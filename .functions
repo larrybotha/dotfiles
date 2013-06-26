@@ -17,8 +17,13 @@ function calc() {
 }
 
 # Create a new directory and enter it
-function mkd() {
+function md() {
 	mkdir -p "$@" && cd "$@"
+}
+
+# find shorthand
+function f() {
+    find . -name "$1"
 }
 
 # Change working directory to the top-most Finder window location

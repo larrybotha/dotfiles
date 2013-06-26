@@ -61,20 +61,24 @@ function installcask() {
 	fi
 }
 
+installcask alfred
 installcask dropbox
 installcask google-chrome
 installcask google-chrome-canary
+installcask firefox
 installcask imagealpha
 installcask imageoptim
+installcask integrity
+installcask inkscape
 installcask iterm2
 installcask macvim
 installcask miro-video-converter
+installcask moom
+installcask opera
 installcask sublime-text
 installcask the-unarchiver
 installcask tor-browser
 installcask transmission
-installcask ukelele
-installcask virtualbox
 installcask vlc
 
 # Remove outdated versions from the cellar
