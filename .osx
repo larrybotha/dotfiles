@@ -343,8 +343,8 @@ defaults write com.apple.dock autohide-delay -float 0
 # Remove the animation when hiding/showing the Dock
 defaults write com.apple.dock autohide-time-modifier -float 0
 
-# Enable the 2D Dock
-defaults write com.apple.dock no-glass -bool true
+# Disable the 2D Dock
+defaults write com.apple.dock no-glass -bool false
 
 # Automatically hide and show the Dock
 defaults write com.apple.dock autohide -bool false
