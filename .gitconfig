@@ -13,6 +13,8 @@
 	ci = commit
 	# Checkout a branch
 	co = checkout
+	# Checkout a branch
+	br = branch
 	# Show verbose output about tags, branches or remotes
 	tags = tag -l
 	branches = branch -a
