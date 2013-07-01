@@ -11,7 +11,7 @@ alias please=sudo
 alias hosts='sudo $EDITOR /etc/hosts'
 
 # Shortcuts
-alias d="cd ~/Documents/Dropbox"
+alias d="cd ~/Dropbox"
 alias dl="cd ~/Downloads"
 alias dt="cd ~/Desktop"
 alias p="cd ~/Projects"
