@@ -41,6 +41,7 @@ if [ ! -d ~/code/git-completion ]; then
 fi
 cd ~/code/git-completion
 curl https://raw.github.com/git/git/master/contrib/completion/git-completion.bash -OL
+chmod -X ~/code/git-completion/git-completion.bash
 
 # git-completion binary is already referenced from .bash_profile
 
