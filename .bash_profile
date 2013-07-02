@@ -19,6 +19,11 @@ if [ -f ~/code/git-completion/git-completion.bash ]; then
 	. ~/code/git-completion/git-completion.bash
 fi
 
+#add git aliases to git-completion
+complete -o default -o nospace -F _git g
+complete -o default -o nospace -F _git_checkout co
+
+
 # init rvm
 source ~/.rvm/scripts/rvm
 
