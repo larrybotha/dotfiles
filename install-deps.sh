@@ -36,9 +36,11 @@ chmod +x ~/code/z/z.sh
 
 # https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
 # Autocomplete motherflippin' git branches
-mkdir ~/code/git-completion
+if [ ! -d ~/code/git-completion ]; then
+	mkdir ~/code/git-completion
+fi
 cd ~/code/git-completion
-curl https://raw.github.com/git/git/master/contrib/completion/git-completion.bash
+curl https://raw.github.com/git/git/master/contrib/completion/git-completion.bash -OL
 
 # git-completion binary is already referenced from .bash_profile
 
