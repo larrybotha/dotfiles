@@ -1,4 +1,4 @@
-# Mathias’s dotfiles
+# Larry's dotfiles (stolen from Mathias)
 
 ## Installation
 
