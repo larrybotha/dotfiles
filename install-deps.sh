@@ -19,10 +19,13 @@ npm install -g nave
 # you need the code CLI tools YOU FOOL.
 ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
 
+# make a code directory for dependencies
+if [ ! -d ~/code ]; then
+	mkdir ~/code
+fi
 
 # https://github.com/rupa/z
 # z, oh how i love you
-mkdir ~/code
 cd ~/code
 git clone https://github.com/rupa/z.git
 chmod +x ~/code/z/z.sh
@@ -31,8 +34,17 @@ chmod +x ~/code/z/z.sh
 # z binary is already referenced from .bash_profile
 
 
+# https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
+# Autocomplete motherflippin' git branches
+mkdir ~/code/git-completion
+cd ~/code/git-completion
+curl https://raw.github.com/git/git/master/contrib/completion/git-completion.bash
+
+# git-completion binary is already referenced from .bash_profile
+
+
 # https://github.com/dronir/SpotifyControl
-# Spotify Controll Script
+# Spotify Control Script
 cd ~/code
 git clone git://github.com/dronir/SpotifyControl.git
 

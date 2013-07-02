@@ -10,7 +10,14 @@ done
 unset file
 
 # init z   https://github.com/rupa/z
-. ~/code/z/z.sh
+if [ -f ~/code/z/z.sh ]; then
+	. ~/code/z/z.sh
+fi
+
+# init git-completion https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
+if [ -f ~/code/git-completion/git-completion.bash ]; then
+	. ~/code/git-completion/git-completion.bash
+fi
 
 # init rvm
 source ~/.rvm/scripts/rvm
