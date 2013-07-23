@@ -45,6 +45,12 @@ brew install rhino
 brew install tree
 brew install webkit2png
 brew install zopfli
+brew install brew-gem
+
+# Install gems via brew
+brew gem capistrano
+brew gem railsless-deploy
+brew gem capistrano-ext
 
 brew tap homebrew/versions
 brew install lua52
