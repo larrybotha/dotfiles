@@ -80,6 +80,7 @@ installcask the-unarchiver
 installcask tor-browser
 installcask transmission
 installcask vlc
+installcask xscope
 
 # Remove outdated versions from the cellar
 brew cleanup
