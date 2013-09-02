@@ -56,6 +56,8 @@ git clone git://github.com/dronir/SpotifyControl.git
 cd ~/code
 git clone git://github.com/jeroenbegyn/VLCControl.git
 
+# setup Vundle for Vim package management - https://github.com/gmarik/vundle
+git clone https://github.com/gmarik/vundle.git ~/.vim/bundle/vundle
 
 # my magic photobooth symlink -> dropbox. I love it.
 # first move Photo Booth folder out of Pictures
