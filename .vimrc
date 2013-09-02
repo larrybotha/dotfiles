@@ -86,6 +86,14 @@ set showmatch
 set wildmenu
 set wildmode=longest,list
 
+" switch relative line numbers to absolute when Vim is not in focus
+:au FocusLost * :set number
+:au FocusGained * :set relativenumber
+
+" use absolute numbers when in Insert mode
+autocmd InsertEnter * :set number
+autocmd InsertLeave * :set relativenumber
+
 let mapleader=","
 inoremap <c-s> <c-c>:w<CR>
 map <c-s> <c-c>:w<CR>
