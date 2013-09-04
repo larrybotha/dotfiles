@@ -44,6 +44,9 @@ let g:syntastic_check_on_open=1
 
 filetype plugin indent on
 
+" ensure ctrlp lists hidden files
+let g:ctrlp_show_hidden = 1
+
 set t_Co=256
 colorscheme monokai
 
