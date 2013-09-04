@@ -126,7 +126,7 @@ map <leader>bu :!bundle update<space>
 map <leader>vi :tabe ~/dotfiles/.vimrc<CR>
 map <leader>td :tabe ~/Dropbox/todo.txt<CR>
 map <leader>tb :tabe ~/Dropbox/blog.txt<CR>
-map <leader>bs :source ~/dotfiles/bootstrap.sh<CR>
+map <leader>vs :source ~/dotfiles/.vimrc<CR>
 
 map <silent> <leader>gs :Gstatus<CR>/not staged<CR>/modified<CR>
 map <leader>gc :Gcommit<CR>
