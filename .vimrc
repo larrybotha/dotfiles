@@ -25,6 +25,7 @@ Bundle 'terryma/vim-multiple-cursors'
 Bundle 'guns/vim-clojure-static'
 Bundle 'tpope/vim-fireplace'
 Bundle 'jwhitley/vim-matchit'
+Bundle 'mattn/emmet-vim'
 
 
 " autoindent with two spaces, always expand tabs
@@ -73,6 +74,7 @@ set noswapfile
 set nobackup
 set nowritebackup
 set nowrap
+set colorcolumn=85 " show column length hint for long lines
 set backspace=indent,eol,start " allow backspacing over everything in insert mode
 " set clipboard=unnamed
 
@@ -106,12 +108,22 @@ nmap <silent> <c-j> :wincmd j<CR>
 nmap <silent> <c-h> :wincmd h<CR>
 nmap <silent> <c-l> :wincmd l<CR>
 
+" quickly remove highlighted searches
+nmap <silent> ,/ :nohlsearch<CR>
+
 map <leader>. :noh<CR>
 map <leader>n :NERDTreeTabsToggle<CR>
 map <leader>ff :NERDTreeFind<CR>
 
 " paste, fix indentation and clear the mark by default
 nnoremap p p=`]`<esc>
+
+" ahoq trailing white space
+:highlight ExtraWhitespace ctermbg=red guibg=red
+:match ExtraWhitespace /\s\+$/
+
+" clear trailing white space across file
+nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
 
 nmap <leader>gp :exec ':Git push origin ' . fugitive#head()<CR>
 nmap <leader>ghp :exec ':Git push heroku ' . fugitive#head()<CR>
@@ -126,7 +138,7 @@ map <leader>bu :!bundle update<space>
 map <leader>vi :tabe ~/dotfiles/.vimrc<CR>
 map <leader>td :tabe ~/Dropbox/todo.txt<CR>
 map <leader>tb :tabe ~/Dropbox/blog.txt<CR>
-map <leader>vs :source ~/dotfiles/.vimrc<CR>
+map <leader>vs :source ~/.vimrc<CR>
 
 map <silent> <leader>gs :Gstatus<CR>/not staged<CR>/modified<CR>
 map <leader>gc :Gcommit<CR>
