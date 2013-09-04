@@ -82,6 +82,8 @@ set ttimeout
 set ttimeoutlen=1
 
 set showmatch
+" show timeout on leader
+set showcmd
 
 set wildmenu
 set wildmode=longest,list
@@ -121,10 +123,10 @@ map <leader>vbu :BundleUpdate<CR>
 map <leader>bi :!bundle<CR>
 map <leader>bu :!bundle update<space>
 
-map <leader>vi :tabe ~/.vimrc<CR>
+map <leader>vi :tabe ~/dotfiles/.vimrc<CR>
 map <leader>td :tabe ~/Dropbox/todo.txt<CR>
 map <leader>tb :tabe ~/Dropbox/blog.txt<CR>
-map <leader>vs :source ~/.vimrc<CR>
+map <leader>bs :source ~/dotfiles/bootstrap.sh<CR>
 
 map <silent> <leader>gs :Gstatus<CR>/not staged<CR>/modified<CR>
 map <leader>gc :Gcommit<CR>
