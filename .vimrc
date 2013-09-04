@@ -40,12 +40,10 @@ let delimitMate_expand_cr = 1
 let delimitMate_expand_space = 1
 let g:nerdtree_tabs_open_on_console_startup = 1
 let g:ctrlp_max_height = 25
+let g:ctrlp_show_hidden = 1 " ensure ctrlp lists hidden files
 let g:syntastic_check_on_open=1
 
 filetype plugin indent on
-
-" ensure ctrlp lists hidden files
-let g:ctrlp_show_hidden = 1
 
 set t_Co=256
 colorscheme monokai
