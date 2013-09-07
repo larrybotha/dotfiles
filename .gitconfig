@@ -19,6 +19,8 @@
 	tags = tag -l
 	branches = branch -a
 	remotes = remote -v
+  # Update ctags
+  ctags = !.git/hooks/ctags
 
 [apply]
 	# Detect whitespace errors when applying a patch
@@ -50,6 +52,9 @@
 [merge]
 	# Include summaries of merged commits in newly created merge commit messages
 	log = true
+
+[init]
+  templatedir = '~/.git_template'
 
 # Use `origin` as the default remote on the `master` branch in all cases
 [branch "master"]
