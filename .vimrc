@@ -25,8 +25,8 @@ Bundle 'terryma/vim-multiple-cursors'
 Bundle 'guns/vim-clojure-static'
 Bundle 'tpope/vim-fireplace'
 Bundle 'jwhitley/vim-matchit'
-Bundle 'joonty/vdebug.git'
-Bundle 'mattn/emmet-vim'
+Bundle 'joonty/vdebug.git' " PHP, Python, Perl, Ruby debugging
+Bundle 'mattn/emmet-vim' " CSS and HTML completion
 
 
 " autoindent with two spaces, always expand tabs
