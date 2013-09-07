@@ -25,6 +25,7 @@ Bundle 'terryma/vim-multiple-cursors'
 Bundle 'guns/vim-clojure-static'
 Bundle 'tpope/vim-fireplace'
 Bundle 'jwhitley/vim-matchit'
+Bundle 'joonty/vdebug.git'
 Bundle 'mattn/emmet-vim'
 
 
