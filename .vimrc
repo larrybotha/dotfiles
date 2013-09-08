@@ -25,11 +25,9 @@ Bundle 'terryma/vim-multiple-cursors'
 Bundle 'guns/vim-clojure-static'
 Bundle 'tpope/vim-fireplace'
 Bundle 'jwhitley/vim-matchit'
-Bundle 'joonty/vdebug.git' " PHP, Python, Perl, Ruby debugging
-Bundle 'mattn/emmet-vim' " CSS and HTML completion
+Bundle 'joonty/vdebug.git'
+Bundle 'mattn/emmet-vim'
 
-
-" autoindent with two spaces, always expand tabs
 autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 et
 
 " check for external file changes
