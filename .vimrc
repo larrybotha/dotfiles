@@ -35,7 +35,7 @@ autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 et
 autocmd CursorHold,CursorMoved,BufEnter * checktime
 
 syntax on
-let g:Powerline_symbols = 'fancy'
+let g:Powerline_symbols = 'compatible'
 let delimitMate_expand_cr = 1
 let delimitMate_expand_space = 1
 let g:nerdtree_tabs_open_on_console_startup = 1
