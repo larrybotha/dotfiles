@@ -31,7 +31,7 @@ Bundle 'scrooloose/nerdtree'
 Bundle 'shawncplus/phpcomplete.vim'
 Bundle 'godlygeek/tabular'
 Bundle 'majutsushi/tagbar'
-Bundle 'Lokaltog/vim-powerline'
+Bundle 'Lokaltog/powerline'
 Bundle 'jistr/vim-nerdtree-tabs'
 Bundle 'terryma/vim-multiple-cursors'
 Bundle 'guns/vim-clojure-static'
@@ -63,7 +63,25 @@ Bundle 'mattn/emmet-vim'
                                                         " selected characters/lines in visual mode
   endif
 
-
+  set backspace=indent,eol,start                " allow backspacing over everything in insert mode
+  set linespace=0                               " No extra spaces between rows
+  set relativenumber                            " relative line numbers on
+  set showmatch                                 " show matching brackets/parenthesis
+  set incsearch                                 " find as you type search
+  set hlsearch                                  " highlight search terms
+  set winminheight=0                            " windows can be 0 line high
+  set ignorecase                                " case insensitive search
+  set smartcase                                 " case sensitive when uc present
+  set wildmenu                                  " show list instead of just completing
+  set wildmode=list:longest,full                " command <Tab> completion, list matches, then longest common part, then all.
+  set whichwrap=b,s,h,l,<,>,[,]whichwrap        " backspace and cursor keys wrap to
+  set scrolljump=5                              " lines to scroll when cursor leaves screen
+  set scrolloff=5                               " minimum lines to keep above and below cursor
+  noh            " clear the initial highlight after sourcing
+  set foldenable " auto fold code
+  set gdefault                                  " the /g flag on :s substitutions by default
+  set list
+  set listchars=tab:>.,trail:.,extends:#,nbsp:. " highlight problematic whitespace
 " }
 
 
@@ -98,19 +116,11 @@ let &t_EI = "\<Esc>]50;CursorShape=0\x7"
 
 " line highlighting
 
-set incsearch
-set hlsearch
-noh " clear the initial highlight after sourcing
-set ignorecase smartcase
-set relativenumber
-set scrolloff=5
-set laststatus=2 " always show the status bar
 set noswapfile
 set nobackup
 set nowritebackup
 set nowrap
 set colorcolumn=85 " show column length hint for long lines
-set backspace=indent,eol,start " allow backspacing over everything in insert mode
 " set clipboard=unnamed
 
 " (Hopefully) removes the delay when hitting esc in insert mode
@@ -118,7 +128,6 @@ set noesckeys
 set ttimeout
 set ttimeoutlen=1
 
-set showmatch
 " show timeout on leader
 set showcmd
 
@@ -154,8 +163,8 @@ map <leader>ff :NERDTreeFind<CR>
 nnoremap p p=`]`<esc>
 
 " ahoq trailing white space
-:highlight ExtraWhitespace ctermbg=red guibg=red
-:match ExtraWhitespace /\s\+$/
+" :highlight ExtraWhitespace ctermbg=red guibg=red
+" :match ExtraWhitespace /\s\+$/
 
 " clear trailing white space across file
 nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
