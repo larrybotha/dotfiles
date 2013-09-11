@@ -192,12 +192,12 @@ map <leader>sm /end<CR>?\<def\>\\|\<it\><CR>:noh<CR>V%
 map <leader>sf :e spec/factories/
 
 " quickly move lines up and down
-nnoremap <A-j> :m .+1<CR>==
-nnoremap <A-k> :m .-2<CR>==
-inoremap <A-j> <Esc>:m .+1<CR>==gi
-inoremap <A-k> <Esc>:m .-2<CR>==gi
-vnoremap <A-j> :m '>+1<CR>gv=gv
-vnoremap <A-k> :m '<-2<CR>gv=gv
+nnoremap <A-j> :m+1<CR>==
+nnoremap <A-k> :m-2<CR>==
+inoremap <A-j> <Esc>:m+1<CR>==gi
+inoremap <A-k> <Esc>:m-2<CR>==gi
+vnoremap <A-j> :m'>+1<CR>gv=gv
+vnoremap <A-k> :m'<-2<CR>gv=gv
 
 " j and k navigate through wrapped lines
 nmap k gk
