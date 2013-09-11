@@ -84,8 +84,8 @@ Bundle 'mattn/emmet-vim'
   set listchars=tab:>.,trail:.,extends:#,nbsp:. " highlight problematic whitespace
 
   " highlight trailing white space
-  :highlight ExtraWhitespace ctermbg=red guibg=red
-  :match ExtraWhitespace /\s\+$/
+  highlight ExtraWhitespace ctermbg=red guibg=red
+  match ExtraWhitespace /\s\+$/
 " }
 
 
@@ -117,8 +117,6 @@ endif
 
 let &t_SI = "\<Esc>]50;CursorShape=1\x7"
 let &t_EI = "\<Esc>]50;CursorShape=0\x7"
-
-" line highlighting
 
 set noswapfile
 set nobackup
