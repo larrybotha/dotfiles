@@ -49,14 +49,33 @@ Bundle 'mattn/emmet-vim'
   set spell                 " spell checking on
 " }
 " Vim UI {
-  color monokai  " load a colourscheme
-  set splitright " open split panes to the right of the current pane
-  set splitbelow " open split panes underneath the current pane
+  color monokai                                        " load a colourscheme
+  set splitright                                       " open split panes to the right of the current pane
+  set splitbelow                                       " open split panes underneath the current pane
 
-  set cursorline " highlight current line
+  set cursorline                                       " highlight current line
   hi CursorLine term=bold cterm=bold ctermbg=233
 
+  if has('cmdline_info')
+    set ruler                                           " show the ruler
+    set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " a ruler on steroids
+    set showcmd                                         " show partial commands in status line and
+                                                        " selected characters/lines in visual mode
+  endif
 
+
+  if has('statusline')
+    set laststatus=2
+
+    " Broken down into easily includeable segments
+    set statusline=%<%f\                                " Filename
+    set statusline+=%w%h%m%r                            " Options
+    set statusline+=%{fugitive#statusline()}            " Git Hotness
+    set statusline+=\ [%{&ff}/%Y]                       " filetype
+    set statusline+=\ [%{getcwd()}]                     " current dir
+    " set statusline+=\ [A=\%03.3b/H=\%02.2B]           " ASCII / Hexadecimal value of char
+    set statusline+=%=%-14.(%l,%c%V%)\ %p%%             " Right aligned file nav info
+  endif
 " }
 
 
