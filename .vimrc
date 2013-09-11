@@ -40,13 +40,17 @@ Bundle 'jwhitley/vim-matchit'
 Bundle 'joonty/vdebug.git'
 Bundle 'mattn/emmet-vim'
 "}
+" General {
+  filetype plugin indent on " automatically detect files types
+  syntax on                 " syntax highlighting
+  set mouse=a               " automatically enable mouse usage
+" }
 
 autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 et
 
 " check for external file changes
 autocmd CursorHold,CursorMoved,BufEnter * checktime
 
-syntax on
 let g:Powerline_symbols = 'fancy'
 let delimitMate_expand_cr = 1
 let delimitMate_expand_space = 1
@@ -56,7 +60,6 @@ let g:ctrlp_max_height = 25
 let g:ctrlp_show_hidden = 1
 let g:syntastic_check_on_open=1
 
-filetype plugin indent on
 
 set t_Co=256
 colorscheme monokai
@@ -81,7 +84,6 @@ noh " clear the initial highlight after sourcing
 set ignorecase smartcase
 set relativenumber
 set scrolloff=5
-set mouse=a
 set laststatus=2 " always show the status bar
 set noswapfile
 set nobackup
