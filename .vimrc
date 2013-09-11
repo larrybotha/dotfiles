@@ -1,7 +1,13 @@
 " Modeline and Notes {
 " vim: set foldmarker={,} foldlevel=0 foldmethod=marker spell:
 " }
-" Bundles {"
+" Environment {
+  " Basics {
+    set nocompatible " must come first
+    set background=dark " assume a dark background
+  "}
+"}
+" Bundles {
 set rtp+=~/.vim/bundle/vundle/
 call vundle#rc()
 Bundle 'gmarik/vundle'
@@ -77,7 +83,6 @@ set relativenumber
 set scrolloff=5
 set mouse=a
 set laststatus=2 " always show the status bar
-set nocompatible
 set noswapfile
 set nobackup
 set nowritebackup
