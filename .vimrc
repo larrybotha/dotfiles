@@ -1,6 +1,7 @@
 " Modeline and Notes {
 " vim: set foldmarker={,} foldlevel=0 foldmethod=marker spell:
 " }
+" Bundles {"
 set rtp+=~/.vim/bundle/vundle/
 call vundle#rc()
 Bundle 'gmarik/vundle'
@@ -32,6 +33,7 @@ Bundle 'tpope/vim-fireplace'
 Bundle 'jwhitley/vim-matchit'
 Bundle 'joonty/vdebug.git'
 Bundle 'mattn/emmet-vim'
+"}
 
 autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 et
 
