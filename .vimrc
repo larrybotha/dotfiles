@@ -74,7 +74,7 @@ Bundle 'mattn/emmet-vim'
   set smartcase                                 " case sensitive when uc present
   set wildmenu                                  " show list instead of just completing
   set wildmode=list:longest,full                " command <Tab> completion, list matches, then longest common part, then all.
-  set whichwrap=b,s,h,l,<,>,[,]whichwrap        " backspace and cursor keys wrap to
+  set whichwrap=b,s,h,l,<,>,[,]                 " backspace and cursor keys wrap to
   set scrolljump=5                              " lines to scroll when cursor leaves screen
   set scrolloff=5                               " minimum lines to keep above and below cursor
   noh            " clear the initial highlight after sourcing
