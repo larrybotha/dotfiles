@@ -44,7 +44,21 @@ Bundle 'mattn/emmet-vim'
   filetype plugin indent on " automatically detect files types
   syntax on                 " syntax highlighting
   set mouse=a               " automatically enable mouse usage
+  scriptencoding utf-8
+  set history=1000          " store more history (default is 20)
+  set spell                 " spell checking on
 " }
+" Vim UI {
+  color monokai  " load a colourscheme
+  set splitright " open split panes to the right of the current pane
+  set splitbelow " open split panes underneath the current pane
+
+  set cursorline " highlight current line
+  hi CursorLine term=bold cterm=bold ctermbg=233
+
+
+" }
+
 
 autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 et
 
@@ -60,12 +74,13 @@ let g:ctrlp_max_height = 25
 let g:ctrlp_show_hidden = 1
 let g:syntastic_check_on_open=1
 
+if exists(":Tabularize")
+  nmap <Leader>a= :Tabularize /=<CR>
+  vmap <Leader>a= :Tabularize /=<CR>
+  nmap <Leader>a: :Tabularize /:\zs<CR>
+  vmap <Leader>a: :Tabularize /:\zs<CR>
+endif
 
-set t_Co=256
-colorscheme monokai
-
-set splitright
-set splitbelow
 
 if has('mouse_sgr')
   set ttymouse=sgr
@@ -75,8 +90,6 @@ let &t_SI = "\<Esc>]50;CursorShape=1\x7"
 let &t_EI = "\<Esc>]50;CursorShape=0\x7"
 
 " line highlighting
-set cursorline
-hi CursorLine term=bold cterm=bold ctermbg=233
 
 set incsearch
 set hlsearch
