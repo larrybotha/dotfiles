@@ -82,6 +82,10 @@ Bundle 'mattn/emmet-vim'
   set gdefault                                  " the /g flag on :s substitutions by default
   set list
   set listchars=tab:>.,trail:.,extends:#,nbsp:. " highlight problematic whitespace
+
+  " highlight trailing white space
+  :highlight ExtraWhitespace ctermbg=red guibg=red
+  :match ExtraWhitespace /\s\+$/
 " }
 
 
@@ -162,9 +166,6 @@ map <leader>ff :NERDTreeFind<CR>
 " paste, fix indentation and clear the mark by default
 nnoremap p p=`]`<esc>
 
-" ahoq trailing white space
-" :highlight ExtraWhitespace ctermbg=red guibg=red
-" :match ExtraWhitespace /\s\+$/
 
 " clear trailing white space across file
 nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
