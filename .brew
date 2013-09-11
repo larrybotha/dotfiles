@@ -36,6 +36,7 @@ brew install php54
 brew install ack
 brew install ctags
 #brew install exiv2
+brew install fontforge
 brew install git
 #brew install imagemagick
 brew install lynx
