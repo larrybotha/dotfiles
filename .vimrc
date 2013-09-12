@@ -1,5 +1,8 @@
 " Modeline and Notes {
 " vim: set foldmarker={,} foldlevel=0 foldmethod=marker spell:
+"   This .vimrc is largely inspired by
+"   https://github.com/spf13/spf13-vim/blob/master/.vimrc and
+"   https://github.com/kmckelvin/vimrc/blob/master/vimrc
 " }
 " Environment {
   " Basics {
@@ -57,28 +60,28 @@ Bundle 'mattn/emmet-vim'
   hi CursorLine term=bold cterm=bold ctermbg=233
 
   if has('cmdline_info')
-    set ruler                                           " show the ruler
-    set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)  " a ruler on steroids
-    set showcmd                                         " show partial commands in status line and
-                                                        " selected characters/lines in visual mode
+    set ruler                                            " show the ruler
+    set rulerformat=%30(%=\:b%n%y%m%r%w\ %l,%c%V\ %P%)   " a ruler on steroids
+    set showcmd                                          " show partial commands in status line and
+                                                         " selected characters/lines in visual mode
   endif
 
-  set backspace=indent,eol,start                " allow backspacing over everything in insert mode
-  set linespace=0                               " No extra spaces between rows
-  set relativenumber                            " relative line numbers on
-  set showmatch                                 " show matching brackets/parenthesis
-  set incsearch                                 " find as you type search
-  set hlsearch                                  " highlight search terms
-  set winminheight=0                            " windows can be 0 line high
-  set ignorecase                                " case insensitive search
-  set smartcase                                 " case sensitive when uc present
-  set wildmenu                                  " show list instead of just completing
-  set wildmode=list:longest,full                " command <Tab> completion, list matches, then longest common part, then all.
-  set whichwrap=b,s,h,l,<,>,[,]                 " backspace and cursor keys wrap to
-  set scrolljump=5                              " lines to scroll when cursor leaves screen
-  set scrolloff=5                               " minimum lines to keep above and below cursor
-  noh            " clear the initial highlight after sourcing
-  set foldenable " auto fold code
+  set backspace=indent,eol,start                         " allow backspacing over everything in insert mode
+  set linespace=0                                        " No extra spaces between rows
+  set relativenumber                                     " relative line numbers on
+  set showmatch                                          " show matching brackets/parenthesis
+  set incsearch                                          " find as you type search
+  set hlsearch                                           " highlight search terms
+  set winminheight=0                                     " windows can be 0 line high
+  set ignorecase                                         " case insensitive search
+  set smartcase                                          " case sensitive when uc present
+  set wildmenu                                           " show list instead of just completing
+  set wildmode=list:longest,full                         " command <Tab> completion, list matches, then longest common part, then all.
+  set whichwrap=b,s,h,l,<,>,[,]                          " backspace and cursor keys wrap to
+  set scrolljump=5                                       " lines to scroll when cursor leaves screen
+  set scrolloff=5                                        " minimum lines to keep above and below cursor
+  noh                                                    " clear the initial highlight after sourcing
+  set foldenable                                         " auto fold code
 
   " highlight trailing white space
   highlight ExtraWhitespace ctermbg=red guibg=red
