@@ -93,8 +93,6 @@ Bundle 'mattn/emmet-vim'
 " }
 
 
-autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 et
-
 " check for external file changes
 autocmd CursorHold,CursorMoved,BufEnter * checktime
 
