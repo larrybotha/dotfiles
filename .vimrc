@@ -79,8 +79,6 @@ Bundle 'mattn/emmet-vim'
   set scrolloff=5                               " minimum lines to keep above and below cursor
   noh            " clear the initial highlight after sourcing
   set foldenable " auto fold code
-  set gdefault                                  " the /g flag on :s substitutions by default
-  set list
 
   " highlight trailing white space
   highlight ExtraWhitespace ctermbg=red guibg=red
