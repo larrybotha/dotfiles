@@ -81,7 +81,6 @@ Bundle 'mattn/emmet-vim'
   set foldenable " auto fold code
   set gdefault                                  " the /g flag on :s substitutions by default
   set list
-  set listchars=tab:>.,trail:.,extends:#,nbsp:. " highlight problematic whitespace
 
   " highlight trailing white space
   highlight ExtraWhitespace ctermbg=red guibg=red
