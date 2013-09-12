@@ -52,34 +52,44 @@ Bundle 'mattn/emmet-vim'
   set nospell                 " spell checking off
 " }
 " Vim UI {
-  color monokai                                        " load a colourscheme
-  set splitright                                       " open split panes to the right of the current pane
-  set splitbelow                                       " open split panes underneath the current pane
+  color monokai                                  " load a colourscheme
+  set splitright                                 " open split panes to the right of the current pane
+  set splitbelow                                 " open split panes underneath the current pane
 
-  set cursorline                                       " highlight current line
+  set cursorline                                 " highlight current line
   hi CursorLine term=bold cterm=bold ctermbg=233
 
-  set backspace=indent,eol,start                         " allow backspacing over everything in insert mode
-  set linespace=0                                        " No extra spaces between rows
-  set relativenumber                                     " relative line numbers on
-  set showmatch                                          " show matching brackets/parenthesis
-  set incsearch                                          " find as you type search
-  set hlsearch                                           " highlight search terms
-  set winminheight=0                                     " windows can be 0 line high
-  set ignorecase                                         " case insensitive search
-  set smartcase                                          " case sensitive when uc present
-  set wildmenu                                           " show list instead of just completing
-  set wildmode=list:longest,full                         " command <Tab> completion, list matches, then longest common part, then all.
-  set whichwrap=b,s,h,l,<,>,[,]                          " backspace and cursor keys wrap to
-  set scrolljump=5                                       " lines to scroll when cursor leaves screen
-  set scrolloff=5                                        " minimum lines to keep above and below cursor
-  noh                                                    " clear the initial highlight after sourcing
-  set foldenable                                         " auto fold code
-  set nospell                                           " disable spellcheck
+  set colorcolumn=85                             " show column length hint for long lines
+
+  set backspace=indent,eol,start                 " allow backspacing over everything in insert mode
+  set linespace=0                                " No extra spaces between rows
+  set relativenumber                             " relative line numbers on
+  set showmatch                                  " show matching brackets/parenthesis
+  set incsearch                                  " find as you type search
+  set hlsearch                                   " highlight search terms
+  set winminheight=0                             " windows can be 0 line high
+  set ignorecase                                 " case insensitive search
+  set smartcase                                  " case sensitive when uc present
+  set wildmenu                                   " show list instead of just completing
+  set wildmode=list:longest,full                 " command <Tab> completion, list matches, then longest common part, then all.
+  set whichwrap=b,s,h,l,<,>,[,]                  " backspace and cursor keys wrap to
+  set scrolljump=5                               " lines to scroll when cursor leaves screen
+  set scrolloff=5                                " minimum lines to keep above and below cursor
+  noh                                            " clear the initial highlight after sourcing
+  set foldenable                                 " auto fold code
+  set nospell                                    " disable spellcheck
 
   " highlight trailing white space
   highlight ExtraWhitespace ctermbg=red guibg=red
   match ExtraWhitespace /\s\+$/
+" }
+" Formatting {
+  set nowrap        " wrap long lines
+  set autoindent    " indent at the same level of the previous line
+  set shiftwidth=2  " use indents of 2 spaces
+  set expandtab     " expand tabs to spaces
+  set tabstop=2     " indent every 2 columns
+  set softtabstop=2 " let backspace delete indent
 " }
 
 
@@ -115,8 +125,6 @@ let &t_EI = "\<Esc>]50;CursorShape=0\x7"
 set noswapfile
 set nobackup
 set nowritebackup
-set nowrap
-set colorcolumn=85 " show column length hint for long lines
 " set clipboard=unnamed
 
 " (Hopefully) removes the delay when hitting esc in insert mode
