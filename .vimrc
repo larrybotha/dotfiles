@@ -135,20 +135,13 @@ Bundle 'mattn/emmet-vim'
   vnoremap < <gv
   vnoremap > >gv
 
-  " Fix home and end keybindings for screen, particularly on mac
-  " - for some reason this fixes the arrow keys too. huh.
-  map [F $
-  imap [F $
-  map [H g0
-  imap [H g0
-
   " quickly move lines up and down
-  nnoremap <A-j> :m .+1<CR>==
-  nnoremap <A-k> :m .-2<CR>==
-  inoremap <A-j> <Esc>:m .+1<CR>==gi
-  inoremap <A-k> <Esc>:m .-2<CR>==gi
-  vnoremap <A-j> :m '>+1<CR>gv=gv
-  vnoremap <A-k> :m '<-2<CR>gv=gv
+  nnoremap <A-J> :m .+1<CR>==
+  nnoremap <A-K> :m .-2<CR>==
+  inoremap <A-J> <Esc>:m .+1<CR>==gi
+  inoremap <A-K> <Esc>:m .-2<CR>==gi
+  vnoremap <A-J> :m '>+1<CR>gv=gv
+  vnoremap <A-K> :m '<-2<CR>gv=gv
 " }
 
 " check for external file changes
