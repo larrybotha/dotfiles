@@ -52,46 +52,104 @@ Bundle 'mattn/emmet-vim'
   set nospell                 " spell checking off
 " }
 " Vim UI {
-  color monokai                                  " load a colourscheme
-  set splitright                                 " open split panes to the right of the current pane
-  set splitbelow                                 " open split panes underneath the current pane
+  color monokai                                   " load a colourscheme
+  set splitright                                  " open split panes to the right of the current pane
+  set splitbelow                                  " open split panes underneath the current pane
 
-  set cursorline                                 " highlight current line
+  set cursorline                                  " highlight current line
   hi CursorLine term=bold cterm=bold ctermbg=233
 
-  set colorcolumn=85                             " show column length hint for long lines
+  set colorcolumn=85                              " show column length hint for long lines
 
-  set backspace=indent,eol,start                 " allow backspacing over everything in insert mode
-  set linespace=0                                " No extra spaces between rows
-  set relativenumber                             " relative line numbers on
-  set showmatch                                  " show matching brackets/parenthesis
-  set incsearch                                  " find as you type search
-  set hlsearch                                   " highlight search terms
-  set winminheight=0                             " windows can be 0 line high
-  set ignorecase                                 " case insensitive search
-  set smartcase                                  " case sensitive when uc present
-  set wildmenu                                   " show list instead of just completing
-  set wildmode=list:longest,full                 " command <Tab> completion, list matches, then longest common part, then all.
-  set whichwrap=b,s,h,l,<,>,[,]                  " backspace and cursor keys wrap to
-  set scrolljump=5                               " lines to scroll when cursor leaves screen
-  set scrolloff=5                                " minimum lines to keep above and below cursor
-  noh                                            " clear the initial highlight after sourcing
-  set foldenable                                 " auto fold code
-  set nospell                                    " disable spellcheck
+  set backspace=indent,eol,start                  " allow backspacing over everything in insert mode
+  set linespace=0                                 " No extra spaces between rows
+  set relativenumber                              " relative line numbers on
+  set showmatch                                   " show matching brackets/parenthesis
+  set incsearch                                   " find as you type search
+  set hlsearch                                    " highlight search terms
+  set winminheight=0                              " windows can be 0 line high
+  set ignorecase                                  " case insensitive search
+  set smartcase                                   " case sensitive when uc present
+  set wildmenu                                    " show list instead of just completing
+  set wildmode=list:longest,full                  " command <Tab> completion, list matches, then longest common part, then all.
+  set whichwrap=b,s,h,l,<,>,[,]                   " backspace and cursor keys wrap to
+  set scrolljump=5                                " lines to scroll when cursor leaves screen
+  set scrolloff=5                                 " minimum lines to keep above and below cursor
+  noh                                             " clear the initial highlight after sourcing
+  set foldenable                                  " auto fold code
+  set nospell                                     " disable spellcheck
+  set shortmess=atI                               " prevent 'Press ENTER' prompt
 
   " highlight trailing white space
   highlight ExtraWhitespace ctermbg=red guibg=red
   match ExtraWhitespace /\s\+$/
 " }
 " Formatting {
-  set nowrap        " wrap long lines
+  set wrap        " wrap long lines
   set autoindent    " indent at the same level of the previous line
   set shiftwidth=2  " use indents of 2 spaces
   set expandtab     " expand tabs to spaces
   set tabstop=2     " indent every 2 columns
   set softtabstop=2 " let backspace delete indent
 " }
+" Key Mappings {
+  " set custom leader
+  let mapleader = ','
 
+  " navigate panes with <c-hhkl>
+  nmap <silent> <c-k> :wincmd k<CR>
+  nmap <silent> <c-j> :wincmd j<CR>
+  nmap <silent> <c-h> :wincmd h<CR>
+  nmap <silent> <c-l> :wincmd l<CR>
+
+  " j and k navigate through wrapped lines
+  nmap k gk
+  nmap j gj
+
+  " map common shift keys
+  cmap Q q " Bind :Q to :q
+  cmap Qall qall
+  cmap W w
+  cmap Wa wall
+  cmap Tabe tabe
+
+  " yank from cursor to EOL the same as C and D do
+  nnoremap Y y$
+
+  " code folding options
+  nmap <leader>f0 :set foldlevel=0<CR>
+  nmap <leader>f1 :set foldlevel=1<CR>
+  nmap <leader>f2 :set foldlevel=2<CR>
+  nmap <leader>f3 :set foldlevel=3<CR>
+  nmap <leader>f4 :set foldlevel=4<CR>
+  nmap <leader>f5 :set foldlevel=5<CR>
+  nmap <leader>f6 :set foldlevel=6<CR>
+  nmap <leader>f7 :set foldlevel=7<CR>
+  nmap <leader>f8 :set foldlevel=8<CR>
+  nmap <leader>f9 :set foldlevel=9<CR>
+
+  " clear highlighted searches
+  nmap <silent> <leader>/ :nohlsearch<CR>
+
+  " visual shifting without exiting visual mode
+  vnoremap < <gv
+  vnoremap > >gv
+
+  " Fix home and end keybindings for screen, particularly on mac
+  " - for some reason this fixes the arrow keys too. huh.
+  map [F $
+  imap [F $
+  map [H g0
+  imap [H g0
+
+  " quickly move lines up and down
+  nnoremap <A-j> :m .+1<CR>==
+  nnoremap <A-k> :m .-2<CR>==
+  inoremap <A-j> <Esc>:m .+1<CR>==gi
+  inoremap <A-k> <Esc>:m .-2<CR>==gi
+  vnoremap <A-j> :m '>+1<CR>gv=gv
+  vnoremap <A-k> :m '<-2<CR>gv=gv
+" }
 
 " check for external file changes
 autocmd CursorHold,CursorMoved,BufEnter * checktime
@@ -148,16 +206,8 @@ let mapleader=","
 inoremap <c-s> <c-c>:w<CR>
 map <c-s> <c-c>:w<CR>
 
-" navigate panes with <c-hhkl>
-nmap <silent> <c-k> :wincmd k<CR>
-nmap <silent> <c-j> :wincmd j<CR>
-nmap <silent> <c-h> :wincmd h<CR>
-nmap <silent> <c-l> :wincmd l<CR>
 
-" quickly remove highlighted searches
-nmap <silent> ,/ :nohlsearch<CR>
 
-map <leader>. :noh<CR>
 map <leader>n :NERDTreeTabsToggle<CR>
 map <leader>ff :NERDTreeFind<CR>
 
@@ -231,23 +281,8 @@ map <leader>rp :!touch tmp/restart.txt<CR><CR>
 map <leader>sm /end<CR>?\<def\>\\|\<it\><CR>:noh<CR>V%
 map <leader>sf :e spec/factories/
 
-" quickly move lines up and down
-nnoremap <A-j> :m .+1<CR>==
-nnoremap <A-k> :m .-2<CR>==
-inoremap <A-j> <Esc>:m .+1<CR>==gi
-inoremap <A-k> <Esc>:m .-2<CR>==gi
-vnoremap <A-j> :m '>+1<CR>gv=gv
-vnoremap <A-k> :m '<-2<CR>gv=gv
 
-" j and k navigate through wrapped lines
-nmap k gk
-nmap j gj
 
-command! Q q " Bind :Q to :q
-command! Qall qall
-
-command! W w
-command! Wa wall
 
 " deprecated? must check new docs.
 autocmd User Rails Rnavcommand presenter app/presenters -glob=**/* -suffix=.rb
