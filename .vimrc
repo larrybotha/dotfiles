@@ -46,7 +46,7 @@ Bundle 'mattn/emmet-vim'
   set mouse=a               " automatically enable mouse usage
   scriptencoding utf-8
   set history=1000          " store more history (default is 20)
-  " set spell                 " spell checking on
+  set nospell                 " spell checking off
 " }
 " Vim UI {
   color monokai                                        " load a colourscheme
