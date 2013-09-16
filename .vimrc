@@ -4,12 +4,14 @@
 "   https://github.com/spf13/spf13-vim/blob/master/.vimrc and
 "   https://github.com/kmckelvin/vimrc/blob/master/vimrc
 " }
+
 " Environment {
   " Basics {
     set nocompatible " must come first
     set background=dark " assume a dark background
   "}
 "}
+
 " Bundles {
 set rtp+=~/.vim/bundle/vundle/
 call vundle#rc()
@@ -43,6 +45,7 @@ Bundle 'jwhitley/vim-matchit'
 Bundle 'joonty/vdebug.git'
 Bundle 'mattn/emmet-vim'
 "}
+
 " General {
   filetype plugin indent on " automatically detect files types
   syntax on                 " syntax highlighting
@@ -51,6 +54,7 @@ Bundle 'mattn/emmet-vim'
   set history=1000          " store more history (default is 20)
   set nospell                 " spell checking off
 " }
+
 " Vim UI {
   color monokai                                   " load a colourscheme
   set splitright                                  " open split panes to the right of the current pane
@@ -84,14 +88,17 @@ Bundle 'mattn/emmet-vim'
   highlight ExtraWhitespace ctermbg=red guibg=red
   match ExtraWhitespace /\s\+$/
 " }
+
 " Formatting {
-  set wrap        " wrap long lines
-  set autoindent    " indent at the same level of the previous line
-  set shiftwidth=2  " use indents of 2 spaces
-  set expandtab     " expand tabs to spaces
-  set tabstop=2     " indent every 2 columns
-  set softtabstop=2 " let backspace delete indent
+  set wrap                                                   " wrap long lines
+  set autoindent                                             " indent at the same level of the previous line
+  set shiftwidth=2                                           " use indents of 2 spaces
+  set expandtab                                              " expand tabs to spaces
+  set tabstop=2                                              " indent every 2 columns
+  set softtabstop=2                                          " let backspace delete indent
+  autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 et " set above values when opening new files
 " }
+
 " Key Mappings {
   " set custom leader
   let mapleader = ','
