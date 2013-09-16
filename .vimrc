@@ -1,5 +1,5 @@
 " Modeline and Notes {
-" vim: set foldmarker={,} foldlevel=0 foldmethod=marker
+" vim: set foldmarker={,} foldlevel=0 foldmethod=marker spell:
 "   This .vimrc is largely inspired by
 "   https://github.com/spf13/spf13-vim/blob/master/.vimrc and
 "   https://github.com/kmckelvin/vimrc/blob/master/vimrc
