@@ -13,37 +13,37 @@
 "}
 
 " Bundles {
-set rtp+=~/.vim/bundle/vundle/
-call vundle#rc()
-Bundle 'gmarik/vundle'
+  set rtp+=~/.vim/bundle/vundle/
+  call vundle#rc()
+  Bundle 'gmarik/vundle'
 
-Bundle 'rking/ag.vim'
-Bundle 'vim-ruby/vim-ruby'
-Bundle 'tpope/vim-rails'
-Bundle 'tpope/vim-fugitive'
-Bundle 'tpope/vim-surround'
-Bundle 'Raimondi/delimitMate'
-Bundle 'adamlowe/vim-slurper'
-Bundle 'kien/ctrlp.vim'
-Bundle 'slim-template/vim-slim'
-Bundle 'ervandew/supertab'
-Bundle 'kchmck/vim-coffee-script'
-Bundle 'ddollar/nerdcommenter'
-Bundle 'tpope/vim-endwise'
-Bundle 'ecomba/vim-ruby-refactoring'
-Bundle 'scrooloose/syntastic'
-Bundle 'scrooloose/nerdtree'
-Bundle 'shawncplus/phpcomplete.vim'
-Bundle 'godlygeek/tabular'
-Bundle 'majutsushi/tagbar'
-Bundle 'Lokaltog/powerline', {'rtp': 'powerline/bindings/vim/'}
-Bundle 'jistr/vim-nerdtree-tabs'
-Bundle 'terryma/vim-multiple-cursors'
-Bundle 'guns/vim-clojure-static'
-Bundle 'tpope/vim-fireplace'
-Bundle 'jwhitley/vim-matchit'
-Bundle 'joonty/vdebug.git'
-Bundle 'mattn/emmet-vim'
+  Bundle 'rking/ag.vim'
+  Bundle 'vim-ruby/vim-ruby'
+  Bundle 'tpope/vim-rails'
+  Bundle 'tpope/vim-fugitive'
+  Bundle 'tpope/vim-surround'
+  Bundle 'Raimondi/delimitMate'
+  Bundle 'adamlowe/vim-slurper'
+  Bundle 'kien/ctrlp.vim'
+  Bundle 'slim-template/vim-slim'
+  Bundle 'ervandew/supertab'
+  Bundle 'kchmck/vim-coffee-script'
+  Bundle 'ddollar/nerdcommenter'
+  Bundle 'tpope/vim-endwise'
+  Bundle 'ecomba/vim-ruby-refactoring'
+  Bundle 'scrooloose/syntastic'
+  Bundle 'scrooloose/nerdtree'
+  Bundle 'shawncplus/phpcomplete.vim'
+  Bundle 'godlygeek/tabular'
+  Bundle 'majutsushi/tagbar'
+  Bundle 'Lokaltog/powerline', {'rtp': 'powerline/bindings/vim/'}
+  Bundle 'jistr/vim-nerdtree-tabs'
+  Bundle 'terryma/vim-multiple-cursors'
+  Bundle 'guns/vim-clojure-static'
+  Bundle 'tpope/vim-fireplace'
+  Bundle 'jwhitley/vim-matchit'
+  Bundle 'joonty/vdebug.git'
+  Bundle 'mattn/emmet-vim'
 "}
 
 " General {
