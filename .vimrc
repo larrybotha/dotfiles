@@ -63,6 +63,15 @@ Bundle 'mattn/emmet-vim'
   set noesckeys
   set ttimeout
   set ttimeoutlen=1
+
+  " check for external file changes
+  if has("autocmd")
+    autocmd CursorHold,CursorMoved,BufEnter * checktime
+  endif
+
+  if has('mouse_sgr')
+    set ttymouse=sgr
+  endif
 " }
 
 " Vim UI {
@@ -185,6 +194,9 @@ Bundle 'mattn/emmet-vim'
 
   " paste, fix indentation and clear the mark by default
   nnoremap p p=`]`<esc>
+
+  " clear trailing white space across file
+  nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
 " }
 
 " Plugins {
@@ -199,8 +211,37 @@ Bundle 'mattn/emmet-vim'
     let delimitMate_expand_space = 1
   " }
 
+  " Fugitive {
+    " git push
+    nmap <leader>gp :exec ':Git push origin ' . fugitive#head()<CR>
+
+    " git push to heroku
+    nmap <leader>ghp :exec ':Git push heroku ' . fugitive#head()<CR>
+
+    " git status
+    map <silent> <leader>gs :Gstatus<CR>/not staged<CR>/modified<CR>
+
+    " git commit -am "
+    map <leader>gci :!git commit -am "
+
+    " git checkout
+    map <leader>gco :!git checkout
+
+    " git gui
+    map <leader>ggui :!git gui<CR>
+    map <leader>gw :!git add . && git commit -m "WIP"
+
+  " }
+
   " NERDTree {
+    " quick access to NERDTree
+    map <leader>n :NERDTreeTabsToggle<CR>
+    map <leader>ff :NERDTreeFind<CR>
+
+    " open NERDTree on startup
     let g:nerdtree_tabs_open_on_console_startup = 1
+
+    " show hidden files by default
     let NERDTreeShowHidden=1
   " }
 
@@ -222,27 +263,8 @@ Bundle 'mattn/emmet-vim'
   " }
 " }
 
-" check for external file changes
-autocmd CursorHold,CursorMoved,BufEnter * checktime
-
-if has('mouse_sgr')
-  set ttymouse=sgr
-endif
 
 
-let mapleader=","
-
-map <leader>n :NERDTreeTabsToggle<CR>
-map <leader>ff :NERDTreeFind<CR>
-
-" paste, fix indentation and clear the mark by default
-nnoremap p p=`]`<esc>
-
-" clear trailing white space across file
-nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
-
-nmap <leader>gp :exec ':Git push origin ' . fugitive#head()<CR>
-nmap <leader>ghp :exec ':Git push heroku ' . fugitive#head()<CR>
 nmap <leader>bx :!bundle exec<space>
 nmap <leader>zx :!zeus<space>
 map <leader>vbi :BundleInstall<CR>
@@ -256,9 +278,6 @@ map <leader>td :tabe ~/Dropbox/todo.txt<CR>
 map <leader>tb :tabe ~/Dropbox/blog.txt<CR>
 map <leader>vs :source ~/.vimrc<CR>
 
-map <silent> <leader>gs :Gstatus<CR>/not staged<CR>/modified<CR>
-map <leader>gc :Gcommit<CR>
-map <leader>gw :!git add . && git commit -m "WIP"
 
 map <leader>bn :bn<CR>
 map <leader>bp :bp<CR>
@@ -289,9 +308,6 @@ map <leader>mh :wincmd H<CR>
 map <leader>mj :wincmd J<CR>
 map <leader>mk :wincmd K<CR>
 map <leader>ml :wincmd L<CR>
-
-" flip left and right panes
-map <leader>mm :NERDTreeTabsClose<CR>:wincmd l<CR>:wincmd H<CR>:NERDTreeTabsOpen<CR>:wincmd l<CR><C-W>=
 
 " restart pow
 map <leader>rp :!touch tmp/restart.txt<CR><CR>
