@@ -228,7 +228,7 @@ Bundle 'mattn/emmet-vim'
     map <leader>gco :Git checkout
 
     " git diff
-    map <leader>gd :Git diff<CR>
+    map <leader>gd :Gdiff<CR>
 
     " git gui
     map <leader>ggui :Git gui<CR>
