@@ -225,13 +225,13 @@ Bundle 'mattn/emmet-vim'
     map <leader>gci :Git commit -am "
 
     " git checkout
-    map <leader>gco :Git checkout<space>
+    map <leader>gco :Git checkout
 
     " git diff
     map <leader>gd :Git diff<CR>
 
     " git gui
-    map <leader>ggui :!git gui<CR>
+    map <leader>ggui :Git gui<CR>
     map <leader>gw :!git add . && git commit -m "WIP"
 
   " }
@@ -276,8 +276,6 @@ Bundle 'mattn/emmet-vim'
     endif
   " }
 " }
-
-
 
 nmap <leader>bx :!bundle exec<space>
 nmap <leader>zx :!zeus<space>
