@@ -222,10 +222,10 @@ Bundle 'mattn/emmet-vim'
     map <silent> <leader>gs :Gstatus<CR>/not staged<CR>/modified<CR>
 
     " git commit -am "
-    map <leader>gci :!git commit -am "
+    map <leader>gci :Git commit -am "
 
     " git checkout
-    map <leader>gco :!git checkout
+    map <leader>gco :Git checkout
 
     " git gui
     map <leader>ggui :!git gui<CR>
