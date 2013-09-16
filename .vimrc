@@ -52,7 +52,13 @@ Bundle 'mattn/emmet-vim'
   set mouse=a               " automatically enable mouse usage
   scriptencoding utf-8
   set history=1000          " store more history (default is 20)
-  set nospell                 " spell checking off
+  set nospell               " spell checking off
+  set noswapfile            " don't use swapfiles
+
+  " don't create backup files
+  set nobackup
+  set nowritebackup
+
 " }
 
 " Vim UI {
@@ -87,6 +93,14 @@ Bundle 'mattn/emmet-vim'
   " highlight trailing white space
   highlight ExtraWhitespace ctermbg=red guibg=red
   match ExtraWhitespace /\s\+$/
+
+  " switch relative line numbers to absolute when Vim is not in focus
+  :au FocusLost * :set number
+  :au FocusGained * :set relativenumber
+
+  " use absolute numbers when in Insert mode
+  autocmd InsertEnter * :set number
+  autocmd InsertLeave * :set relativenumber
 " }
 
 " Formatting {
@@ -149,34 +163,45 @@ Bundle 'mattn/emmet-vim'
   inoremap <A-K> <Esc>:m .-2<CR>==gi
   vnoremap <A-J> :m '>+1<CR>gv=gv
   vnoremap <A-K> :m '<-2<CR>gv=gv
+" }
 
-  " Fix home and end keybindings for screen, particularly on mac
-  " - for some reason this fixes the arrow keys too. huh.
-  map [F $
-  imap [F $
-  map [H g0
-  imap [H g0
+" Plugins {
+
+  " ctrlP {
+    let g:ctrlp_max_height = 25
+    let g:ctrlp_show_hidden = 1
+  " }
+
+  " delimitMate {
+    let delimitMate_expand_cr = 1
+    let delimitMate_expand_space = 1
+  " }
+
+  " NERDTree {
+    let g:nerdtree_tabs_open_on_console_startup = 1
+    let NERDTreeShowHidden=1
+  " }
+
+  " Syntastic {
+    let g:syntastic_check_on_open=1
+  " }
+
+  " Powerline {
+    let g:Powerline_symbols = 'fancy'
+  " }
+
+  " Tabularize {
+    if exists(":Tabularize")
+      nmap <Leader>a= :Tabularize /=<CR>
+      vmap <Leader>a= :Tabularize /=<CR>
+      nmap <Leader>a: :Tabularize /:\zs<CR>
+      vmap <Leader>a: :Tabularize /:\zs<CR>
+    endif
+  " }
 " }
 
 " check for external file changes
 autocmd CursorHold,CursorMoved,BufEnter * checktime
-
-let g:Powerline_symbols = 'fancy'
-let delimitMate_expand_cr = 1
-let delimitMate_expand_space = 1
-let g:nerdtree_tabs_open_on_console_startup = 1
-let NERDTreeShowHidden=1
-let g:ctrlp_max_height = 25
-let g:ctrlp_show_hidden = 1
-let g:syntastic_check_on_open=1
-
-if exists(":Tabularize")
-  nmap <Leader>a= :Tabularize /=<CR>
-  vmap <Leader>a= :Tabularize /=<CR>
-  nmap <Leader>a: :Tabularize /:\zs<CR>
-  vmap <Leader>a: :Tabularize /:\zs<CR>
-endif
-
 
 if has('mouse_sgr')
   set ttymouse=sgr
@@ -185,10 +210,6 @@ endif
 let &t_SI = "\<Esc>]50;CursorShape=1\x7"
 let &t_EI = "\<Esc>]50;CursorShape=0\x7"
 
-set noswapfile
-set nobackup
-set nowritebackup
-" set clipboard=unnamed
 
 " (Hopefully) removes the delay when hitting esc in insert mode
 set noesckeys
@@ -201,13 +222,6 @@ set showcmd
 set wildmenu
 set wildmode=longest,list
 
-" switch relative line numbers to absolute when Vim is not in focus
-:au FocusLost * :set number
-:au FocusGained * :set relativenumber
-
-" use absolute numbers when in Insert mode
-autocmd InsertEnter * :set number
-autocmd InsertLeave * :set relativenumber
 
 let mapleader=","
 inoremap <c-s> <c-c>:w<CR>
