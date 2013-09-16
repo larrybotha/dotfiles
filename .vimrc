@@ -59,6 +59,10 @@ Bundle 'mattn/emmet-vim'
   set nobackup
   set nowritebackup
 
+  " remove the delay when hitting esc in insert mode
+  set noesckeys
+  set ttimeout
+  set ttimeoutlen=1
 " }
 
 " Vim UI {
@@ -101,6 +105,17 @@ Bundle 'mattn/emmet-vim'
   " use absolute numbers when in Insert mode
   autocmd InsertEnter * :set number
   autocmd InsertLeave * :set relativenumber
+
+  " show timeout on leader
+  set showcmd
+
+  " show wildmenu when pressing <Tab> to autocomplete command line hints
+  set wildmenu
+  set wildmode=longest,list
+
+  " change cursor to caret when in insert mode, block in other modes
+  let &t_SI = "\<Esc>]50;CursorShape=1\x7"
+  let &t_EI = "\<Esc>]50;CursorShape=0\x7"
 " }
 
 " Formatting {
@@ -163,6 +178,13 @@ Bundle 'mattn/emmet-vim'
   inoremap <A-K> <Esc>:m .-2<CR>==gi
   vnoremap <A-J> :m '>+1<CR>gv=gv
   vnoremap <A-K> :m '<-2<CR>gv=gv
+
+  " Emacs-like beginning and end of line
+  imap <c-e> <c-o>$
+  imap <c-a> <c-o>^
+
+  " paste, fix indentation and clear the mark by default
+  nnoremap p p=`]`<esc>
 " }
 
 " Plugins {
@@ -207,34 +229,14 @@ if has('mouse_sgr')
   set ttymouse=sgr
 endif
 
-let &t_SI = "\<Esc>]50;CursorShape=1\x7"
-let &t_EI = "\<Esc>]50;CursorShape=0\x7"
-
-
-" (Hopefully) removes the delay when hitting esc in insert mode
-set noesckeys
-set ttimeout
-set ttimeoutlen=1
-
-" show timeout on leader
-set showcmd
-
-set wildmenu
-set wildmode=longest,list
-
 
 let mapleader=","
-inoremap <c-s> <c-c>:w<CR>
-map <c-s> <c-c>:w<CR>
-
-
 
 map <leader>n :NERDTreeTabsToggle<CR>
 map <leader>ff :NERDTreeFind<CR>
 
 " paste, fix indentation and clear the mark by default
 nnoremap p p=`]`<esc>
-
 
 " clear trailing white space across file
 nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
@@ -265,10 +267,6 @@ map <leader>tp :tabp<CR>
 map <leader>tn :tabn<CR>
 
 map <leader>= <C-w>=
-
-" Emacs-like beginning and end of line.
-imap <c-e> <c-o>$
-imap <c-a> <c-o>^
 
 map <leader>tt :Tabularize /=<CR>
 
@@ -301,9 +299,6 @@ map <leader>rp :!touch tmp/restart.txt<CR><CR>
 " select the current method in ruby (or it block in rspec)
 map <leader>sm /end<CR>?\<def\>\\|\<it\><CR>:noh<CR>V%
 map <leader>sf :e spec/factories/
-
-
-
 
 " deprecated? must check new docs.
 autocmd User Rails Rnavcommand presenter app/presenters -glob=**/* -suffix=.rb
