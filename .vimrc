@@ -149,6 +149,13 @@ Bundle 'mattn/emmet-vim'
   inoremap <A-K> <Esc>:m .-2<CR>==gi
   vnoremap <A-J> :m '>+1<CR>gv=gv
   vnoremap <A-K> :m '<-2<CR>gv=gv
+
+  " Fix home and end keybindings for screen, particularly on mac
+  " - for some reason this fixes the arrow keys too. huh.
+  map [F $
+  imap [F $
+  map [H g0
+  imap [H g0
 " }
 
 " check for external file changes
