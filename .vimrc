@@ -176,6 +176,10 @@
   " clear highlighted searches
   nmap <silent> <leader>/ :nohlsearch<CR>
 
+  " use enter in normal mode to create lines above and below the cursor
+  noremap <S-ENTER> O<ESC>j
+  noremap <ENTER> o<ESC>k
+
   " visual shifting without exiting visual mode
   vnoremap < <gv
   vnoremap > >gv
@@ -353,7 +357,7 @@ if has("autocmd")
   autocmd FileType slim setlocal textwidth=0
 
   " Delete trailing shite space on save
-  " autocmd BufWritePre * :%s/\s\+$//e
+  autocm BufWritePre * :%s/\s\+$//e
 
   " When editing a file, always jump to the last known cursor position.
   " Don't do it when the position is invalid or when inside an event handler
