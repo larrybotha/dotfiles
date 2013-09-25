@@ -352,7 +352,8 @@ if has("autocmd")
   " Never wrap slim files
   autocmd FileType slim setlocal textwidth=0
 
-  autocmd BufWritePre * :%s/\s\+$//e
+  " Delete trailing shite space on save
+  " autocmd BufWritePre * :%s/\s\+$//e
 
   " When editing a file, always jump to the last known cursor position.
   " Don't do it when the position is invalid or when inside an event handler
