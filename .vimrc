@@ -205,6 +205,12 @@
 
 " Plugins {
 
+  " Vundle {
+
+    map <leader>vbi :BundleInstall<CR>
+    map <leader>vbu :BundleUpdate<CR>
+  " }
+
   " ctrlP {
     let g:ctrlp_max_height = 25
     let g:ctrlp_show_hidden = 1
@@ -283,8 +289,6 @@
 
 nmap <leader>bx :!bundle exec<space>
 nmap <leader>zx :!zeus<space>
-map <leader>vbi :BundleInstall<CR>
-map <leader>vbu :BundleUpdate<CR>
 
 map <leader>bi :!bundle<CR>
 map <leader>bu :!bundle update<space>
