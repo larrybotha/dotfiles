@@ -181,12 +181,12 @@
   vnoremap > >gv
 
   " quickly move lines up and down
-  nnoremap <A-J> :m .+1<CR>==
-  nnoremap <A-K> :m .-2<CR>==
-  inoremap <A-J> <Esc>:m .+1<CR>==gi
-  inoremap <A-K> <Esc>:m .-2<CR>==gi
-  vnoremap <A-J> :m '>+1<CR>gv=gv
-  vnoremap <A-K> :m '<-2<CR>gv=gv
+  nnoremap <C-S-J> :m .+1<CR>==
+  nnoremap <C-S-K> :m .-2<CR>==
+  inoremap <C-S-J> <Esc>:m .+1<CR>==gi
+  inoremap <C-S-K> <Esc>:m .-2<CR>==gi
+  vnoremap <C-S-J> :m '>+1<CR>gv=gv
+  vnoremap <C-S-K> :m '<-2<CR>gv=gv
 
   " Emacs-like beginning and end of line
   imap <c-e> <c-o>$
