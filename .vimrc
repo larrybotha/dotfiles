@@ -148,7 +148,7 @@
   nmap j gj
 
   " map common shift keys
-  cmap Q q " Bind :Q to :q
+  cmap Q q
   cmap Qall qall
   cmap W w
   cmap Wa wall
