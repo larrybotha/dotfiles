@@ -220,6 +220,38 @@
 
 " }
 
+" Auto Commands {
+
+  if has("autocmd")
+    " Also load indent files, to automatically do language-dependent indenting.
+
+    " Put these in an autocmd group, so that we can delete them easily.
+    augroup vimrcEx
+    au!
+
+    " For all text files set 'textwidth' to 78 characters.
+    autocmd FileType text setlocal textwidth=78
+
+    " Never wrap slim files
+    autocmd FileType slim setlocal textwidth=0
+
+    " Delete trailing shite space on save
+    autocm BufWritePre * :%s/\s\+$//e
+
+    " When editing a file, always jump to the last known cursor position.
+    " Don't do it when the position is invalid or when inside an event handler
+    " (happens when dropping a file on gvim).
+    autocmd BufReadPost *
+      \ if line("'\"") > 0 && line("'\"") <= line("$") |
+      \   exe "normal g`\"" |
+      \ endif
+
+    augroup END
+
+  endif " has("autocmd")
+
+" }
+
 " Plugins {
 
   " Vundle {
@@ -307,131 +339,104 @@
   " }
 " }
 
+" Rails Testing {
 
+  map <leader>rt :call RunCurrentTest()<CR>
+  map <leader>rl :call RunCurrentLineInTest()<CR>
+  map <leader>rrt :call RunCurrentTestNoZeus()<CR>
+  map <leader>rrl :call RunCurrentLineInTestNoZeus()<CR>
 
-map <leader>rt :call RunCurrentTest()<CR>
-map <leader>rl :call RunCurrentLineInTest()<CR>
-map <leader>rrt :call RunCurrentTestNoZeus()<CR>
-map <leader>rrl :call RunCurrentLineInTestNoZeus()<CR>
+  map <leader>sm :RSmodel<space>
+  map <leader>vc :RVcontroller<CR>
+  map <leader>vm :RVmodel<space>
+  map <leader>vv :RVview<CR>
+  map <leader>zv :Rview<CR>
+  map <leader>zc :Rcontroller<CR>
+  map <leader>zm :Rmodel<space>
 
-map <leader>sm :RSmodel<space>
-map <leader>vc :RVcontroller<CR>
-map <leader>vm :RVmodel<space>
-map <leader>vv :RVview<CR>
-map <leader>zv :Rview<CR>
-map <leader>zc :Rcontroller<CR>
-map <leader>zm :Rmodel<space>
+  " pane management
+  map <leader>mh :wincmd H<CR>
+  map <leader>mj :wincmd J<CR>
+  map <leader>mk :wincmd K<CR>
+  map <leader>ml :wincmd L<CR>
 
-" pane management
-map <leader>mh :wincmd H<CR>
-map <leader>mj :wincmd J<CR>
-map <leader>mk :wincmd K<CR>
-map <leader>ml :wincmd L<CR>
+  " select the current method in ruby (or it block in rspec)
+  map <leader>sm /end<CR>?\<def\>\\|\<it\><CR>:noh<CR>V%
+  map <leader>sf :e spec/factories/
 
-" select the current method in ruby (or it block in rspec)
-map <leader>sm /end<CR>?\<def\>\\|\<it\><CR>:noh<CR>V%
-map <leader>sf :e spec/factories/
+  " deprecated? must check new docs.
+  autocmd User Rails Rnavcommand presenter app/presenters -glob=**/* -suffix=.rb
 
-" deprecated? must check new docs.
-autocmd User Rails Rnavcommand presenter app/presenters -glob=**/* -suffix=.rb
+  " Set up some useful Rails.vim bindings for working with Backbone.js
+  autocmd User Rails Rnavcommand template    app/assets/templates               -glob=**/*  -suffix=.jst.ejs
+  autocmd User Rails Rnavcommand jmodel      app/assets/javascripts/models      -glob=**/*  -suffix=.coffee
+  autocmd User Rails Rnavcommand jview       app/assets/javascripts/views       -glob=**/*  -suffix=.coffee
+  autocmd User Rails Rnavcommand jcollection app/assets/javascripts/collections -glob=**/*  -suffix=.coffee
+  autocmd User Rails Rnavcommand jrouter     app/assets/javascripts/routers     -glob=**/*  -suffix=.coffee
+  autocmd User Rails Rnavcommand jspec       spec/javascripts                   -glob=**/*  -suffix=.coffee
 
-" Set up some useful Rails.vim bindings for working with Backbone.js
-autocmd User Rails Rnavcommand template    app/assets/templates               -glob=**/*  -suffix=.jst.ejs
-autocmd User Rails Rnavcommand jmodel      app/assets/javascripts/models      -glob=**/*  -suffix=.coffee
-autocmd User Rails Rnavcommand jview       app/assets/javascripts/views       -glob=**/*  -suffix=.coffee
-autocmd User Rails Rnavcommand jcollection app/assets/javascripts/collections -glob=**/*  -suffix=.coffee
-autocmd User Rails Rnavcommand jrouter     app/assets/javascripts/routers     -glob=**/*  -suffix=.coffee
-autocmd User Rails Rnavcommand jspec       spec/javascripts                   -glob=**/*  -suffix=.coffee
+  " thanks to @r00k
+  function! RunCurrentTest()
+    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
+    if in_test_file
+      call SetTestFile()
 
-
-if has("autocmd")
-  " Also load indent files, to automatically do language-dependent indenting.
-
-  " Put these in an autocmd group, so that we can delete them easily.
-  augroup vimrcEx
-  au!
-
-  " For all text files set 'textwidth' to 78 characters.
-  autocmd FileType text setlocal textwidth=78
-
-  " Never wrap slim files
-  autocmd FileType slim setlocal textwidth=0
-
-  " Delete trailing shite space on save
-  autocm BufWritePre * :%s/\s\+$//e
-
-  " When editing a file, always jump to the last known cursor position.
-  " Don't do it when the position is invalid or when inside an event handler
-  " (happens when dropping a file on gvim).
-  autocmd BufReadPost *
-    \ if line("'\"") > 0 && line("'\"") <= line("$") |
-    \   exe "normal g`\"" |
-    \ endif
-
-  augroup END
-
-endif " has("autocmd")
-
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-" Test-running stuff, thanks @r00k!
-""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""""
-function! RunCurrentTest()
-  let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-  if in_test_file
-    call SetTestFile()
-
-    if match(expand('%'), '\.feature$') != -1
-      call SetTestRunner("!zeus cucumber")
-      exec g:bjo_test_runner g:bjo_test_file
-    elseif match(expand('%'), '_spec\.rb$') != -1
-      call SetTestRunner("!zeus rspec")
-      exec g:bjo_test_runner g:bjo_test_file
+      if match(expand('%'), '\.feature$') != -1
+        call SetTestRunner("!zeus cucumber")
+        exec g:bjo_test_runner g:bjo_test_file
+      elseif match(expand('%'), '_spec\.rb$') != -1
+        call SetTestRunner("!zeus rspec")
+        exec g:bjo_test_runner g:bjo_test_file
+      else
+        call SetTestRunner("!ruby -Itest")
+        exec g:bjo_test_runner g:bjo_test_file
+      endif
     else
-      call SetTestRunner("!ruby -Itest")
       exec g:bjo_test_runner g:bjo_test_file
     endif
-  else
-    exec g:bjo_test_runner g:bjo_test_file
-  endif
-endfunction
+  endfunction
 
-function! RunCurrentTestNoZeus()
-  let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
+  function! RunCurrentTestNoZeus()
+    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
 
-  if in_test_file
-    call SetTestFile()
-  endif
+    if in_test_file
+      call SetTestFile()
+    endif
 
-  exec "!rspec" g:bjo_test_file
-endfunction
+    exec "!rspec" g:bjo_test_file
+  endfunction
 
-function! RunCurrentLineInTestNoZeus()
-  let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-  if in_test_file
-    call SetTestFileWithLine()
-  end
+  function! RunCurrentLineInTestNoZeus()
+    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
+    if in_test_file
+      call SetTestFileWithLine()
+    end
 
-  exec "!rspec" g:bjo_test_file . ":" . g:bjo_test_file_line
-endfunction
+    exec "!rspec" g:bjo_test_file . ":" . g:bjo_test_file_line
+  endfunction
 
-function! SetTestRunner(runner)
-  let g:bjo_test_runner=a:runner
-endfunction
+  function! SetTestRunner(runner)
+    let g:bjo_test_runner=a:runner
+  endfunction
 
-function! RunCurrentLineInTest()
-  let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-  if in_test_file
-    call SetTestFileWithLine()
-  end
+  function! RunCurrentLineInTest()
+    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
+    if in_test_file
+      call SetTestFileWithLine()
+    end
 
-  exec "!zeus rspec" g:bjo_test_file . ":" . g:bjo_test_file_line
-endfunction
+    exec "!zeus rspec" g:bjo_test_file . ":" . g:bjo_test_file_line
+  endfunction
 
-function! SetTestFile()
-  let g:bjo_test_file=@%
-endfunction
+  function! SetTestFile()
+    let g:bjo_test_file=@%
+  endfunction
 
-function! SetTestFileWithLine()
-  let g:bjo_test_file=@%
-  let g:bjo_test_file_line=line(".")
-endfunction
+  function! SetTestFileWithLine()
+    let g:bjo_test_file=@%
+    let g:bjo_test_file_line=line(".")
+  endfunction
+" }
+
+
+
