@@ -95,6 +95,7 @@
   set smartcase                                   " case sensitive when uc present
   set wildmenu                                    " show list instead of just completing
   set wildmode=list:longest,full                  " command <Tab> completion, list matches, then longest common part, then all.
+  set nowrap                                      " don't wrap lines
   set scrolljump=5                                " lines to scroll when cursor leaves screen
   set scrolloff=5                                 " minimum lines to keep above and below cursor
   noh                                             " clear the initial highlight after sourcing
@@ -116,10 +117,6 @@
 
   " show timeout on leader
   set showcmd
-
-  " show wildmenu when pressing <Tab> to autocomplete command line hints
-  set wildmenu
-  set wildmode=longest,list
 
   " change cursor to caret when in insert mode, block in other modes
   let &t_SI = "\<Esc>]50;CursorShape=1\x7"
@@ -218,6 +215,9 @@
   map <leader>bi :!bundle<CR>
   map <leader>bu :!bundle update<space>
 
+  " restart pow
+  map <leader>rp :!touch tmp/restart.txt<CR><CR>
+
 " }
 
 " Plugins {
@@ -308,8 +308,6 @@
 " }
 
 
-" restart pow
-map <leader>rp :!touch tmp/restart.txt<CR><CR>
 
 map <leader>rt :call RunCurrentTest()<CR>
 map <leader>rl :call RunCurrentLineInTest()<CR>
