@@ -209,6 +209,15 @@
   map <leader>vi :tabe ~/dotfiles/.vimrc<CR>
   map <leader>vs :source ~/.vimrc<CR>
 
+  " set all windows to equal width
+  map <leader>= <C-w>=
+
+  " Ruby conveniences
+  nmap <leader>bx :!bundle exec<space>
+  nmap <leader>zx :!zeus<space>
+  map <leader>bi :!bundle<CR>
+  map <leader>bu :!bundle update<space>
+
 " }
 
 " Plugins {
@@ -298,13 +307,9 @@
   " }
 " }
 
-nmap <leader>bx :!bundle exec<space>
-nmap <leader>zx :!zeus<space>
 
-map <leader>bi :!bundle<CR>
-map <leader>bu :!bundle update<space>
-
-map <leader>= <C-w>=
+" restart pow
+map <leader>rp :!touch tmp/restart.txt<CR><CR>
 
 map <leader>rt :call RunCurrentTest()<CR>
 map <leader>rl :call RunCurrentLineInTest()<CR>
@@ -324,9 +329,6 @@ map <leader>mh :wincmd H<CR>
 map <leader>mj :wincmd J<CR>
 map <leader>mk :wincmd K<CR>
 map <leader>ml :wincmd L<CR>
-
-" restart pow
-map <leader>rp :!touch tmp/restart.txt<CR><CR>
 
 " select the current method in ruby (or it block in rspec)
 map <leader>sm /end<CR>?\<def\>\\|\<it\><CR>:noh<CR>V%
