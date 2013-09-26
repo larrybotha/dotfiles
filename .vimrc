@@ -95,7 +95,6 @@
   set smartcase                                   " case sensitive when uc present
   set wildmenu                                    " show list instead of just completing
   set wildmode=list:longest,full                  " command <Tab> completion, list matches, then longest common part, then all.
-  set whichwrap=b,s,h,l,<,>,[,]                   " backspace and cursor keys wrap to
   set scrolljump=5                                " lines to scroll when cursor leaves screen
   set scrolloff=5                                 " minimum lines to keep above and below cursor
   noh                                             " clear the initial highlight after sourcing
@@ -201,6 +200,15 @@
 
   " clear trailing white space across file
   nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
+
+  " quickly move to next and previous buffers
+  map <leader>bn :bn<CR>
+  map <leader>bp :bp<CR>
+
+  " quick access to this .vimrc
+  map <leader>vi :tabe ~/dotfiles/.vimrc<CR>
+  map <leader>vs :source ~/.vimrc<CR>
+
 " }
 
 " Plugins {
@@ -296,20 +304,7 @@ nmap <leader>zx :!zeus<space>
 map <leader>bi :!bundle<CR>
 map <leader>bu :!bundle update<space>
 
-map <leader>vi :tabe ~/dotfiles/.vimrc<CR>
-map <leader>td :tabe ~/Dropbox/todo.txt<CR>
-map <leader>tb :tabe ~/Dropbox/blog.txt<CR>
-map <leader>vs :source ~/.vimrc<CR>
-
-
-map <leader>bn :bn<CR>
-map <leader>bp :bp<CR>
-
-map <leader>tp :tabp<CR>
-map <leader>tn :tabn<CR>
-
 map <leader>= <C-w>=
-
 
 map <leader>rt :call RunCurrentTest()<CR>
 map <leader>rl :call RunCurrentLineInTest()<CR>
