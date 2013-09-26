@@ -437,6 +437,3 @@
     let g:bjo_test_file_line=line(".")
   endfunction
 " }
-
-
-
