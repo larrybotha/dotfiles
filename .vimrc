@@ -206,7 +206,7 @@
 " Plugins {
 
   " Vundle {
-
+    " Update / Install bundles
     map <leader>vbi :BundleInstall<CR>
     map <leader>vbu :BundleUpdate<CR>
   " }
@@ -268,8 +268,11 @@
 
   " Tabularize {
     if exists(":Tabularize")
+      " align equal signs in normal and visual mode
       nmap <Leader>a= :Tabularize /=<CR>
       vmap <Leader>a= :Tabularize /=<CR>
+
+      " align colons in normal and visual mode
       nmap <Leader>a: :Tabularize /:\zs<CR>
       vmap <Leader>a: :Tabularize /:\zs<CR>
     endif
@@ -307,7 +310,6 @@ map <leader>tn :tabn<CR>
 
 map <leader>= <C-w>=
 
-map <leader>tt :Tabularize /=<CR>
 
 map <leader>rt :call RunCurrentTest()<CR>
 map <leader>rl :call RunCurrentLineInTest()<CR>
