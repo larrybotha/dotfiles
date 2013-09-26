@@ -72,7 +72,6 @@ installcask firefox
 installcask imagealpha
 installcask imageoptim
 installcask integrity
-installcask inkscape
 installcask iterm2
 installcask macvim
 installcask miro-video-converter
