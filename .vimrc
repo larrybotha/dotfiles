@@ -172,10 +172,6 @@
   " clear highlighted searches
   nmap <silent> <leader>/ :nohlsearch<CR>
 
-  " use enter in normal mode to create lines above and below the cursor
-  noremap <S-ENTER> O<ESC>j
-  noremap <ENTER> o<ESC>k
-
   " visual shifting without exiting visual mode
   vnoremap < <gv
   vnoremap > >gv
