@@ -124,7 +124,6 @@
 " }
 
 " Formatting {
-  set wrap                                                   " wrap long lines
   set autoindent                                             " indent at the same level of the previous line
   set shiftwidth=2                                           " use indents of 2 spaces
   set expandtab                                              " expand tabs to spaces
