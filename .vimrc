@@ -225,12 +225,12 @@
     au!
 
     " For all text files set 'textwidth' to 78 characters.
-    autocmd FileType text setlocal textwidth=78
+    autocmd BufRead *.txt,*.md,*.textile set textwidth=80
 
     " Never wrap slim files
     autocmd FileType slim setlocal textwidth=0
 
-    " Delete trailing shite space on save
+    " Delete trailing white space on save
     autocm BufWritePre * :%s/\s\+$//e
 
     " When editing a file, always jump to the last known cursor position.
