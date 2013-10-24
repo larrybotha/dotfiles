@@ -85,6 +85,7 @@ installcask opera-next
 installcask pc-keyboardhack
 installcask sublime-text
 installcask the-unarchiver
+installcask thunderbird
 installcask tor-browser
 installcask transmission
 installcask virtualbox
