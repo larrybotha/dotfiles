@@ -26,8 +26,8 @@ complete -o default -o nospace -F _git g
 complete -o default -o nospace -F _git_checkout co
 
 
-# init rvm
-source ~/.rvm/scripts/rvm
+# init rbenv
+eval "$(rbenv init -)"
 
 # Case-insensitive globbing (used in pathname expansion)
 shopt -s nocaseglob
