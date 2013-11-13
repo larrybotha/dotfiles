@@ -68,6 +68,7 @@ function installcask() {
 }
 
 installcask alfred
+installcask asepsis
 installcask dropbox
 installcask google-app-engine-launcher
 installcask google-chrome
