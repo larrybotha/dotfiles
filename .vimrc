@@ -332,6 +332,17 @@
       let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
     endif
   " }
+
+  " Emmet {
+  let g:user_emmet_settings = {
+    \  'php' : {
+    \    'extends' : 'html',
+    \    'filters' : 'html,c',
+    \    'dollar_expr': 0,
+    \  },
+    \},
+  " }
+
 " }
 
 " Rails Testing {
