@@ -335,12 +335,13 @@
 
   " Emmet {
   let g:user_emmet_settings = {
-    \  'php' : {
-    \    'extends' : 'html',
-    \    'filters' : 'html,c',
-    \    'dollar_expr': 0,
-    \  },
-    \},
+  \  'indentation' : '  ',
+  \  'php' : {
+  \    'extends' : 'html',
+  \    'filters' : 'html,c',
+  \    'dollar_expr': 0,
+  \  },
+  \},
   " }
 
 " }
