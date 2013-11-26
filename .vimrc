@@ -335,6 +335,7 @@
 
   " Emmet {
   let g:user_emmet_settings = {
+  \  'indentation': '  ',
   \  'php' : {
   \    'extends' : 'html',
   \    'filters' : 'html,c',
