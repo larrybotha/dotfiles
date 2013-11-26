@@ -340,7 +340,7 @@
   \    'filters' : 'html,c',
   \    'dollar_expr': 0,
   \  },
-  \},
+  \}
   " }
 
 " }
