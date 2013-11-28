@@ -64,9 +64,9 @@
   set ttimeout
   set ttimeoutlen=1
 
-  " check for external file changes
+  " check for external file changes, and suppress notices from appearing in command line
   if has("autocmd")
-    autocmd CursorHold,CursorMoved,BufEnter * checktime
+    autocmd CursorHold,CursorMoved,BufEnter silent * checktime
   endif
 
   if has('mouse_sgr')
