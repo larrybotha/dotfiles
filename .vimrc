@@ -127,7 +127,7 @@
 " Formatting {
   set autoindent                                             " indent at the same level of the previous line
   set shiftwidth=2                                           " use indents of 2 spaces
-  set expandtab                                              " expand tabs to spaces
+  set noexpandtab                                            " don't expand tabs to spaces
   set tabstop=2                                              " indent every 2 columns
   set softtabstop=2                                          " let backspace delete indent
   autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 et " set above values when opening new files
