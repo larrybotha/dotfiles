@@ -39,6 +39,7 @@ brew install rbenv ruby-build
 # Install other useful binaries
 brew install ack
 brew install ctags
+brew install editorconfig
 #brew install exiv2
 brew install git
 brew install lynx

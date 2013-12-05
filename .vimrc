@@ -44,6 +44,7 @@
   Bundle 'jwhitley/vim-matchit'
   Bundle 'joonty/vdebug.git'
   Bundle 'mattn/emmet-vim'
+  Bundle 'editorconfig/editorconfig-vim'
 "}
 
 " General {
