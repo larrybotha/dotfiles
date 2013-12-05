@@ -130,7 +130,7 @@
   set noexpandtab                                            " don't expand tabs to spaces
   set tabstop=2                                              " indent every 2 columns
   set softtabstop=2                                          " let backspace delete indent
-  autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 et " set above values when opening new files
+  autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2    " set above values when opening new files
 " }
 
 " Key Mappings {
