@@ -32,18 +32,25 @@ brew install php54
 #brew install homebrew/dupes/vim
 #brew install homebrew/dupes/screen
 
+# Install rbenv for Ruby version management
+# eval "$(rbenv init -)" is already added in .bash_profile
+brew install rbenv ruby-build
+
 # Install other useful binaries
 brew install ack
+brew install ctags
+brew install editorconfig
 #brew install exiv2
 brew install git
-#brew install imagemagick
 brew install lynx
 brew install node
 brew install pigz
 brew install rename
 brew install rhino
+brew install the_silver_searcher
 brew install tree
 brew install webkit2png
+brew install vim
 brew install zopfli
 
 brew tap homebrew/versions
@@ -62,23 +69,28 @@ function installcask() {
 }
 
 installcask alfred
+installcask asepsis
 installcask dropbox
+installcask google-app-engine-launcher
 installcask google-chrome
 installcask google-chrome-canary
+installcask filezilla
 installcask firefox
 installcask imagealpha
 installcask imageoptim
 installcask integrity
-installcask inkscape
 installcask iterm2
-installcask macvim
 installcask miro-video-converter
 installcask moom
 installcask opera
+installcask opera-next
+installcask pc-keyboardhack
 installcask sublime-text
 installcask the-unarchiver
+installcask thunderbird
 installcask tor-browser
 installcask transmission
+installcask virtualbox
 installcask vlc
 installcask xscope
 
