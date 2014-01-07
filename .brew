@@ -84,7 +84,8 @@ installcask miro-video-converter
 installcask moom
 installcask opera
 installcask opera-next
-installcask pc-keyboardhack
+installcask pckeyboardhack
+installcask sourcetree
 installcask sublime-text
 installcask the-unarchiver
 installcask thunderbird
