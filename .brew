@@ -73,7 +73,6 @@ installcask asepsis
 installcask dropbox
 installcask google-app-engine-launcher
 installcask google-chrome
-installcask google-chrome-canary
 installcask filezilla
 installcask firefox
 installcask imagealpha
