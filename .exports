@@ -1,5 +1,5 @@
 # Make sublime text the default editor
-export EDITOR="subl -w"
+# export EDITOR="subl -w"
 
 # Larger bash history (allow 32³ entries; default is 500)
 export HISTSIZE=32768

@@ -27,7 +27,6 @@ brew tap homebrew/dupes
 brew install homebrew/dupes/grep
 brew tap josegonzalez/homebrew-php
 brew install php54 --with-apache --with-mysql
-brew install phpmyadmin
 
 # Install rbenv for Ruby version management
 # eval "$(rbenv init -)" is already added in .bash_profile
@@ -35,15 +34,21 @@ brew install rbenv ruby-build
 
 # Install other useful binaries
 brew install ack
+brew install codeception
+brew install composer
 brew install ctags
 brew install editorconfig
-#brew install exiv2
 brew install git
 brew install lynx
+brew install mysql
+brew install nginx
 brew install node
+brew install phpmyadmin
 brew install pigz
+brew install postgresql
 brew install rename
 brew install rhino
+brew install sequel-pro
 brew install the_silver_searcher
 brew install tree
 brew install webkit2png
