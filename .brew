@@ -26,11 +26,8 @@ brew install narwhal
 brew tap homebrew/dupes
 brew install homebrew/dupes/grep
 brew tap josegonzalez/homebrew-php
-brew install php54
-
-# These two formulae didn’t work well last time I tried them:
-#brew install homebrew/dupes/vim
-#brew install homebrew/dupes/screen
+brew install php54 --with-apache --with-mysql
+brew install phpmyadmin
 
 # Install rbenv for Ruby version management
 # eval "$(rbenv init -)" is already added in .bash_profile
@@ -73,7 +70,6 @@ installcask asepsis
 installcask dropbox
 installcask google-app-engine-launcher
 installcask google-chrome
-installcask google-chrome-canary
 installcask filezilla
 installcask firefox
 installcask imagealpha
@@ -82,9 +78,9 @@ installcask integrity
 installcask iterm2
 installcask miro-video-converter
 installcask moom
-installcask opera
 installcask opera-next
-installcask pc-keyboardhack
+installcask pckeyboardhack
+installcask sourcetree
 installcask sublime-text
 installcask the-unarchiver
 installcask thunderbird
