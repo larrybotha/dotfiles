@@ -1,0 +1,10 @@
+# PATH
+PATH=/opt/local/bin:/opt/local/sbin:$PATH
+
+PATH=$PATH:/usr/local/sbin
+PATH=$PATH:/usr/local/git/libexec/git-core
+PATH=$PATH:/usr/local/Cellar/mysql/5.5.27/bin
+
+# ...
+
+export PATH

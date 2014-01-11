@@ -6,15 +6,3 @@ git config --global user.name "$GIT_AUTHOR_NAME"
 GIT_AUTHOR_EMAIL="larry@fixate.it"
 GIT_COMMITTER_EMAIL="$GIT_AUTHOR_EMAIL"
 git config --global user.email "$GIT_AUTHOR_EMAIL"
-
-
-# PATH
-PATH=/opt/local/bin:/opt/local/sbin:$PATH
-
-PATH=$PATH:/usr/local/sbin
-PATH=$PATH:/usr/local/git/libexec/git-core
-PATH=$PATH:/usr/local/Cellar/mysql/5.5.27/bin
-
-# ...
-
-export PATH
