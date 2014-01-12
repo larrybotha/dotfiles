@@ -53,7 +53,6 @@ brew install the_silver_searcher
 brew install tree
 brew install webkit2png
 brew install vim
-brew install vimgolf
 brew install zopfli
 
 brew tap homebrew/versions
