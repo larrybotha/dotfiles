@@ -39,6 +39,8 @@ brew install composer
 brew install ctags
 brew install editorconfig
 brew install git
+brew install git-flow
+brew install hub
 brew install lynx
 brew install mysql
 brew install nginx
@@ -86,6 +88,7 @@ installcask miro-video-converter
 installcask moom
 installcask opera-next
 installcask pckeyboardhack
+installcask smoothmouse
 installcask sourcetree
 installcask sublime-text
 installcask the-unarchiver
