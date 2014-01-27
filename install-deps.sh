@@ -42,11 +42,6 @@ chmod -X ~/code/git-completion/git-completion.bash
 # git-completion binary is already referenced from .bash_profile
 
 
-# https://github.com/dronir/SpotifyControl
-# Spotify Control Script
-cd ~/code
-git clone git://github.com/dronir/SpotifyControl.git
-
 # https://github.com/jeroenbegyn/VLCControl
 # VLC Controll Script
 cd ~/code
