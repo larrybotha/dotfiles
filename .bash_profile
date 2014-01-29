@@ -60,3 +60,6 @@ which grunt &> /dev/null && eval "$(grunt --completion=bash)"
 
 # If possible, add tab completion for many more commands
 [ -f /etc/bash_completion ] && source /etc/bash_completion
+
+# Run nvm.sh if nvm is installed
+[ -f $(brew --prefix nvm)/nvm.sh ] && source $(brew --prefix nvm)/nvm.sh
