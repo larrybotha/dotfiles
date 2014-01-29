@@ -45,6 +45,7 @@ brew install lynx
 brew install mysql
 brew install nginx
 brew install node
+brew install nvm
 brew install phpmyadmin
 brew install pigz
 brew install postgresql
@@ -75,6 +76,7 @@ function installcask() {
 
 installcask alfred
 installcask asepsis
+installcask betterzipql
 installcask dropbox
 installcask google-app-engine-launcher
 installcask google-chrome
@@ -88,6 +90,12 @@ installcask miro-video-converter
 installcask moom
 installcask opera-next
 installcask pckeyboardhack
+installcask quicklook-csv
+installcask quicklook-json
+installcask qlcolorcode
+installcask qlmarkdown
+installcask qlstephen
+installcask screenhero
 installcask smoothmouse
 installcask sourcetree
 installcask sublime-text
