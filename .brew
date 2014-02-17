@@ -41,12 +41,14 @@ brew install editorconfig
 brew install git
 brew install git-flow
 brew install hub
+brew install jasmine
 brew install lynx
 brew install mysql
 brew install nginx
 brew install node
 brew install nvm
 brew install phpmyadmin
+brew install phantomjs
 brew install pigz
 brew install postgresql
 brew install python
