@@ -108,6 +108,7 @@ installcask tor-browser
 installcask transmission
 installcask virtualbox
 installcask vlc
+installcask witch
 installcask xscope
 
 # Remove outdated versions from the cellar
