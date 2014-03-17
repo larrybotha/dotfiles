@@ -80,6 +80,7 @@ function installcask() {
 installcask alfred
 installcask asepsis
 installcask betterzipql
+installcask dash
 installcask dropbox
 installcask google-app-engine-launcher
 installcask google-chrome
