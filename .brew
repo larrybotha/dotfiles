@@ -39,6 +39,7 @@ brew install composer
 brew install ctags
 brew install editorconfig
 brew install git
+brew install git-crypt
 brew install git-flow
 brew install hub
 brew install jasmine
