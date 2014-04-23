@@ -34,6 +34,7 @@ brew install rbenv ruby-build
 
 # Install other useful binaries
 brew install ack
+brew install boot2docker
 brew install codeception
 brew install composer
 brew install ctags
