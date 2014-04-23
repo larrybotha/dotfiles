@@ -37,6 +37,7 @@ brew install ack
 brew install boot2docker
 brew install codeception
 brew install composer
+brew install docker
 brew install ctags
 brew install editorconfig
 brew install git
