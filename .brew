@@ -52,11 +52,13 @@ brew install nginx
 brew install node
 brew install nvm
 brew install phpmyadmin
+brew install phppgadmin
 brew install phantomjs
 brew install pigz
 brew install postgresql
 brew install python
 brew install qt
+brew install redis
 brew install rename
 brew install rhino
 brew install sequel-pro
