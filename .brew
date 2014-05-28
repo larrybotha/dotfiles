@@ -26,7 +26,7 @@ brew install narwhal
 brew tap homebrew/dupes
 brew install homebrew/dupes/grep
 brew tap josegonzalez/homebrew-php
-brew install php54 --with-apache --with-mysql
+brew install php54 --with-fpm --with-apache --with-mysql --with-pgsql
 
 # Install rbenv for Ruby version management
 # eval "$(rbenv init -)" is already added in .bash_profile
