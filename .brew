@@ -40,6 +40,7 @@ brew install composer
 brew install docker
 brew install ctags
 brew install editorconfig
+brew install elasticsearch
 brew install git
 brew install git-crypt
 brew install git-flow
