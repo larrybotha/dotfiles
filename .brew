@@ -26,7 +26,7 @@ brew install narwhal
 brew tap homebrew/dupes
 brew install homebrew/dupes/grep
 brew tap josegonzalez/homebrew-php
-brew install php54 --with-apache --with-mysql
+brew install php54 --with-fpm --with-apache --with-mysql --with-pgsql
 
 # Install rbenv for Ruby version management
 # eval "$(rbenv init -)" is already added in .bash_profile
@@ -34,22 +34,32 @@ brew install rbenv ruby-build
 
 # Install other useful binaries
 brew install ack
+brew install boot2docker
 brew install codeception
 brew install composer
+brew install docker
 brew install ctags
 brew install editorconfig
+brew install elasticsearch
 brew install git
+brew install git-crypt
 brew install git-flow
+brew install go
 brew install hub
+brew install jasmine
 brew install lynx
 brew install mysql
 brew install nginx
 brew install node
 brew install nvm
 brew install phpmyadmin
+brew install phppgadmin
+brew install phantomjs
 brew install pigz
 brew install postgresql
 brew install python
+brew install qt
+brew install redis
 brew install rename
 brew install rhino
 brew install sequel-pro
@@ -78,6 +88,7 @@ function installcask() {
 installcask alfred
 installcask asepsis
 installcask betterzipql
+installcask dash
 installcask dropbox
 installcask google-app-engine-launcher
 installcask google-chrome
@@ -106,6 +117,7 @@ installcask tor-browser
 installcask transmission
 installcask virtualbox
 installcask vlc
+installcask witch
 installcask xscope
 
 # Remove outdated versions from the cellar

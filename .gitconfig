@@ -21,6 +21,12 @@
 	remotes = remote -v
   # Update ctags
   ctags = !.git/hooks/ctags
+	# git flow feature
+	ff = "flow feature"
+	# git flow release
+	fr = "flow release"
+	# git flow hotfix
+	fh = "flow hotfix"
 
 [apply]
 	# Detect whitespace errors when applying a patch
