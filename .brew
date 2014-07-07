@@ -92,6 +92,7 @@ installcask dash
 installcask dropbox
 installcask google-app-engine-launcher
 installcask google-chrome
+installcask hydra
 installcask filezilla
 installcask firefox
 installcask imagealpha
