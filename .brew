@@ -118,6 +118,7 @@ installcask thunderbird
 installcask tor-browser
 installcask transmission
 installcask vagrant
+installcask vagrant-manager
 installcask virtualbox
 installcask vlc
 installcask witch
