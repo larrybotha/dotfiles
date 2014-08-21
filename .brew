@@ -68,7 +68,6 @@ brew install sequel-pro
 brew install the_silver_searcher
 brew install tree
 brew install webkit2png
-brew install vagrant
 brew install vim
 brew install zopfli
 
@@ -118,6 +117,7 @@ installcask the-unarchiver
 installcask thunderbird
 installcask tor-browser
 installcask transmission
+installcask vagrant
 installcask virtualbox
 installcask vlc
 installcask witch
