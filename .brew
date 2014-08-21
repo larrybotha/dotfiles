@@ -109,7 +109,6 @@ installcask quicklook-json
 installcask qlcolorcode
 installcask qlmarkdown
 installcask qlstephen
-installcask screenhero
 installcask smoothmouse
 installcask sourcetree
 installcask sublime-text
