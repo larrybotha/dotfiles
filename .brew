@@ -104,6 +104,7 @@ installcask miro-video-converter
 installcask moom
 installcask opera-next
 installcask pckeyboardhack
+installcask plex-media-server
 installcask quicklook-csv
 installcask quicklook-json
 installcask qlcolorcode
