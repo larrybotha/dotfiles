@@ -34,6 +34,7 @@ brew install rbenv ruby-build
 
 # Install other useful binaries
 brew install ack
+brew install ansible
 brew install boot2docker
 brew install codeception
 brew install composer
@@ -46,6 +47,7 @@ brew install git-crypt
 brew install git-flow
 brew install go
 brew install hub
+brew install ios-webkit-debug-proxy
 brew install jasmine
 brew install lynx
 brew install mysql
@@ -66,7 +68,6 @@ brew install sequel-pro
 brew install the_silver_searcher
 brew install tree
 brew install webkit2png
-brew install vagrant
 brew install vim
 brew install zopfli
 
@@ -92,6 +93,7 @@ installcask dash
 installcask dropbox
 installcask google-app-engine-launcher
 installcask google-chrome
+installcask hydra
 installcask filezilla
 installcask firefox
 installcask imagealpha
@@ -102,12 +104,13 @@ installcask miro-video-converter
 installcask moom
 installcask opera-next
 installcask pckeyboardhack
+installcask plex-media-server
 installcask quicklook-csv
 installcask quicklook-json
 installcask qlcolorcode
 installcask qlmarkdown
 installcask qlstephen
-installcask screenhero
+installcask robomongo
 installcask smoothmouse
 installcask sourcetree
 installcask sublime-text
@@ -115,6 +118,8 @@ installcask the-unarchiver
 installcask thunderbird
 installcask tor-browser
 installcask transmission
+installcask vagrant
+installcask vagrant-manager
 installcask virtualbox
 installcask vlc
 installcask witch
