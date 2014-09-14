@@ -110,6 +110,7 @@ installcask quicklook-json
 installcask qlcolorcode
 installcask qlmarkdown
 installcask qlstephen
+installcask robomongo
 installcask smoothmouse
 installcask sourcetree
 installcask sublime-text
