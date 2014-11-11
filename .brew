@@ -105,6 +105,7 @@ installcask moom
 installcask opera-next
 installcask pckeyboardhack
 installcask plex-media-server
+installcask plex-home-theater
 installcask quicklook-csv
 installcask quicklook-json
 installcask qlcolorcode

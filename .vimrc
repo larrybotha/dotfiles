@@ -45,6 +45,7 @@
 	Bundle 'joonty/vdebug.git'
 	Bundle 'mattn/emmet-vim'
 	Bundle 'editorconfig/editorconfig-vim'
+	Bundle 'maxbrunsfeld/vim-yankstack'
 "}
 
 " General {
@@ -253,8 +254,8 @@
 
 	" Vundle {
 		" Update / Install bundles
-		map <leader>vbi :BundleInstall<CR>
-		map <leader>vbu :BundleUpdate<CR>
+		map <leader>vbi :PluginInstall<CR>
+		map <leader>vbu :PluginUpdate<CR>
 	" }
 
 	" ctrlP {
@@ -346,6 +347,21 @@
 	\		 'dollar_expr': 0,
 	\  },
 	\}
+	" }
+
+
+	" Editorconfig {
+		let g:EditorConfig_core_mode = 'external_command'
+	" }
+
+	" YankStack {
+		" don't use default key mappings
+		let g:yankstack_map_keys = 0
+
+		" alt-p
+		nmap π <Plug>yankstack_substitute_older_paste
+		" alt-P
+		nmap ∏ <Plug>yankstack_substitute_newer_paste
 	" }
 
 " }
