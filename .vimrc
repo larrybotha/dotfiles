@@ -349,6 +349,11 @@
 	\}
 	" }
 
+
+	" Editorconfig {
+		let g:EditorConfig_core_mode = 'external_command'
+	" }
+
 	" YankStack {
 		" don't use default key mappings
 		let g:yankstack_map_keys = 0
