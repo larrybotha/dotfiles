@@ -90,6 +90,7 @@ installcask alfred
 installcask asepsis
 installcask betterzipql
 installcask dash
+installcask dimmer
 installcask dropbox
 installcask google-app-engine-launcher
 installcask google-chrome
