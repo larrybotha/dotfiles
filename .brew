@@ -90,13 +90,13 @@ installcask alfred
 installcask asepsis
 installcask betterzipql
 installcask dash
-installcask dimmer
 installcask dropbox
+installcask flux
+installcask filezilla
+installcask firefox
 installcask google-app-engine-launcher
 installcask google-chrome
 installcask hydra
-installcask filezilla
-installcask firefox
 installcask imagealpha
 installcask imageoptim
 installcask integrity
