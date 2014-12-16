@@ -35,6 +35,7 @@
 	Bundle 'scrooloose/nerdtree'
 	Bundle 'shawncplus/phpcomplete.vim'
 	Bundle 'godlygeek/tabular'
+	Bundle 'plasticboy/vim-markdown' " must come after tabular
 	Bundle 'majutsushi/tagbar'
 	Bundle 'Lokaltog/powerline', {'rtp': 'powerline/bindings/vim/'}
 	Bundle 'jistr/vim-nerdtree-tabs'
