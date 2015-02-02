@@ -124,6 +124,7 @@ installcask vagrant
 installcask vagrant-manager
 installcask virtualbox
 installcask vlc
+installcask vox
 installcask witch
 installcask xscope
 
