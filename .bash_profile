@@ -68,3 +68,6 @@ which grunt &> /dev/null && eval "$(grunt --completion=bash)"
 
 # Run nvm.sh if nvm is installed
 [ -f $(brew --prefix nvm)/nvm.sh ] && source $(brew --prefix nvm)/nvm.sh
+
+# Make bash aliases available to tmux
+case $- in *i*) . ~/.bashrc;; esac
