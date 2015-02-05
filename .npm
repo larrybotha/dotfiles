@@ -4,7 +4,7 @@ if ! type npm
 	echo 'npm is not a recognised command'
 
 npm install -g bower
-npm install -g grunt
+npm install -g gulp
 npm install -g jquery
 npm install -g jsdom
 npm install -g jasmine-node
