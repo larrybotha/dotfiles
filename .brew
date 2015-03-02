@@ -118,6 +118,7 @@ installcask qlcolorcode
 installcask qlmarkdown
 installcask qlstephen
 installcask robomongo
+installcask slack
 installcask smoothmouse
 installcask sourcetree
 installcask sublime-text
