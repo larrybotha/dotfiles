@@ -19,6 +19,7 @@
 
 	Bundle 'rking/ag.vim'
 	Bundle 'vim-ruby/vim-ruby'
+	Bundle 'digitaltoad/vim-jade'
 	Bundle 'tpope/vim-rails'
 	Bundle 'tpope/vim-fugitive'
 	Bundle 'tpope/vim-surround'
