@@ -19,8 +19,8 @@
 	tags = tag -l
 	branches = branch -a
 	remotes = remote -v
-  # Update ctags
-  ctags = !.git/hooks/ctags
+	# Update ctags
+	ctags = !.git/hooks/ctags
 	# git flow feature
 	ff = "flow feature"
 	# git flow release
@@ -33,8 +33,8 @@
 	whitespace = fix
 
 [core]
-  # Use vim for merges
-  editor = vim
+	# Use vim for merges
+	editor = vim
 	# Use custom `.gitignore` and `.gitattributes`
 	excludesfile = ~/.gitignore
 	attributesfile = ~/.gitattributes
@@ -62,7 +62,7 @@
 	log = true
 
 [init]
-  templatedir = ~/.git_template
+	templatedir = ~/.git_template
 
 # Use `origin` as the default remote on the `master` branch in all cases
 [branch "master"]

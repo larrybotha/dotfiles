@@ -3,10 +3,8 @@ export PATH="/usr/local/bin:$PATH"
 # Add `~/bin` to the `$PATH`
 export PATH="$HOME/bin:$PATH"
 
-# Add homebrew python to path if it's installed (no longer required?)
-# if [ -d "/usr/local/share/python" ]; then
-#   export PATH=/usr/local/share/python:$PATH
-# fi
+# Add Node to `$PATH`
+export PATH="$HOME/.node/bin:$PATH"
 
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.

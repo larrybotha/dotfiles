@@ -34,6 +34,7 @@ brew install rbenv ruby-build
 
 # Install other useful binaries
 brew install ack
+brew install android-studio
 brew install ansible
 brew install boot2docker
 brew install codeception
@@ -74,6 +75,10 @@ brew install zopfli
 brew tap homebrew/versions
 brew install lua52
 
+# tmux and depdencies
+brew install tmux
+brew install reattach-to-user-namespace
+
 # Install native apps
 brew tap phinze/homebrew-cask
 brew install brew-cask
@@ -113,6 +118,7 @@ installcask qlcolorcode
 installcask qlmarkdown
 installcask qlstephen
 installcask robomongo
+installcask slack
 installcask smoothmouse
 installcask sourcetree
 installcask sublime-text

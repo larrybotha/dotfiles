@@ -1,0 +1,12 @@
+function installmodule() {
+	if npm list -g "${@}" | grep "empty" > /dev/null; then
+		npm install -g "${@}"
+	else
+		echo "${@} is already installed."
+	fi
+}
+
+installmodule grunt-cli
+installmodule gulp-cli
+installmodule http-server
+installmodule yo
