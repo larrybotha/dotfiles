@@ -13,4 +13,5 @@ installmodule grunt-cli
 installmodule gulp-cli
 installmodule http-server
 installmodule node-inspector
+installmodule svgo
 installmodule yo
