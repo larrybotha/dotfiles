@@ -106,6 +106,7 @@ installcask imagealpha
 installcask imageoptim
 installcask integrity
 installcask iterm2
+installcask libreoffice
 installcask miro-video-converter
 installcask moom
 installcask opera-next

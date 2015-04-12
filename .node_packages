@@ -9,8 +9,11 @@ function installmodule() {
 }
 
 installmodule bower
+installmodule coffee-script
 installmodule grunt-cli
 installmodule gulp-cli
 installmodule http-server
 installmodule node-inspector
+installmodule svgo
+installmodule shelljs
 installmodule yo
