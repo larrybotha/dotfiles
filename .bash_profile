@@ -6,6 +6,9 @@ export PATH="$HOME/bin:$PATH"
 # Add Node to `$PATH`
 export PATH="$HOME/.node/bin:$PATH"
 
+export LC_ALL=en_ZA.UTF-8
+export LANG=en_ZA.UTF-8
+
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
 # * ~/.extra can be used for other settings you don’t want to commit.
