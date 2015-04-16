@@ -43,6 +43,7 @@
 	Bundle 'guns/vim-clojure-static'
 	Bundle 'tpope/vim-fireplace'
 	Bundle 'jwhitley/vim-matchit'
+	Bundle 'moll/vim-node'
 	Bundle 'joonty/vdebug.git'
 	Bundle 'mattn/emmet-vim'
 	Bundle 'editorconfig/editorconfig-vim'
