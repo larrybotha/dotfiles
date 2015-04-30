@@ -65,6 +65,8 @@ brew install qt
 brew install redis
 brew install rename
 brew install rhino
+brew install sbt
+brew install scala
 brew install sequel-pro
 brew install the_silver_searcher
 brew install tree
