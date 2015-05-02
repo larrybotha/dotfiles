@@ -128,12 +128,12 @@
 " }
 
 " Formatting {
-	set autoindent                                                      " indent at the same level of the previous line
-	set smartindent																											" indent on opening braces with a new line
-	set shiftwidth=2                                                    " use indents of 2 spaces
-	set tabstop=2                                                       " indent every 2 columns
-	set softtabstop=2                                                   " let backspace delete indent
-	autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2             " set above values when opening new files
+set autoindent                                                      " indent at the same level of the previous line
+set shiftwidth=2                                                    " use indents of 2 spaces
+set tabstop=2                                                       " indent every 2 columns
+set softtabstop=2                                                   " let backspace delete indent
+set expandtab
+autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2             " set above values when opening new files
 " }
 
 " Key Mappings {
@@ -285,7 +285,7 @@
 		map <leader>gci :Git commit -am "
 
 		" git checkout
-		map <leader>gco :Git checkout
+		map <leader>gco :Git checkout<space>
 
 		" git diff
 		map <leader>gd :Gdiff<CR>
