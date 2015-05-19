@@ -15,6 +15,7 @@ installmodule gulp-cli
 installmodule http-server
 installmodule mocha
 installmodule node-inspector
+installmodule mocha-phantomjs
 installmodule svgo
 installmodule shelljs
 installmodule yo
