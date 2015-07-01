@@ -13,6 +13,7 @@ installmodule coffee-script
 installmodule grunt-cli
 installmodule gulp-cli
 installmodule http-server
+installmodule imageoptim-cli
 installmodule mocha
 installmodule node-inspector
 installmodule mocha-phantomjs
