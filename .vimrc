@@ -18,7 +18,6 @@
 	Bundle 'gmarik/vundle'
 
 	Bundle 'rking/ag.vim'
-	Bundle 'bigfish/vim-js-context-coloring'
 	Bundle 'vim-ruby/vim-ruby'
 	Bundle 'digitaltoad/vim-jade'
 	Bundle 'tpope/vim-rails'
