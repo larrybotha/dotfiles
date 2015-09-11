@@ -19,4 +19,5 @@ installmodule node-inspector
 installmodule mocha-phantomjs
 installmodule svgo
 installmodule shelljs
+installmodule testem
 installmodule yo
