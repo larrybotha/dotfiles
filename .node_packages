@@ -17,6 +17,7 @@ installmodule imageoptim-cli
 installmodule mocha
 installmodule node-inspector
 installmodule mocha-phantomjs
+installmodule react-native-cli
 installmodule svgo
 installmodule shelljs
 installmodule testem
