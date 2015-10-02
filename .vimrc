@@ -33,6 +33,7 @@
 	Bundle 'tpope/vim-endwise'
 	Bundle 'ecomba/vim-ruby-refactoring'
 	Bundle 'scrooloose/syntastic'
+  Bundle 'pangloss/vim-javascript'
 	Bundle 'scrooloose/nerdtree'
 	Bundle 'shawncplus/phpcomplete.vim'
 	Bundle 'godlygeek/tabular'
