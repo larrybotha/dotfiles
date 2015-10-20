@@ -17,7 +17,7 @@
 	call vundle#rc()
 	Bundle 'gmarik/vundle'
 
-	Bundle 'rking/ag.vim'
+  Bundle 'rking/ag.vim'
 	Bundle 'vim-ruby/vim-ruby'
 	Bundle 'digitaltoad/vim-jade'
 	Bundle 'tpope/vim-rails'
@@ -38,6 +38,8 @@
 	Bundle 'shawncplus/phpcomplete.vim'
 	Bundle 'godlygeek/tabular'
 	Bundle 'majutsushi/tagbar'
+  Bundle 'marijnh/tern_for_vim'
+  Bundle 'lukaszkorecki/CoffeeTags'
 	Bundle 'Lokaltog/powerline', {'rtp': 'powerline/bindings/vim/'}
 	Bundle 'jistr/vim-nerdtree-tabs'
 	Bundle 'terryma/vim-multiple-cursors'
