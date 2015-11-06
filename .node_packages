@@ -21,4 +21,5 @@ installmodule react-native-cli
 installmodule svgo
 installmodule shelljs
 installmodule testem
+installmodule webpack
 installmodule yo
