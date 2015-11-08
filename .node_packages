@@ -22,4 +22,5 @@ installmodule svgo
 installmodule shelljs
 installmodule testem
 installmodule webpack
+installmodule webpack-dev-server
 installmodule yo
