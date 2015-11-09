@@ -35,6 +35,7 @@
 	Bundle 'scrooloose/syntastic'
   Bundle 'pangloss/vim-javascript'
   Bundle 'mxw/vim-jsx'
+  Bundle 'digitaltoad/vim-jade'
 	Bundle 'scrooloose/nerdtree'
 	Bundle 'shawncplus/phpcomplete.vim'
 	Bundle 'godlygeek/tabular'
