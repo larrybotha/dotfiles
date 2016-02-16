@@ -32,6 +32,9 @@ complete -o default -o nospace -F _git_checkout co
 # init rbenv
 eval "$(rbenv init -)"
 
+# activate tmux autocomplete
+source ~/.tmux/tmux_completion.sh
+
 # activate autoenv
 source /usr/local/opt/autoenv/activate.sh
 
