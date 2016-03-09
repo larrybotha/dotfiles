@@ -17,7 +17,7 @@
 	call vundle#rc()
 	Bundle 'gmarik/vundle'
 
-	Bundle 'rking/ag.vim'
+  Bundle 'rking/ag.vim'
 	Bundle 'vim-ruby/vim-ruby'
 	Bundle 'digitaltoad/vim-jade'
 	Bundle 'tpope/vim-rails'
@@ -33,10 +33,14 @@
 	Bundle 'tpope/vim-endwise'
 	Bundle 'ecomba/vim-ruby-refactoring'
 	Bundle 'scrooloose/syntastic'
+  Bundle 'pangloss/vim-javascript'
+  Bundle 'mxw/vim-jsx'
 	Bundle 'scrooloose/nerdtree'
 	Bundle 'shawncplus/phpcomplete.vim'
 	Bundle 'godlygeek/tabular'
 	Bundle 'majutsushi/tagbar'
+  Bundle 'marijnh/tern_for_vim'
+  Bundle 'lukaszkorecki/CoffeeTags'
 	Bundle 'Lokaltog/powerline', {'rtp': 'powerline/bindings/vim/'}
 	Bundle 'jistr/vim-nerdtree-tabs'
 	Bundle 'terryma/vim-multiple-cursors'
@@ -128,12 +132,12 @@
 " }
 
 " Formatting {
-set autoindent                                                      " indent at the same level of the previous line
-set shiftwidth=2                                                    " use indents of 2 spaces
-set tabstop=2                                                       " indent every 2 columns
-set softtabstop=2                                                   " let backspace delete indent
-set expandtab
-autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2             " set above values when opening new files
+  set autoindent                                                      " indent at the same level of the previous line
+  set shiftwidth=2                                                    " use indents of 2 spaces
+  set tabstop=2                                                       " indent every 2 columns
+  set softtabstop=2                                                   " let backspace delete indent
+  set expandtab
+  autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2             " set above values when opening new files
 " }
 
 " Key Mappings {
@@ -311,6 +315,10 @@ autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2             " set above 
 	" Syntastic {
 		let g:syntastic_check_on_open=1
 	" }
+
+  " Vim JSX {
+    let g:jsx_ext_required = 0
+  " }
 
 	" Powerline {
 		let g:Powerline_symbols = 'fancy'

@@ -36,13 +36,15 @@ brew install rbenv ruby-build
 brew install ack
 brew install android-studio
 brew install ansible
-brew install boot2docker
+brew install autoenv
 brew install codeception
 brew install composer
 brew install docker
+brew install docker-machine
 brew install ctags
 brew install editorconfig
 brew install elasticsearch
+brew install flow
 brew install git
 brew install git-crypt
 brew install git-flow
@@ -70,6 +72,7 @@ brew install scala210
 brew install sequel-pro
 brew install the_silver_searcher
 brew install tree
+brew install watchman
 brew install webkit2png
 brew install vim
 brew install zopfli

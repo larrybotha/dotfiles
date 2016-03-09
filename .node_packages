@@ -14,9 +14,10 @@ installmodule grunt-cli
 installmodule gulp-cli
 installmodule http-server
 installmodule imageoptim-cli
-installmodule mocha
+installmodule jspm
 installmodule node-inspector
 installmodule mocha-phantomjs
+installmodule react-native-cli
 installmodule svgo
 installmodule shelljs
 installmodule testem
