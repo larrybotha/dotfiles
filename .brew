@@ -37,10 +37,10 @@ brew install ack
 brew install android-studio
 brew install ansible
 brew install autoenv
-brew install boot2docker
 brew install codeception
 brew install composer
 brew install docker
+brew install docker-machine
 brew install ctags
 brew install editorconfig
 brew install elasticsearch
