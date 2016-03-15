@@ -28,6 +28,8 @@ brew install homebrew/dupes/grep
 brew tap josegonzalez/homebrew-php
 brew install php54 --with-fpm --with-apache --with-mysql --with-pgsql
 
+brew tap homebrew/services
+
 # Install rbenv for Ruby version management
 # eval "$(rbenv init -)" is already added in .bash_profile
 brew install rbenv ruby-build
