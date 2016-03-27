@@ -16,7 +16,6 @@
 	set rtp+=~/.vim/bundle/vundle/
 	call vundle#rc()
 	Bundle 'gmarik/vundle'
-
   Bundle 'rking/ag.vim'
 	Bundle 'vim-ruby/vim-ruby'
 	Bundle 'digitaltoad/vim-jade'
@@ -40,6 +39,7 @@
 	Bundle 'godlygeek/tabular'
 	Bundle 'majutsushi/tagbar'
   Bundle 'marijnh/tern_for_vim'
+  Bundle 'leafgarland/typescript-vim'
   Bundle 'lukaszkorecki/CoffeeTags'
 	Bundle 'Lokaltog/powerline', {'rtp': 'powerline/bindings/vim/'}
 	Bundle 'jistr/vim-nerdtree-tabs'
@@ -52,6 +52,7 @@
 	Bundle 'mattn/emmet-vim'
 	Bundle 'editorconfig/editorconfig-vim'
 	Bundle 'maxbrunsfeld/vim-yankstack'
+	Bundle 'flowtype/vim-flow'
 "}
 
 " General {
@@ -336,6 +337,10 @@
 		endif
 	" }
 
+	" Typescript Vim {
+    au BufRead,BufNewFile *.ts   setfiletype typescript
+	" }
+
 	" The Silver Searcher {
 		" Source: https://github.com/thoughtbot/dotfiles/blob/master/vimrc
 		if executable('ag')
@@ -389,6 +394,9 @@
 		nmap π <Plug>yankstack_substitute_older_paste
 		" alt-P
 		nmap ∏ <Plug>yankstack_substitute_newer_paste
+	" }
+
+	" Vim Flow {
 	" }
 
 " }
