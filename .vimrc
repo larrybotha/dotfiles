@@ -52,7 +52,7 @@
 	Bundle 'mattn/emmet-vim'
 	Bundle 'editorconfig/editorconfig-vim'
 	Bundle 'maxbrunsfeld/vim-yankstack'
-	Bundle 'flowtype/vim-flow'
+  Bundle 'Yggdroot/indentLine'
 "}
 
 " General {
@@ -394,9 +394,6 @@
 		nmap π <Plug>yankstack_substitute_older_paste
 		" alt-P
 		nmap ∏ <Plug>yankstack_substitute_newer_paste
-	" }
-
-	" Vim Flow {
 	" }
 
 " }
