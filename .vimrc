@@ -397,6 +397,7 @@
 	" }
 
 	" indentLine {
+    let g:indentLine_color_term = 236
 		let g:indentLine_leadingSpaceEnabled = 1
 		let g:indentLine_leadingSpaceChar = '·'
 	" }
