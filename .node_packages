@@ -12,7 +12,7 @@ installmodule bower
 installmodule coffee-script
 installmodule grunt-cli
 installmodule gulp-cli
-installmodule http-server
+installmodule server
 installmodule imageoptim-cli
 installmodule jspm
 installmodule node-inspector
