@@ -52,7 +52,6 @@
   Bundle 'mattn/emmet-vim'
   Bundle 'editorconfig/editorconfig-vim'
   Bundle 'maxbrunsfeld/vim-yankstack'
-  Bundle 'Yggdroot/indentLine'
 "}
 
 " General {
@@ -394,12 +393,6 @@
     nmap π <Plug>yankstack_substitute_older_paste
     " alt-P
     nmap ∏ <Plug>yankstack_substitute_newer_paste
-  " }
-
-  " indentLine {
-    let g:indentLine_color_term = 237
-    let g:indentLine_leadingSpaceEnabled = 1
-    let g:indentLine_leadingSpaceChar = '·'
   " }
 
 " }
