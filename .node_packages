@@ -10,15 +10,12 @@ function installmodule() {
 
 installmodule bower
 installmodule coffee-script
-installmodule grunt-cli
+installmodule denode
 installmodule gulp-cli
 installmodule server
 installmodule imageoptim-cli
-installmodule jspm
-installmodule node-inspector
 installmodule mocha-phantomjs
 installmodule react-native-cli
 installmodule svgo
-installmodule shelljs
 installmodule testem
 installmodule yo
