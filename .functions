@@ -277,3 +277,15 @@ function upctags() {
     exec "$0"
   fi
 }
+
+
+# kill processes at a port
+function killprt() {
+  DIE=$(netstat -nlp 2> /dev/null | grep ^tcp | grep $1 | tr -s ' ' | cut -d " " -f 7)
+  if [[ -z "$DIE" ]];then
+    echo "No process found."
+  else
+    echo "Killing $DIE"
+    echo $DIE | cut -d "/" -f 1 | xargs kill -9
+  fi
+}
