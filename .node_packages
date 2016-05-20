@@ -11,6 +11,7 @@ function installmodule() {
 installmodule bower
 installmodule coffee-script
 installmodule denode
+installmodule devtool
 installmodule gulp-cli
 installmodule server
 installmodule imageoptim-cli
