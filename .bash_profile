@@ -3,8 +3,10 @@ export PATH="/usr/local/bin:$PATH"
 # Add `~/bin` to the `$PATH`
 export PATH="$HOME/bin:$PATH"
 
-# Add Node to `$PATH`
+# Add Node and NVM to `$PATH`
 export PATH="$HOME/.node/bin:$PATH"
+export NVM_DIR=~/.nvm
+[ -f $(brew --prefix nvm)/nvm.sh ] && source $(brew --prefix nvm)/nvm.sh
 
 export LC_ALL=en_ZA.UTF-8
 export LANG=en_ZA.UTF-8
@@ -70,8 +72,8 @@ complete -o "nospace" -W "Contacts Calendar Dock Finder Mail Safari iTunes Syste
 # Autocomplete Grunt commands
 which grunt &> /dev/null && eval "$(grunt --completion=bash)"
 
+# Enable php-version
+source $(brew --prefix php-version)/php-version.sh && php-version 5
+
 # If possible, add tab completion for many more commands
 [ -f /etc/bash_completion ] && source /etc/bash_completion
-
-# Run nvm.sh if nvm is installed
-[ -f $(brew --prefix nvm)/nvm.sh ] && source $(brew --prefix nvm)/nvm.sh
