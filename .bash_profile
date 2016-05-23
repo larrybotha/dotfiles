@@ -3,8 +3,10 @@ export PATH="/usr/local/bin:$PATH"
 # Add `~/bin` to the `$PATH`
 export PATH="$HOME/bin:$PATH"
 
-# Add Node to `$PATH`
+# Add Node and NVM to `$PATH`
 export PATH="$HOME/.node/bin:$PATH"
+export NVM_DIR=~/.nvm
+[ -f $(brew --prefix nvm)/nvm.sh ] && source $(brew --prefix nvm)/nvm.sh
 
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
@@ -72,6 +74,3 @@ source $(brew --prefix php-version)/php-version.sh && php-version 5
 
 # If possible, add tab completion for many more commands
 [ -f /etc/bash_completion ] && source /etc/bash_completion
-
-# Run nvm.sh if nvm is installed
-[ -f $(brew --prefix nvm)/nvm.sh ] && source $(brew --prefix nvm)/nvm.sh
