@@ -41,7 +41,8 @@
   Bundle 'marijnh/tern_for_vim'
   Bundle 'leafgarland/typescript-vim'
   Bundle 'lukaszkorecki/CoffeeTags'
-  Bundle 'Lokaltog/powerline', {'rtp': 'powerline/bindings/vim/'}
+  Bundle 'vim-airline/vim-airline'
+  Bundle 'vim-airline/vim-airline-themes'
   Bundle 'jistr/vim-nerdtree-tabs'
   Bundle 'terryma/vim-multiple-cursors'
   Bundle 'guns/vim-clojure-static'
@@ -320,8 +321,9 @@
     let g:jsx_ext_required = 0
   " }
 
-  " Powerline {
-    let g:Powerline_symbols = 'fancy'
+  " Airline {
+    let g:airline_symbols = 'fancy'
+    let g:airline_powerline_fonts = 1
   " }
 
   " Tabularize {
