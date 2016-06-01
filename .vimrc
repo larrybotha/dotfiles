@@ -41,8 +41,7 @@
   Bundle 'marijnh/tern_for_vim'
   Bundle 'leafgarland/typescript-vim'
   Bundle 'lukaszkorecki/CoffeeTags'
-  Bundle 'vim-airline/vim-airline'
-  Bundle 'vim-airline/vim-airline-themes'
+  Bundle 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
   Bundle 'jistr/vim-nerdtree-tabs'
   Bundle 'terryma/vim-multiple-cursors'
   Bundle 'guns/vim-clojure-static'
@@ -72,6 +71,10 @@
   set noesckeys
   set ttimeout
   set ttimeoutlen=1
+
+  set showbreak=↪
+
+  -set fillchars=diff:·
 
   " check for external file changes, and suppress notices from appearing in command line
   if has("autocmd")
@@ -321,10 +324,8 @@
     let g:jsx_ext_required = 0
   " }
 
-  " Airline {
-    let g:airline_theme='bubblegum'
-    let g:airline_powerline_fonts = 1
-    let g:airline#extensions#tabline#enabled = 1
+  " Powerline {
+    let g:Powerline_symbols = 'fancy'
   " }
 
   " Tabularize {
