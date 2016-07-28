@@ -74,7 +74,7 @@
 
   set showbreak=↪
 
-  -set fillchars=diff:·
+  set fillchars=diff:·
 
   " check for external file changes, and suppress notices from appearing in command line
   if has("autocmd")
