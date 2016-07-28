@@ -16,6 +16,7 @@ installmodule gulp-cli
 installmodule server
 installmodule imageoptim-cli
 installmodule mocha-phantomjs
+installmodule ngrok
 installmodule react-native-cli
 installmodule svgo
 installmodule testem
