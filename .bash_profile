@@ -8,6 +8,9 @@ export PATH="$HOME/.node/bin:$PATH"
 export NVM_DIR=~/.nvm
 [ -f $(brew --prefix nvm)/nvm.sh ] && source $(brew --prefix nvm)/nvm.sh
 
+# make Vim the editor for tmux
+export EDITOR="vim"
+
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
 # * ~/.extra can be used for other settings you don’t want to commit.
