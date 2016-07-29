@@ -75,8 +75,5 @@ which grunt &> /dev/null && eval "$(grunt --completion=bash)"
 # Enable php-version
 source $(brew --prefix php-version)/php-version.sh && php-version 5
 
-# Enable git-subrepo
-source ~/code/git-subrepo/.rc
-
 # If possible, add tab completion for many more commands
 [ -f /etc/bash_completion ] && source /etc/bash_completion

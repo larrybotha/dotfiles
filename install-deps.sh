@@ -63,13 +63,6 @@ chmod -X ~/code/git-completion/git-completion.bash
 # git-completion binary is already referenced from .bash_profile
 
 
-# git sub-repo
-cd ~/code
-if [ ! -d ~/code/git-subrepo ]; then
-  git clone https://github.com/ingydotnet/git-subrepo
-fi
-
-
 # https://github.com/jeroenbegyn/VLCControl
 # VLC Controll Script
 cd ~/code
