@@ -130,11 +130,7 @@
   " show timeout on leader
   set showcmd
 
-  " change cursor to caret when in insert mode, block in other modes
-  let &t_SI = "\<Esc>]50;CursorShape=1\x7"
-  let &t_EI = "\<Esc>]50;CursorShape=0\x7"
-
-  " chnage cursor to caret when in tmux
+  " change cursor to caret when in insert mode in tmux
   if exists('$TMUX')
     let &t_SI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=1\x7\<Esc>\\"
     let &t_EI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=0\x7\<Esc>\\"
