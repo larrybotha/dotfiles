@@ -32,6 +32,7 @@ alias tma='tmux attach -t'
 alias tmn='tmux new -s'
 alias tml='tmux ls'
 alias tmr='tmux rename -t'
+alias tmk='tmux kill -t'
 
 # Detect which `ls` flavor is in use
 if ls --color > /dev/null 2>&1; then # GNU `ls`
