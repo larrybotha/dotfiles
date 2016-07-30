@@ -28,11 +28,11 @@ alias dr='docker'
 alias drquick="'/Applications/Docker/Docker Quickstart Terminal.app/Contents/Resources/Scripts/start.sh'"
 
 # Tmux
-alias tma='tmux attach -t'
-alias tmn='tmux new -s'
+alias tma='tmux attach-session -t'
+alias tmn='tmux new-session -s'
 alias tml='tmux ls'
-alias tmr='tmux rename -t'
-alias tmk='tmux kill -t'
+alias tmr='tmux rename-session -t'
+alias tmk='tmux kill-session -t'
 
 # Detect which `ls` flavor is in use
 if ls --color > /dev/null 2>&1; then # GNU `ls`
