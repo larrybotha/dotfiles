@@ -52,6 +52,7 @@
   Bundle 'mattn/emmet-vim'
   Bundle 'editorconfig/editorconfig-vim'
   Bundle 'maxbrunsfeld/vim-yankstack'
+  Bundle 'christoomey/vim-tmux-navigator'
 "}
 
 " General {
