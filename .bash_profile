@@ -10,6 +10,7 @@ export NVM_DIR=~/.nvm
 
 export LC_ALL=en_ZA.UTF-8
 export LANG=en_ZA.UTF-8
+export EDITOR="vim"
 
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
@@ -74,9 +75,6 @@ which grunt &> /dev/null && eval "$(grunt --completion=bash)"
 
 # Enable php-version
 source $(brew --prefix php-version)/php-version.sh && php-version 5
-
-# Enable git-subrepo
-source ~/code/git-subrepo/.rc
 
 # If possible, add tab completion for many more commands
 [ -f /etc/bash_completion ] && source /etc/bash_completion

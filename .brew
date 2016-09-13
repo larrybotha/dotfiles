@@ -26,7 +26,7 @@ brew install narwhal
 brew tap homebrew/dupes
 brew install homebrew/dupes/grep
 # brew tap josegonzalez/homebrew-php
-brew install php54 --with-fpm --with-apache --with-mysql --with-pgsql
+brew install php56 --with-fpm --with-apache --with-mysql --with-pgsql
 
 brew tap homebrew/services
 
@@ -107,7 +107,6 @@ installcask filezilla
 installcask firefox
 installcask google-app-engine-launcher
 installcask google-chrome
-installcask hydra
 installcask imagealpha
 installcask imageoptim
 installcask integrity
@@ -132,7 +131,6 @@ installcask sourcetree
 installcask sublime-text
 installcask the-unarchiver
 installcask thunderbird
-installcask tor-browser
 installcask transmission
 installcask vagrant
 installcask vagrant-manager
