@@ -68,6 +68,8 @@
   set nobackup
   set nowritebackup
 
+  set clipboard^=unnamed
+
   " remove the delay when hitting esc in insert mode
   set noesckeys
   set ttimeout
