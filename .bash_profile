@@ -11,6 +11,10 @@ export NVM_DIR=~/.nvm
 # make Vim the editor for tmux
 export EDITOR="vim"
 
+# allow vi mode in bash
+set -o vi
+set show-mode-in-prompt on
+
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
 # * ~/.extra can be used for other settings you don’t want to commit.
