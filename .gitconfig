@@ -42,6 +42,13 @@
 	# Treat spaces before tabs, lines that are indented with 8 or more spaces, and all kinds of trailing whitespace as an error
 	whitespace = space-before-tab,indent-with-non-tab,trailing-space
 
+[diff]
+  # output logs for submodules that have changed
+	submodule = log
+
+[push]
+	default = simple
+
 [status]
   # show submodule changes on status
 	submoduleSummary = true
@@ -87,6 +94,3 @@
 	pushInsteadOf = "git://gist.github.com/"
 [url "git://gist.github.com/"]
 	insteadOf = "gist:"
-
-[push]
-	default = upstream
