@@ -99,7 +99,6 @@ function installcask() {
 }
 
 installcask alfred
-installcask asepsis
 installcask betterzipql
 installcask dash
 installcask dropbox
