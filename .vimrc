@@ -167,9 +167,7 @@
   nmap j gj
 
   " map common shift keys
-  cmap Q q
   cmap Qall qall
-  cmap W w
   cmap Wa wall
   cmap Tabe tabe
 
