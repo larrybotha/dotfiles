@@ -12,6 +12,7 @@ installmodule bower
 installmodule coffee-script
 installmodule denode
 installmodule devtool
+installmodule feathers-cli
 installmodule gulp-cli
 installmodule server
 installmodule imageoptim-cli
