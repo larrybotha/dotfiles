@@ -24,7 +24,7 @@
   Bundle 'tpope/vim-surround'
   Bundle 'Raimondi/delimitMate'
   Bundle 'adamlowe/vim-slurper'
-  Bundle 'kien/ctrlp.vim'
+  Bundle 'ctrlpvim/ctrlp.vim'
   Bundle 'slim-template/vim-slim'
   Bundle 'ervandew/supertab'
   Bundle 'kchmck/vim-coffee-script'
