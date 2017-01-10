@@ -53,6 +53,7 @@
   Bundle 'editorconfig/editorconfig-vim'
   Bundle 'maxbrunsfeld/vim-yankstack'
   Bundle 'christoomey/vim-tmux-navigator'
+  Bundle 'luochen1990/rainbow'
 "}
 
 " General {
@@ -385,7 +386,7 @@
   \ 'indentation': '  ',
   \ 'php' : {
   \   'extends' : 'html',
-  \   'filters' : 'html,c',
+  \   'filters' : 'html',
   \   'dollar_expr': 0,
   \ },
   \}
@@ -393,6 +394,10 @@
 
   " Editorconfig {
     let g:EditorConfig_core_mode = 'external_command'
+  " }
+
+  " Rainbow {
+    let g:rainbow_active = 1
   " }
 
   " YankStack {
