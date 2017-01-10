@@ -53,7 +53,6 @@
   Bundle 'editorconfig/editorconfig-vim'
   Bundle 'maxbrunsfeld/vim-yankstack'
   Bundle 'christoomey/vim-tmux-navigator'
-  Bundle 'luochen1990/rainbow'
 "}
 
 " General {
@@ -394,10 +393,6 @@
 
   " Editorconfig {
     let g:EditorConfig_core_mode = 'external_command'
-  " }
-
-  " Rainbow {
-    let g:rainbow_active = 1
   " }
 
   " YankStack {
