@@ -32,7 +32,7 @@
   Bundle 'tpope/vim-endwise'
   Bundle 'ecomba/vim-ruby-refactoring'
   Bundle 'scrooloose/syntastic'
-  Bundle 'jelera/vim-javascript-syntax'
+  Bundle 'pangloss/vim-javascript'
   Bundle 'mxw/vim-jsx'
   Bundle 'scrooloose/nerdtree'
   Bundle 'shawncplus/phpcomplete.vim'
