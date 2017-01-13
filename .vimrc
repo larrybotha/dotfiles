@@ -245,6 +245,9 @@
     " For all text files set 'textwidth' to 78 characters.
     autocmd BufRead *.txt,*.md,*.textile set textwidth=80
 
+    " Use prettier to reformat javascript when using gq
+    autocmd FileType javascript set formatprg=prettier\ --stdin
+
     " Never wrap slim files
     autocmd FileType slim setlocal textwidth=0
 
