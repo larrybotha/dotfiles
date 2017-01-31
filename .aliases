@@ -28,6 +28,7 @@ alias dr='docker'
 alias drquick="'/Applications/Docker/Docker Quickstart Terminal.app/Contents/Resources/Scripts/start.sh'"
 
 # Tmux
+alias mux='tmuxinator'
 alias tma='tmux attach-session -t'
 alias tmn='tmux new-session -s'
 alias tml='tmux ls'
