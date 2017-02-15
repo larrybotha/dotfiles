@@ -123,6 +123,7 @@ installcask quicklook-json
 installcask qlcolorcode
 installcask qlmarkdown
 installcask qlstephen
+installcask qlvideo
 installcask recordit
 installcask robomongo
 installcask slack
