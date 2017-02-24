@@ -53,6 +53,7 @@
   Bundle 'editorconfig/editorconfig-vim'
   Bundle 'maxbrunsfeld/vim-yankstack'
   Bundle 'christoomey/vim-tmux-navigator'
+  Bundle 'elmcast/elm-vim'
 "}
 
 " General {
