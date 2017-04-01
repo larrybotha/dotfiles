@@ -107,6 +107,7 @@ installcask filezilla
 installcask firefox
 installcask google-app-engine-launcher
 installcask google-chrome
+installcask haskell-platform
 installcask imagealpha
 installcask imageoptim
 installcask integrity
