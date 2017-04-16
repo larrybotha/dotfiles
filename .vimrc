@@ -31,6 +31,7 @@
   Bundle 'ddollar/nerdcommenter'
   Bundle 'tpope/vim-endwise'
   Bundle 'ecomba/vim-ruby-refactoring'
+  Bundle 'scrooloose/syntastic'
   Bundle 'pangloss/vim-javascript'
   Bundle 'mxw/vim-jsx'
   Bundle 'scrooloose/nerdtree'
@@ -54,7 +55,6 @@
   Bundle 'christoomey/vim-tmux-navigator'
   Bundle 'elmcast/elm-vim'
   Bundle 'metakirby5/codi.vim'
-  Bundle 'w0rp/ale'
 "}
 
 " General {
@@ -327,6 +327,10 @@
     let NERDTreeShowHidden=1
   " }
 
+  " Syntastic {
+    let g:syntastic_check_on_open=1
+  " }
+
   " Vim JSX {
     let g:jsx_ext_required = 0
   " }
@@ -397,6 +401,10 @@
   " }
 
   " Elm {
+    let g:syntastic_always_populate_loc_list = 1
+    let g:syntastic_auto_loc_list = 1
+
+    let g:elm_syntastic_show_warnings = 1
   " }
 
   " YankStack {
