@@ -54,6 +54,7 @@
   Bundle 'maxbrunsfeld/vim-yankstack'
   Bundle 'christoomey/vim-tmux-navigator'
   Bundle 'elmcast/elm-vim'
+  Bundle 'metakirby5/codi.vim'
 "}
 
 " General {
