@@ -283,6 +283,10 @@
     let g:ctrlp_show_hidden = 1
   " }
 
+  " Elm {
+    let g:elm_format_autosave = 1
+  " }
+
   " delimitMate {
     " expand a new line after a brace to autoindent
     let delimitMate_expand_cr = 1

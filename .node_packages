@@ -13,6 +13,9 @@ installmodule coffee-script
 installmodule denode
 installmodule devtool
 installmodule elm
+installmodule elm-format@exp
+installmodule elm-oracle
+installmodule elm-test
 installmodule feathers-cli
 installmodule gulp-cli
 installmodule server
