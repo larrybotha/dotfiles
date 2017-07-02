@@ -248,9 +248,6 @@
     " For all text files set 'textwidth' to 78 characters.
     autocmd BufRead *.txt,*.md,*.textile set textwidth=80
 
-    " Use prettier to reformat javascript when using gq
-    autocmd FileType javascript set formatprg=prettier\ --stdin
-
     " Never wrap slim files
     autocmd FileType slim setlocal textwidth=0
 
@@ -332,12 +329,18 @@
     let g:syntastic_check_on_open=1
   " }
 
-  " Vim JSX {
-    let g:jsx_ext_required = 0
+  " Prettier {
+    " let g:prettier#quickfix_enabled = 0
+    let g:prettier#autoformat = 0
+    autocmd BufWritePre *.js,*.json,*.css,*.scss PrettierAsync
   " }
 
   " Powerline {
     let g:Powerline_symbols = 'fancy'
+  " }
+
+  " Vim JSX {
+    let g:jsx_ext_required = 0
   " }
 
   " Tabularize {
