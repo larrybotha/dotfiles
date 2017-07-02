@@ -283,10 +283,6 @@
     let g:ctrlp_show_hidden = 1
   " }
 
-  " Elm {
-    let g:elm_format_autosave = 1
-  " }
-
   " delimitMate {
     " expand a new line after a brace to autoindent
     let delimitMate_expand_cr = 1
@@ -409,6 +405,7 @@
     let g:syntastic_auto_loc_list = 1
 
     let g:elm_syntastic_show_warnings = 1
+    let g:elm_format_autosave = 1
   " }
 
   " YankStack {
