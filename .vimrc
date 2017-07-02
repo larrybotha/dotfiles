@@ -330,9 +330,9 @@
   " }
 
   " Prettier {
-    " let g:prettier#quickfix_enabled = 0
+    let g:prettier#quickfix_enabled = 0
     let g:prettier#autoformat = 0
-    autocmd BufWritePre *.js,*.json,*.css,*.scss PrettierAsync
+    autocmd BufWritePre,TextChanged,InsertLeave *.js,*.json,*.css PrettierAsync
   " }
 
   " Powerline {
