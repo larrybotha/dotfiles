@@ -18,7 +18,7 @@
   Bundle 'gmarik/vundle'
   Bundle 'rking/ag.vim'
   Bundle 'vim-ruby/vim-ruby'
-  Bundle 'digitaltoad/vim-jade'
+  Bundle 'digitaltoad/vim-pug'
   Bundle 'tpope/vim-rails'
   Bundle 'tpope/vim-fugitive'
   Bundle 'tpope/vim-surround'
@@ -334,7 +334,7 @@
 
     " let g:prettier#quickfix_enabled = 0
     let g:prettier#autoformat = 0
-    autocmd BufWritePre *.js,*.json,*.css PrettierAsync
+    autocmd BufWritePre *.js,*.json,*.css,*.scss PrettierAsync
   " }
 
   " Powerline {
