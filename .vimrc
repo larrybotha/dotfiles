@@ -330,6 +330,8 @@
   " }
 
   " Prettier {
+    g:prettier#config#trailing_comma = 'es5'
+
     " let g:prettier#quickfix_enabled = 0
     let g:prettier#autoformat = 0
     autocmd BufWritePre *.js,*.json,*.css PrettierAsync
