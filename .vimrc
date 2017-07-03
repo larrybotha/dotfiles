@@ -27,7 +27,6 @@
   Bundle 'ctrlpvim/ctrlp.vim'
   Bundle 'slim-template/vim-slim'
   Bundle 'ervandew/supertab'
-  Bundle 'kchmck/vim-coffee-script'
   Bundle 'ddollar/nerdcommenter'
   Bundle 'tpope/vim-endwise'
   Bundle 'ecomba/vim-ruby-refactoring'
@@ -40,7 +39,6 @@
   Bundle 'majutsushi/tagbar'
   Bundle 'marijnh/tern_for_vim'
   Bundle 'leafgarland/typescript-vim'
-  Bundle 'lukaszkorecki/CoffeeTags'
   Bundle 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
   Bundle 'jistr/vim-nerdtree-tabs'
   Bundle 'terryma/vim-multiple-cursors'
@@ -325,9 +323,10 @@
     let NERDTreeShowHidden=1
   " }
 
-  " Syntastic {
-    let g:syntastic_check_on_open=1
+  " PHPFmt {
+    let g:phpfmt_standard = 'PSR2'
   " }
+
 
   " Prettier {
     let g:prettier#config#trailing_comma = 'es5'
@@ -339,6 +338,10 @@
 
   " Powerline {
     let g:Powerline_symbols = 'fancy'
+  " }
+
+  " Syntastic {
+    let g:syntastic_check_on_open=1
   " }
 
   " Vim JSX {
@@ -453,14 +456,6 @@
 
   " deprecated? must check new docs.
   autocmd User Rails Rnavcommand presenter app/presenters -glob=**/* -suffix=.rb
-
-  " Set up some useful Rails.vim bindings for working with Backbone.js
-  autocmd User Rails Rnavcommand template   app/assets/templates               -glob=**/* -suffix=.jst.ejs
-  autocmd User Rails Rnavcommand jmodel     app/assets/javascripts/models     -glob=**/*  -suffix=.coffee
-  autocmd User Rails Rnavcommand jview       app/assets/javascripts/views      -glob=**/* -suffix=.coffee
-  autocmd User Rails Rnavcommand jcollection app/assets/javascripts/collections -glob=**/*  -suffix=.coffee
-  autocmd User Rails Rnavcommand jrouter     app/assets/javascripts/routers    -glob=**/* -suffix=.coffee
-  autocmd User Rails Rnavcommand jspec       spec/javascripts                  -glob=**/* -suffix=.coffee
 
   " thanks to @r00k
   function! RunCurrentTest()
