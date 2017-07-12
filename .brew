@@ -115,6 +115,7 @@ installcask iterm2
 installcask libreoffice
 installcask miro-video-converter
 installcask moom
+installcask muzzle
 installcask opera-next
 installcask pckeyboardhack
 installcask plex-media-server
