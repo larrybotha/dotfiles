@@ -17,33 +17,22 @@
   call vundle#rc()
   Bundle 'gmarik/vundle'
   Bundle 'rking/ag.vim'
-  Bundle 'vim-ruby/vim-ruby'
   Bundle 'digitaltoad/vim-pug'
-  Bundle 'tpope/vim-rails'
   Bundle 'tpope/vim-fugitive'
   Bundle 'tpope/vim-surround'
   Bundle 'Raimondi/delimitMate'
-  Bundle 'adamlowe/vim-slurper'
   Bundle 'ctrlpvim/ctrlp.vim'
-  Bundle 'slim-template/vim-slim'
   Bundle 'ervandew/supertab'
   Bundle 'ddollar/nerdcommenter'
   Bundle 'tpope/vim-endwise'
-  Bundle 'ecomba/vim-ruby-refactoring'
   Bundle 'scrooloose/syntastic'
-  Bundle 'pangloss/vim-javascript'
-  Bundle 'mxw/vim-jsx'
   Bundle 'scrooloose/nerdtree'
-  Bundle 'shawncplus/phpcomplete.vim'
   Bundle 'godlygeek/tabular'
   Bundle 'majutsushi/tagbar'
   Bundle 'marijnh/tern_for_vim'
-  Bundle 'leafgarland/typescript-vim'
   Bundle 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
   Bundle 'jistr/vim-nerdtree-tabs'
   Bundle 'terryma/vim-multiple-cursors'
-  Bundle 'guns/vim-clojure-static'
-  Bundle 'tpope/vim-fireplace'
   Bundle 'jwhitley/vim-matchit'
   Bundle 'moll/vim-node'
   Bundle 'joonty/vdebug.git'
@@ -54,6 +43,7 @@
   Bundle 'elmcast/elm-vim'
   Bundle 'metakirby5/codi.vim'
   Bundle 'mitermayer/vim-prettier'
+  Bundle 'sheerun/vim-polyglot'
 "}
 
 " General {
@@ -133,6 +123,12 @@
 
   " show timeout on leader
   set showcmd
+
+  " moving panes
+  map <leader>mh :wincmd H<CR>
+  map <leader>mj :wincmd J<CR>
+  map <leader>mk :wincmd K<CR>
+  map <leader>ml :wincmd L<CR>
 
   " change cursor to caret when in insert mode in tmux
   if exists('$TMUX')
@@ -341,10 +337,17 @@
   " }
 
   " Syntastic {
-    let g:syntastic_check_on_open=1
+    set statusline+=%#warningmsg#
+    set statusline+=%{SyntasticStatuslineFlag()}
+    set statusline+=%*
+
+    let g:syntastic_always_populate_loc_list = 1
+    let g:syntastic_auto_loc_list = 1
+    let g:syntastic_check_on_open = 1
+    let g:syntastic_check_on_wq = 0
   " }
 
-  " Vim JSX {
+  " Vim JSX (via vim-polyglot) {
     let g:jsx_ext_required = 0
   " }
 
@@ -426,96 +429,4 @@
     " alt-P
     nmap ∏ <Plug>yankstack_substitute_newer_paste
   " }
-
-" }
-
-" Rails Testing {
-
-  map <leader>rt :call RunCurrentTest()<CR>
-  map <leader>rl :call RunCurrentLineInTest()<CR>
-  map <leader>rrt :call RunCurrentTestNoZeus()<CR>
-  map <leader>rrl :call RunCurrentLineInTestNoZeus()<CR>
-
-  map <leader>sm :RSmodel<space>
-  map <leader>vc :RVcontroller<CR>
-  map <leader>vm :RVmodel<space>
-  map <leader>vv :RVview<CR>
-  map <leader>zv :Rview<CR>
-  map <leader>zc :Rcontroller<CR>
-  map <leader>zm :Rmodel<space>
-
-  " pane management
-  map <leader>mh :wincmd H<CR>
-  map <leader>mj :wincmd J<CR>
-  map <leader>mk :wincmd K<CR>
-  map <leader>ml :wincmd L<CR>
-
-  " select the current method in ruby (or it block in rspec)
-  map <leader>sm /end<CR>?\<def\>\\|\<it\><CR>:noh<CR>V%
-  map <leader>sf :e spec/factories/
-
-  " deprecated? must check new docs.
-  autocmd User Rails Rnavcommand presenter app/presenters -glob=**/* -suffix=.rb
-
-  " thanks to @r00k
-  function! RunCurrentTest()
-    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-    if in_test_file
-      call SetTestFile()
-
-      if match(expand('%'), '\.feature$') != -1
-        call SetTestRunner("!zeus cucumber")
-        exec g:bjo_test_runner g:bjo_test_file
-      elseif match(expand('%'), '_spec\.rb$') != -1
-        call SetTestRunner("!zeus rspec")
-        exec g:bjo_test_runner g:bjo_test_file
-      else
-        call SetTestRunner("!ruby -Itest")
-        exec g:bjo_test_runner g:bjo_test_file
-      endif
-    else
-      exec g:bjo_test_runner g:bjo_test_file
-    endif
-  endfunction
-
-  function! RunCurrentTestNoZeus()
-    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-
-    if in_test_file
-      call SetTestFile()
-    endif
-
-    exec "!rspec" g:bjo_test_file
-  endfunction
-
-  function! RunCurrentLineInTestNoZeus()
-    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-    if in_test_file
-      call SetTestFileWithLine()
-    end
-
-    exec "!rspec" g:bjo_test_file . ":" . g:bjo_test_file_line
-  endfunction
-
-  function! SetTestRunner(runner)
-    let g:bjo_test_runner=a:runner
-  endfunction
-
-  function! RunCurrentLineInTest()
-    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-    if in_test_file
-      call SetTestFileWithLine()
-    end
-
-    exec "!zeus rspec" g:bjo_test_file . ":" . g:bjo_test_file_line
-  endfunction
-
-  function! SetTestFile()
-    let g:bjo_test_file=@%
-  endfunction
-
-  function! SetTestFileWithLine()
-    let g:bjo_test_file=@%
-    let g:bjo_test_file_line=line(".")
-  endfunction
 " }
