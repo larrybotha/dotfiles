@@ -17,7 +17,6 @@
   call vundle#rc()
   Bundle 'gmarik/vundle'
   Bundle 'rking/ag.vim'
-  Bundle 'digitaltoad/vim-pug'
   Bundle 'tpope/vim-fugitive'
   Bundle 'tpope/vim-surround'
   Bundle 'Raimondi/delimitMate'
