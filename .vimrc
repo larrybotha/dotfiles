@@ -33,7 +33,6 @@
   Bundle 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
   Bundle 'jistr/vim-nerdtree-tabs'
   Bundle 'terryma/vim-multiple-cursors'
-  Bundle 'jwhitley/vim-matchit'
   Bundle 'moll/vim-node'
   Bundle 'joonty/vdebug.git'
   Bundle 'mattn/emmet-vim'
@@ -58,8 +57,6 @@
   " don't create backup files
   set nobackup
   set nowritebackup
-
-  set clipboard^=unnamed
 
   " remove the delay when hitting esc in insert mode
   set noesckeys
