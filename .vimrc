@@ -15,6 +15,7 @@
 " Bundles {
   set rtp+=~/.vim/bundle/vundle/
   call vundle#rc()
+  Bundle 'tpope/vim-sensible'
   Bundle 'gmarik/vundle'
   Bundle 'rking/ag.vim'
   Bundle 'tpope/vim-fugitive'
