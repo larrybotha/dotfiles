@@ -402,6 +402,9 @@
   \   'filters' : 'html',
   \   'dollar_expr': 0,
   \ },
+  \ 'javascript.jsx' : {
+  \     'extends' : 'jsx',
+  \ },
   \}
   " }
 
