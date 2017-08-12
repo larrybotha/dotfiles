@@ -29,7 +29,6 @@
   Bundle 'scrooloose/nerdtree'
   Bundle 'godlygeek/tabular'
   Bundle 'majutsushi/tagbar'
-  Bundle 'marijnh/tern_for_vim'
   Bundle 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
   Bundle 'jistr/vim-nerdtree-tabs'
   Bundle 'terryma/vim-multiple-cursors'
@@ -334,10 +333,6 @@
   " }
 
   " Syntastic {
-    set statusline+=%#warningmsg#
-    set statusline+=%{SyntasticStatuslineFlag()}
-    set statusline+=%*
-
     let g:syntastic_always_populate_loc_list = 1
     let g:syntastic_auto_loc_list = 0
     let g:syntastic_check_on_open = 1

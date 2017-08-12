@@ -2,6 +2,8 @@
 export PATH="/usr/local/bin:$PATH"
 # Add `~/bin` to the `$PATH`
 export PATH="$HOME/bin:$PATH"
+# Add `~/.local/bin` to the `$PATH` for Haskell Tool Stack
+export PATH="$HOME/.local/bin:$PATH"
 
 # Add Node and NVM to `$PATH`
 export PATH="$HOME/.node/bin:$PATH"
