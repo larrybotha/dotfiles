@@ -40,7 +40,7 @@
   Bundle 'christoomey/vim-tmux-navigator'
   Bundle 'elmcast/elm-vim'
   Bundle 'metakirby5/codi.vim'
-  Bundle 'mitermayer/vim-prettier'
+  Bundle 'prettier/vim-prettier'
   Bundle 'sheerun/vim-polyglot'
 "}
 
