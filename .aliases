@@ -9,6 +9,8 @@ alias -- -="cd -"
 # be nice
 alias please=sudo
 alias hosts='sudo $EDITOR /etc/hosts'
+# silver searcher
+alias ag='ag --hidden'
 
 # Shortcuts
 alias d='cd ~/Dropbox'
