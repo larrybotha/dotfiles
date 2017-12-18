@@ -41,6 +41,8 @@
 	attributesfile = ~/.gitattributes
 	# Treat spaces before tabs, lines that are indented with 8 or more spaces, and all kinds of trailing whitespace as an error
 	whitespace = space-before-tab,indent-with-non-tab,trailing-space
+  # respect changes to filename case
+  ignorecase = false
 
 [diff]
   # output logs for submodules that have changed
