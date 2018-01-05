@@ -13,6 +13,12 @@ export NVM_DIR=~/.nvm
 # make Vim the editor for tmux
 export EDITOR="vim"
 
+# go lang
+export GOPATH=$HOME/golang
+export GOROOT=/usr/local/opt/go/libexec
+export PATH=$PATH:$GOPATH/bin
+export PATH=$PATH:$GOROOT/bin
+
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
 # * ~/.extra can be used for other settings you don’t want to commit.
