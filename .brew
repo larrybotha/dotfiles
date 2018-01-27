@@ -131,6 +131,7 @@ installcask qlstephen
 installcask qlvideo
 installcask recordit
 installcask robomongo
+installcask postman
 installcask slack
 installcask smoothmouse
 installcask sourcetree
