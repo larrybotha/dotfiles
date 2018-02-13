@@ -8,22 +8,18 @@ function installmodule() {
 	fi
 }
 
-installmodule bower
 installmodule coffee-script
 installmodule denode
-installmodule devtool
 installmodule elm
 installmodule elm-format@exp
 installmodule elm-oracle
 installmodule elm-test
 installmodule feathers-cli
 installmodule gulp-cli
+installmodule nodemon
 installmodule server
 installmodule imageoptim-cli
 installmodule mocha-phantomjs
 installmodule ngrok
 installmodule prettier
-installmodule react-native-cli
-installmodule svgo
-installmodule testem
 installmodule yo
