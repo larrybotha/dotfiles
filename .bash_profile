@@ -1,4 +1,3 @@
-echo 'sourcing .bash_profile'
 # Add homebrew's installs to the `$PATH` before non-Homebrew things
 export PATH="/usr/local/bin:$PATH"
 # Add `~/bin` to the `$PATH`
