@@ -42,6 +42,8 @@
   Bundle 'metakirby5/codi.vim'
   Bundle 'prettier/vim-prettier'
   Bundle 'sheerun/vim-polyglot'
+  Bundle 'leafgarland/typescript-vim'
+  Bundle 'Quramy/tsuquyomi'
 "}
 
 " General {
@@ -314,7 +316,7 @@
 
     " let g:prettier#quickfix_enabled = 0
     let g:prettier#autoformat = 0
-    autocmd BufWritePre *.js,*.json PrettierAsync
+    autocmd BufWritePre *.js,*.json,*.ts,*.tsx PrettierAsync
   " }
 
   " Powerline {
@@ -345,7 +347,14 @@
   " }
 
   " Typescript Vim {
-    au BufRead,BufNewFile *.ts   setfiletype typescript
+    au BufRead,BufNewFile *.tsx   setfiletype typescript
+    let g:typescript_indent_disable = 1
+  " }
+
+  " Tsuquyomi {
+    let g:tsuquyomi_disable_quickfix = 1
+    let g:syntastic_typescript_checkers = ['tsuquyomi']
+    autocmd FileType typescript nmap <buffer> <Leader>t : <C-u>echo tsuquyomi#hint()<CR>
   " }
 
   " The Silver Searcher {
