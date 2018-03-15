@@ -4,6 +4,10 @@ export PATH="/usr/local/bin:$PATH"
 export PATH="$HOME/bin:$PATH"
 # Add `~/.local/bin` to the `$PATH` for Haskell Tool Stack
 export PATH="$HOME/.local/bin:$PATH"
+# Add Google's depot_tools for adding Chrome to iOS Simulator to path
+# Installation: https://chromium.googlesource.com/chromium/src/+/master/docs/ios/build_instructions.md
+# Install to ~/code/depot_tools
+export PATH="$PATH:~/code/depot_tools"
 
 # Add Node and NVM to `$PATH`
 export NVM_DIR="$HOME/.nvm"
