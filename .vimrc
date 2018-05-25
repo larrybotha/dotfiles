@@ -348,7 +348,6 @@
 
   " Typescript Vim {
     au BufRead,BufNewFile *.tsx   setfiletype typescript
-    let g:typescript_indent_disable = 1
   " }
 
   " Tsuquyomi {
