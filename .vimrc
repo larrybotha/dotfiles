@@ -44,6 +44,7 @@
   Bundle 'sheerun/vim-polyglot'
   Bundle 'leafgarland/typescript-vim'
   Bundle 'Quramy/tsuquyomi'
+  Bundle 'heavenshell/vim-jsdoc'
 "}
 
 " General {
