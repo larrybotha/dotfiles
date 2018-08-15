@@ -15,44 +15,36 @@
 " Bundles {
   set rtp+=~/.vim/bundle/vundle/
   call vundle#rc()
+  Bundle 'tpope/vim-sensible'
   Bundle 'gmarik/vundle'
   Bundle 'rking/ag.vim'
-  Bundle 'vim-ruby/vim-ruby'
-  Bundle 'digitaltoad/vim-jade'
-  Bundle 'tpope/vim-rails'
   Bundle 'tpope/vim-fugitive'
   Bundle 'tpope/vim-surround'
   Bundle 'Raimondi/delimitMate'
-  Bundle 'adamlowe/vim-slurper'
-  Bundle 'kien/ctrlp.vim'
-  Bundle 'slim-template/vim-slim'
+  Bundle 'ctrlpvim/ctrlp.vim'
   Bundle 'ervandew/supertab'
-  Bundle 'kchmck/vim-coffee-script'
   Bundle 'ddollar/nerdcommenter'
   Bundle 'tpope/vim-endwise'
-  Bundle 'ecomba/vim-ruby-refactoring'
   Bundle 'scrooloose/syntastic'
-  Bundle 'pangloss/vim-javascript'
-  Bundle 'mxw/vim-jsx'
   Bundle 'scrooloose/nerdtree'
-  Bundle 'shawncplus/phpcomplete.vim'
   Bundle 'godlygeek/tabular'
   Bundle 'majutsushi/tagbar'
-  Bundle 'marijnh/tern_for_vim'
-  Bundle 'leafgarland/typescript-vim'
-  Bundle 'lukaszkorecki/CoffeeTags'
   Bundle 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
   Bundle 'jistr/vim-nerdtree-tabs'
   Bundle 'terryma/vim-multiple-cursors'
-  Bundle 'guns/vim-clojure-static'
-  Bundle 'tpope/vim-fireplace'
-  Bundle 'jwhitley/vim-matchit'
   Bundle 'moll/vim-node'
   Bundle 'joonty/vdebug.git'
   Bundle 'mattn/emmet-vim'
   Bundle 'editorconfig/editorconfig-vim'
   Bundle 'maxbrunsfeld/vim-yankstack'
   Bundle 'christoomey/vim-tmux-navigator'
+  Bundle 'elmcast/elm-vim'
+  Bundle 'metakirby5/codi.vim'
+  Bundle 'prettier/vim-prettier'
+  Bundle 'sheerun/vim-polyglot'
+  Bundle 'leafgarland/typescript-vim'
+  Bundle 'Quramy/tsuquyomi'
+  Bundle 'heavenshell/vim-jsdoc'
 "}
 
 " General {
@@ -89,30 +81,30 @@
 
 " Vim UI {
   color monokai                                  " load a colourscheme
-  set splitright                                  " open split panes to the right of the current pane
-  set splitbelow                                  " open split panes underneath the current pane
+  set splitright                                 " open split panes to the right of the current pane
+  set splitbelow                                 " open split panes underneath the current pane
 
-  set cursorline                                  " highlight current line
+  set cursorline                                 " highlight current line
   hi CursorLine term=bold cterm=bold ctermbg=233
 
-  set colorcolumn=85                              " show column length hint for long lines
+  set colorcolumn=85                             " show column length hint for long lines
 
-  set backspace=indent,eol,start                  " allow backspacing over everything in insert mode
+  set backspace=indent,eol,start                 " allow backspacing over everything in insert mode
   set linespace=0                                " No extra spaces between rows
-  set relativenumber                              " relative line numbers on
+  set relativenumber                             " relative line numbers on
   set showmatch                                  " show matching brackets/parenthesis
   set incsearch                                  " find as you type search
-  set hlsearch                                    " highlight search terms
-  set winminheight=0                              " windows can be 0 line high
-  set ignorecase                                  " case insensitive search
+  set hlsearch                                   " highlight search terms
+  set winminheight=0                             " windows can be 0 line high
+  set ignorecase                                 " case insensitive search
   set smartcase                                  " case sensitive when uc present
-  set wildmenu                                    " show list instead of just completing
-  set wildmode=list:longest,full                  " command <Tab> completion, list matches, then longest common part, then all.
-  set nowrap                                      " don't wrap lines
-  set scrolljump=5                                " lines to scroll when cursor leaves screen
+  set wildmenu                                   " show list instead of just completing
+  set wildmode=list:longest,full                 " command <Tab> completion, list matches, then longest common part, then all.
+  set nowrap                                     " don't wrap lines
+  set scrolljump=5                               " lines to scroll when cursor leaves screen
   set scrolloff=5                                " minimum lines to keep above and below cursor
   noh                                            " clear the initial highlight after sourcing
-  set foldenable                                  " auto fold code
+  set foldenable                                 " auto fold code
   set nospell                                    " disable spellcheck
   set shortmess=atI                              " prevent 'Press ENTER' prompt
 
@@ -131,6 +123,12 @@
   " show timeout on leader
   set showcmd
 
+  " moving panes
+  map <leader>mh :wincmd H<CR>
+  map <leader>mj :wincmd J<CR>
+  map <leader>mk :wincmd K<CR>
+  map <leader>ml :wincmd L<CR>
+
   " change cursor to caret when in insert mode in tmux
   if exists('$TMUX')
     let &t_SI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=1\x7\<Esc>\\"
@@ -142,12 +140,12 @@
 " }
 
 " Formatting {
-  set autoindent                                                      " indent at the same level of the previous line
-  set shiftwidth=2                                                    " use indents of 2 spaces
-  set tabstop=2                                                      " indent every 2 columns
-  set softtabstop=2                                                  " let backspace delete indent
+  set autoindent                                          " indent at the same level of the previous line
+  set shiftwidth=2                                        " use indents of 2 spaces
+  set tabstop=2                                           " indent every 2 columns
+  set softtabstop=2                                       " let backspace delete indent
   set expandtab
-  autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2            " set above values when opening new files
+  autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 " set above values when opening new files
 " }
 
 " Key Mappings {
@@ -165,9 +163,7 @@
   nmap j gj
 
   " map common shift keys
-  cmap Q q
   cmap Qall qall
-  cmap W w
   cmap Wa wall
   cmap Tabe tabe
 
@@ -221,16 +217,6 @@
 
   " set all windows to equal width
   map <leader>= <C-w>=
-
-  " Ruby conveniences
-  nmap <leader>bx :!bundle exec<space>
-  nmap <leader>zx :!zeus<space>
-  map <leader>bi :!bundle<CR>
-  map <leader>bu :!bundle update<space>
-
-  " restart pow
-  map <leader>rp :!touch tmp/restart.txt<CR><CR>
-
 " }
 
 " Auto Commands {
@@ -293,7 +279,7 @@
     nmap <leader>ghp :exec ':Git push heroku ' . fugitive#head()<CR>
 
     " git status
-    map <silent> <leader>gs :Gstatus<CR>/not staged<CR>/modified<CR>
+    map <silent> <leader>gss :Gstatus<CR>/not staged<CR>/modified<CR>
 
     " git commit -am "
     map <leader>gci :Git commit -am "
@@ -304,10 +290,13 @@
     " git diff
     map <leader>gd :Gdiff<CR>
 
-    " git gui
-    map <leader>ggui :Git gui<CR>
-    map <leader>gw :!git add . && git commit -m "WIP"
+    " open source tree
+    map <leader>gstree :exec ':!stree'<CR>
 
+  " }
+
+  " JsDoc {
+  let g:jsdoc_enable_es6 = 1
   " }
 
   " NERDTree {
@@ -322,16 +311,32 @@
     let NERDTreeShowHidden=1
   " }
 
-  " Syntastic {
-    let g:syntastic_check_on_open=1
+  " PHPFmt {
+    let g:phpfmt_standard = 'PSR2'
   " }
 
-  " Vim JSX {
-    let g:jsx_ext_required = 0
+
+  " Prettier {
+    let g:prettier#config#trailing_comma = 'es5'
+
+    " let g:prettier#quickfix_enabled = 0
+    let g:prettier#autoformat = 0
+    autocmd BufWritePre *.js,*.json,*.ts,*.tsx,*.vue PrettierAsync
   " }
 
   " Powerline {
     let g:Powerline_symbols = 'fancy'
+  " }
+
+  " Syntastic {
+    let g:syntastic_always_populate_loc_list = 1
+    let g:syntastic_auto_loc_list = 0
+    let g:syntastic_check_on_open = 1
+    let g:syntastic_check_on_wq = 0
+  " }
+
+  " Vim JSX (via vim-polyglot) {
+    let g:jsx_ext_required = 0
   " }
 
   " Tabularize {
@@ -347,7 +352,16 @@
   " }
 
   " Typescript Vim {
-    au BufRead,BufNewFile *.ts   setfiletype typescript
+    au BufRead,BufNewFile *.tsx   setfiletype typescript
+  " }
+
+  " Tsuquyomi {
+    let g:tsuquyomi_disable_quickfix = 1
+    let g:syntastic_typescript_checkers = ['tsuquyomi']
+    " makes completion slow
+    let g:tsuquyomi_completion_detail = 1
+    autocmd FileType typescript setlocal completeopt+=menu,preview
+    autocmd FileType typescript nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
   " }
 
   " The Silver Searcher {
@@ -385,14 +399,25 @@
   \ 'indentation': '  ',
   \ 'php' : {
   \   'extends' : 'html',
-  \   'filters' : 'html,c',
+  \   'filters' : 'html',
   \   'dollar_expr': 0,
+  \ },
+  \ 'typescript' : {
+  \     'extends' : 'jsx',
+  \ },
+  \ 'javascript.jsx' : {
+  \     'extends' : 'jsx',
   \ },
   \}
   " }
 
   " Editorconfig {
     let g:EditorConfig_core_mode = 'external_command'
+  " }
+
+  " Elm {
+    let g:elm_syntastic_show_warnings = 1
+    let g:elm_format_autosave = 1
   " }
 
   " YankStack {
@@ -404,104 +429,4 @@
     " alt-P
     nmap ∏ <Plug>yankstack_substitute_newer_paste
   " }
-
-" }
-
-" Rails Testing {
-
-  map <leader>rt :call RunCurrentTest()<CR>
-  map <leader>rl :call RunCurrentLineInTest()<CR>
-  map <leader>rrt :call RunCurrentTestNoZeus()<CR>
-  map <leader>rrl :call RunCurrentLineInTestNoZeus()<CR>
-
-  map <leader>sm :RSmodel<space>
-  map <leader>vc :RVcontroller<CR>
-  map <leader>vm :RVmodel<space>
-  map <leader>vv :RVview<CR>
-  map <leader>zv :Rview<CR>
-  map <leader>zc :Rcontroller<CR>
-  map <leader>zm :Rmodel<space>
-
-  " pane management
-  map <leader>mh :wincmd H<CR>
-  map <leader>mj :wincmd J<CR>
-  map <leader>mk :wincmd K<CR>
-  map <leader>ml :wincmd L<CR>
-
-  " select the current method in ruby (or it block in rspec)
-  map <leader>sm /end<CR>?\<def\>\\|\<it\><CR>:noh<CR>V%
-  map <leader>sf :e spec/factories/
-
-  " deprecated? must check new docs.
-  autocmd User Rails Rnavcommand presenter app/presenters -glob=**/* -suffix=.rb
-
-  " Set up some useful Rails.vim bindings for working with Backbone.js
-  autocmd User Rails Rnavcommand template   app/assets/templates               -glob=**/* -suffix=.jst.ejs
-  autocmd User Rails Rnavcommand jmodel     app/assets/javascripts/models     -glob=**/*  -suffix=.coffee
-  autocmd User Rails Rnavcommand jview       app/assets/javascripts/views      -glob=**/* -suffix=.coffee
-  autocmd User Rails Rnavcommand jcollection app/assets/javascripts/collections -glob=**/*  -suffix=.coffee
-  autocmd User Rails Rnavcommand jrouter     app/assets/javascripts/routers    -glob=**/* -suffix=.coffee
-  autocmd User Rails Rnavcommand jspec       spec/javascripts                  -glob=**/* -suffix=.coffee
-
-  " thanks to @r00k
-  function! RunCurrentTest()
-    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-    if in_test_file
-      call SetTestFile()
-
-      if match(expand('%'), '\.feature$') != -1
-        call SetTestRunner("!zeus cucumber")
-        exec g:bjo_test_runner g:bjo_test_file
-      elseif match(expand('%'), '_spec\.rb$') != -1
-        call SetTestRunner("!zeus rspec")
-        exec g:bjo_test_runner g:bjo_test_file
-      else
-        call SetTestRunner("!ruby -Itest")
-        exec g:bjo_test_runner g:bjo_test_file
-      endif
-    else
-      exec g:bjo_test_runner g:bjo_test_file
-    endif
-  endfunction
-
-  function! RunCurrentTestNoZeus()
-    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-
-    if in_test_file
-      call SetTestFile()
-    endif
-
-    exec "!rspec" g:bjo_test_file
-  endfunction
-
-  function! RunCurrentLineInTestNoZeus()
-    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-    if in_test_file
-      call SetTestFileWithLine()
-    end
-
-    exec "!rspec" g:bjo_test_file . ":" . g:bjo_test_file_line
-  endfunction
-
-  function! SetTestRunner(runner)
-    let g:bjo_test_runner=a:runner
-  endfunction
-
-  function! RunCurrentLineInTest()
-    let in_test_file = match(expand("%"), '\(.feature\|_spec.rb\|_test.rb\)$') != -1
-    if in_test_file
-      call SetTestFileWithLine()
-    end
-
-    exec "!zeus rspec" g:bjo_test_file . ":" . g:bjo_test_file_line
-  endfunction
-
-  function! SetTestFile()
-    let g:bjo_test_file=@%
-  endfunction
-
-  function! SetTestFileWithLine()
-    let g:bjo_test_file=@%
-    let g:bjo_test_file_line=line(".")
-  endfunction
 " }

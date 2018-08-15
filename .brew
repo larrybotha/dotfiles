@@ -52,6 +52,7 @@ brew install git-crypt
 brew install git-flow
 brew install go
 brew install hub
+brew install httpie
 brew install ios-webkit-debug-proxy
 brew install jasmine
 brew install lynx
@@ -77,6 +78,7 @@ brew install watchman
 brew install webkit2png
 brew install vim
 brew install zopfli
+brew install yarn
 
 brew tap homebrew/versions
 brew install lua52
@@ -98,7 +100,7 @@ function installcask() {
 }
 
 installcask alfred
-installcask asepsis
+installcask anki
 installcask betterzipql
 installcask dash
 installcask dropbox
@@ -107,6 +109,8 @@ installcask filezilla
 installcask firefox
 installcask google-app-engine-launcher
 installcask google-chrome
+installcask google-cloud-sdk
+installcask haskell-platform
 installcask imagealpha
 installcask imageoptim
 installcask integrity
@@ -114,6 +118,7 @@ installcask iterm2
 installcask libreoffice
 installcask miro-video-converter
 installcask moom
+installcask muzzle
 installcask opera-next
 installcask pckeyboardhack
 installcask plex-media-server
@@ -123,8 +128,10 @@ installcask quicklook-json
 installcask qlcolorcode
 installcask qlmarkdown
 installcask qlstephen
+installcask qlvideo
 installcask recordit
 installcask robomongo
+installcask postman
 installcask slack
 installcask smoothmouse
 installcask sourcetree

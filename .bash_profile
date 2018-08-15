@@ -2,15 +2,28 @@
 export PATH="/usr/local/bin:$PATH"
 # Add `~/bin` to the `$PATH`
 export PATH="$HOME/bin:$PATH"
+# Add `~/.local/bin` to the `$PATH` for Haskell Tool Stack
+export PATH="$HOME/.local/bin:$PATH"
+# Add Google's depot_tools for adding Chrome to iOS Simulator to path
+# Installation: https://chromium.googlesource.com/chromium/src/+/master/docs/ios/build_instructions.md
+# Install to ~/code/depot_tools
+export PATH="$PATH:~/code/depot_tools"
 
 # Add Node and NVM to `$PATH`
-export PATH="$HOME/.node/bin:$PATH"
-export NVM_DIR=~/.nvm
-[ -f $(brew --prefix nvm)/nvm.sh ] && source $(brew --prefix nvm)/nvm.sh
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
 
 export LC_ALL=en_ZA.UTF-8
 export LANG=en_ZA.UTF-8
 export EDITOR="vim"
+
+# go lang
+export GOPATH=$HOME/golang
+export GOROOT=/usr/local/opt/go/libexec
+export PATH=$PATH:$GOPATH/bin
+export PATH=$PATH:$GOROOT/bin
 
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
@@ -33,7 +46,6 @@ fi
 #add git aliases to git-completion
 complete -o default -o nospace -F _git g
 complete -o default -o nospace -F _git_checkout co
-
 
 # init rbenv
 eval "$(rbenv init -)"
@@ -69,9 +81,6 @@ complete -W "NSGlobalDomain" defaults
 
 # Add `killall` tab completion for common apps
 complete -o "nospace" -W "Contacts Calendar Dock Finder Mail Safari iTunes SystemUIServer Terminal Twitter" killall
-
-# Autocomplete Grunt commands
-which grunt &> /dev/null && eval "$(grunt --completion=bash)"
 
 # Enable php-version
 source $(brew --prefix php-version)/php-version.sh && php-version 5

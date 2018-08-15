@@ -6,11 +6,11 @@ alias .....="cd ../../../.."
 alias ~="cd ~" # `cd` is probably faster to type though
 alias -- -="cd -"
 
-# be nice
-alias please=sudo
-alias hosts='sudo $EDITOR /etc/hosts'
+# silver searcher
+alias ag='ag --hidden'
 
 # Shortcuts
+alias hosts='sudo $EDITOR /etc/hosts'
 alias d='cd ~/Dropbox'
 alias dl='cd ~/Downloads'
 alias dt='cd ~/Desktop'
@@ -20,14 +20,12 @@ alias git='hub'
 alias h='history'
 alias j='jobs'
 alias v='vim'
-alias m='mate .'
 alias s='subl .'
 alias o='open'
 alias oo='open .'
-alias dr='docker'
-alias drquick="'/Applications/Docker/Docker Quickstart Terminal.app/Contents/Resources/Scripts/start.sh'"
 
 # Tmux
+alias mux='tmuxinator'
 alias tma='tmux attach-session -t'
 alias tmn='tmux new-session -s'
 alias tml='tmux ls'

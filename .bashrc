@@ -1,1 +1,1 @@
-[ -n "$PS1" ] && source ~/.bash_profile
+[[ -n "$PS1"  && -z $TMUX ]] && source ~/.bash_profile
