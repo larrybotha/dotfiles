@@ -402,6 +402,9 @@
   \   'filters' : 'html',
   \   'dollar_expr': 0,
   \ },
+  \ 'typescript' : {
+  \     'extends' : 'jsx',
+  \ },
   \ 'javascript.jsx' : {
   \     'extends' : 'jsx',
   \ },
