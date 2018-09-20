@@ -38,7 +38,6 @@ brew install rbenv ruby-build
 brew install ack
 brew install android-studio
 brew install ansible
-brew install autoenv
 brew install codeception
 brew install composer
 brew install docker
