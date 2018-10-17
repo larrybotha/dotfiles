@@ -15,10 +15,11 @@ installmodule elm-oracle
 installmodule elm-test
 installmodule feathers-cli
 installmodule gulp-cli
-installmodule nodemon
-installmodule server
 installmodule imageoptim-cli
+installmodule ndb
 installmodule ngrok
+installmodule nodemon
 installmodule prettier
+installmodule server
 installmodule typescript
 installmodule yo
