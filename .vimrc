@@ -45,6 +45,8 @@
   Bundle 'leafgarland/typescript-vim'
   Bundle 'Quramy/tsuquyomi'
   Bundle 'heavenshell/vim-jsdoc'
+  Bundle 'janko-m/vim-test'
+  Bundle 'tpope/vim-dispatch'
 "}
 
 " General {
@@ -429,5 +431,17 @@
     nmap π <Plug>yankstack_substitute_older_paste
     " alt-P
     nmap ∏ <Plug>yankstack_substitute_newer_paste
+  " }
+
+  " Vim Test {
+    " use vim-dispatch to run tests
+    let test#strategy = "dispatch"
+    let g:test#preserve_screen = 1
+
+    nmap <silent> t<C-n> :TestNearest<CR> " t Ctrl+n
+    nmap <silent> t<C-f> :TestFile<CR>    " t Ctrl+f
+    nmap <silent> t<C-s> :TestSuite<CR>   " t Ctrl+s
+    nmap <silent> t<C-l> :TestLast<CR>    " t Ctrl+l
+    nmap <silent> t<C-g> :TestVisit<CR>   " t Ctrl+g
   " }
 " }
