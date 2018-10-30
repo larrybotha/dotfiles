@@ -28,7 +28,6 @@
   Bundle 'scrooloose/syntastic'
   Bundle 'scrooloose/nerdtree'
   Bundle 'godlygeek/tabular'
-  Bundle 'majutsushi/tagbar'
   Bundle 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
   Bundle 'jistr/vim-nerdtree-tabs'
   Bundle 'terryma/vim-multiple-cursors'
