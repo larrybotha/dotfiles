@@ -8,7 +8,6 @@ function installmodule() {
 	fi
 }
 
-installmodule coffee-script
 installmodule elm
 installmodule elm-format@exp
 installmodule elm-oracle
@@ -16,6 +15,7 @@ installmodule elm-test
 installmodule feathers-cli
 installmodule gulp-cli
 installmodule imageoptim-cli
+installmodule localtunnel
 installmodule ndb
 installmodule ngrok
 installmodule nodemon
