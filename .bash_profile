@@ -15,6 +15,12 @@ export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/bash_completion" ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
 
 
+# add npm script completion
+if type "npm" > /dev/null; then
+  npm completion >> ~/.bash_profile
+fi
+
+
 # make Vim the editor for tmux
 export EDITOR="vim"
 
