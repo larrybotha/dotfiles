@@ -46,6 +46,7 @@
   Bundle 'heavenshell/vim-jsdoc'
   Bundle 'janko-m/vim-test'
   Bundle 'tpope/vim-dispatch'
+  Bundle 'ternjs/tern_for_vim'
 "}
 
 " General {
