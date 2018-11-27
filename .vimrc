@@ -277,11 +277,8 @@
     " git push
     nmap <leader>gp :exec ':Git push origin ' . fugitive#head()<CR>
 
-    " git push to heroku
-    nmap <leader>ghp :exec ':Git push heroku ' . fugitive#head()<CR>
-
     " git status
-    map <silent> <leader>gss :Gstatus<CR>/not staged<CR>/modified<CR>
+    map <silent> <leader>gs :Gstatus<CR>/not staged<CR>/modified<CR>
 
     " git commit -am "
     map <leader>gci :Git commit -am "
@@ -291,10 +288,6 @@
 
     " git diff
     map <leader>gd :Gdiff<CR>
-
-    " open source tree
-    map <leader>gstree :exec ':!stree'<CR>
-
   " }
 
   " JsDoc {
