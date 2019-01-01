@@ -278,7 +278,7 @@
     nmap <leader>gp :exec ':Git push origin ' . fugitive#head()<CR>
 
     " git status
-    map <silent> <leader>gs :Gstatus<CR>/not staged<CR>/modified<CR>
+    map <silent> <leader>gs :Gstatus<CR>
 
     " git commit -am "
     map <leader>gci :Git commit -am "
