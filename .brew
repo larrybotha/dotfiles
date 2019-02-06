@@ -139,6 +139,7 @@ installcask sourcetree
 installcask sublime-text
 installcask the-unarchiver
 installcask transmission
+installcask virtualbox
 installcask vlc
 installcask witch
 installcask xscope
