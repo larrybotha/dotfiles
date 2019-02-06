@@ -119,7 +119,6 @@ installcask imageoptim
 installcask integrity
 installcask iterm2
 installcask libreoffice
-installcask miro-video-converter
 installcask moom
 installcask muzzle
 installcask opera-next
@@ -136,17 +135,11 @@ installcask recordit
 installcask robo-3t
 installcask postman
 installcask slack
-installcask smoothmouse
 installcask sourcetree
 installcask sublime-text
 installcask the-unarchiver
-installcask thunderbird
 installcask transmission
-installcask vagrant
-installcask vagrant-manager
-installcask virtualbox
 installcask vlc
-installcask vox
 installcask witch
 installcask xscope
 
