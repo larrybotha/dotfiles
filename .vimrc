@@ -428,6 +428,9 @@
   " Vim Test {
     let test#strategy = "vimterminal"
     let g:test#preserve_screen = 1
+    " run Jest tests in debug mode at port 9222, running in band, so that
+    " debugger breakpoints are respected
+    let test#javascript#jest#executable = 'node --inspect=9222 $(npm bin)/jest --runInBand'
 
     nmap <silent> t<C-n> :TestNearest<CR> " t Ctrl+n
     nmap <silent> t<C-f> :TestFile<CR>    " t Ctrl+f
