@@ -45,7 +45,6 @@
   Bundle 'Quramy/tsuquyomi'
   Bundle 'heavenshell/vim-jsdoc'
   Bundle 'janko-m/vim-test'
-  Bundle 'tpope/vim-dispatch'
   Bundle 'ternjs/tern_for_vim'
 "}
 
@@ -427,8 +426,7 @@
   " }
 
   " Vim Test {
-    " use vim-dispatch to run tests
-    let test#strategy = "dispatch"
+    let test#strategy = "vimterminal"
     let g:test#preserve_screen = 1
 
     nmap <silent> t<C-n> :TestNearest<CR> " t Ctrl+n
