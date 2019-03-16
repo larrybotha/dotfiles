@@ -5,3 +5,5 @@
 # http://docs.python-guide.org/en/latest/starting/install/osx/
 pip install virtualenv
 
+# install yamllint for vim-syntastic integration
+pip install yamllint
