@@ -328,7 +328,9 @@
     let g:syntastic_auto_loc_list = 0
     let g:syntastic_check_on_open = 1
     let g:syntastic_check_on_wq = 0
+    " requires yamllint to be installed with pip
     let g:syntastic_yaml_checkers = ['yamllint']
+    " install jsonlint via npm for json linting
   " }
 
   " Vim JSX (via vim-polyglot) {

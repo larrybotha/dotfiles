@@ -15,6 +15,7 @@ installmodule elm-test
 installmodule feathers-cli
 installmodule gulp-cli
 installmodule imageoptim-cli
+installmodule jsonlint
 installmodule localtunnel
 installmodule ndb
 installmodule ngrok
