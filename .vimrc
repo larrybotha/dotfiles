@@ -53,6 +53,7 @@
   Plug 'janko-m/vim-test'
   Plug 'ternjs/tern_for_vim'
   Plug 'tmux-plugins/vim-tmux-focus-events'
+  Plug 'airblade/vim-gitgutter'
   call plug#end()
 "}
 
