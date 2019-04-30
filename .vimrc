@@ -52,6 +52,7 @@
   Plug 'heavenshell/vim-jsdoc'
   Plug 'janko-m/vim-test'
   Plug 'ternjs/tern_for_vim'
+  Plug 'tmux-plugins/vim-tmux-focus-events'
   call plug#end()
 "}
 
@@ -115,6 +116,12 @@
   set foldenable                                 " auto fold code
   set nospell                                    " disable spellcheck
   set shortmess=atI                              " prevent 'Press ENTER' prompt
+
+  " update buffer if file is saved outside of vim
+  " requires tmux-focus-events plugin for tmux support
+  au FocusGained,BufEnter * :checktime " when buffer is changed
+  au CursorHold,CursorHoldI * checktime " when cursor stops moving
+  set autoread
 
   " highlight trailing white space
   highlight ExtraWhitespace ctermbg=red guibg=red
