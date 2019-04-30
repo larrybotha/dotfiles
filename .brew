@@ -104,6 +104,7 @@ function installcask() {
 
 installcask alfred
 installcask anki
+installcask bitbar
 installcask betterzip
 installcask commander-one
 installcask dash
