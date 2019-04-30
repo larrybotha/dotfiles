@@ -271,8 +271,8 @@
 
   " Plug {
     " Update / Install bundles
-    map <leader>vpi :PlugInstall<CR>
-    map <leader>vpu :PlugUpdate<CR>
+    map <leader>vbi :PlugInstall<CR>
+    map <leader>vbu :PlugUpdate<CR>
   " }
 
   " ctrlP {
