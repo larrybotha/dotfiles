@@ -68,9 +68,6 @@ chmod -X ~/code/git-completion/git-completion.bash
 cd ~/code
 git clone git://github.com/jeroenbegyn/VLCControl.git
 
-# setup Vundle for Vim package management - https://github.com/gmarik/vundle
-git clone https://github.com/gmarik/vundle.git ~/.vim/bundle/vundle
-
 # my magic photobooth symlink -> dropbox. I love it.
 # first move Photo Booth folder out of Pictures
 # then start Photo Booth. It'll ask where to put the library.
