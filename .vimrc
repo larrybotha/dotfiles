@@ -38,7 +38,7 @@
   Plug 'jistr/vim-nerdtree-tabs'
   Plug 'terryma/vim-multiple-cursors'
   Plug 'moll/vim-node'
-  Plug 'joonty/vdebug.git'
+  Plug 'vim-vdebug/vdebug'
   Plug 'mattn/emmet-vim'
   Plug 'editorconfig/editorconfig-vim'
   Plug 'maxbrunsfeld/vim-yankstack'
