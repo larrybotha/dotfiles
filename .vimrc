@@ -12,40 +12,47 @@
   "}
 "}
 
-" Bundles {
-  set rtp+=~/.vim/bundle/vundle/
-  call vundle#rc()
-  Bundle 'tpope/vim-sensible'
-  Bundle 'gmarik/vundle'
-  Bundle 'rking/ag.vim'
-  Bundle 'tpope/vim-fugitive'
-  Bundle 'tpope/vim-surround'
-  Bundle 'Raimondi/delimitMate'
-  Bundle 'ctrlpvim/ctrlp.vim'
-  Bundle 'ervandew/supertab'
-  Bundle 'ddollar/nerdcommenter'
-  Bundle 'tpope/vim-endwise'
-  Bundle 'scrooloose/syntastic'
-  Bundle 'scrooloose/nerdtree'
-  Bundle 'godlygeek/tabular'
-  Bundle 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
-  Bundle 'jistr/vim-nerdtree-tabs'
-  Bundle 'terryma/vim-multiple-cursors'
-  Bundle 'moll/vim-node'
-  Bundle 'joonty/vdebug.git'
-  Bundle 'mattn/emmet-vim'
-  Bundle 'editorconfig/editorconfig-vim'
-  Bundle 'maxbrunsfeld/vim-yankstack'
-  Bundle 'christoomey/vim-tmux-navigator'
-  Bundle 'elmcast/elm-vim'
-  Bundle 'metakirby5/codi.vim'
-  Bundle 'prettier/vim-prettier'
-  Bundle 'sheerun/vim-polyglot'
-  Bundle 'leafgarland/typescript-vim'
-  Bundle 'Quramy/tsuquyomi'
-  Bundle 'heavenshell/vim-jsdoc'
-  Bundle 'janko-m/vim-test'
-  Bundle 'ternjs/tern_for_vim'
+" Plugin Installation {
+  " install Plug if it isn't already
+  if empty(glob('~/.vim/autoload/plug.vim'))
+    silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+      \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+  endif
+
+  call plug#begin('~/.vim/plugged')
+  Plug 'tpope/vim-sensible'
+  Plug 'gmarik/vundle'
+  Plug 'rking/ag.vim'
+  Plug 'tpope/vim-fugitive'
+  Plug 'tpope/vim-surround'
+  Plug 'Raimondi/delimitMate'
+  Plug 'ctrlpvim/ctrlp.vim'
+  Plug 'ervandew/supertab'
+  Plug 'ddollar/nerdcommenter'
+  Plug 'tpope/vim-endwise'
+  Plug 'scrooloose/syntastic'
+  Plug 'scrooloose/nerdtree'
+  Plug 'godlygeek/tabular'
+  Plug 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
+  Plug 'jistr/vim-nerdtree-tabs'
+  Plug 'terryma/vim-multiple-cursors'
+  Plug 'moll/vim-node'
+  Plug 'joonty/vdebug.git'
+  Plug 'mattn/emmet-vim'
+  Plug 'editorconfig/editorconfig-vim'
+  Plug 'maxbrunsfeld/vim-yankstack'
+  Plug 'christoomey/vim-tmux-navigator'
+  Plug 'elmcast/elm-vim'
+  Plug 'metakirby5/codi.vim'
+  Plug 'prettier/vim-prettier'
+  Plug 'sheerun/vim-polyglot'
+  Plug 'leafgarland/typescript-vim'
+  Plug 'Quramy/tsuquyomi'
+  Plug 'heavenshell/vim-jsdoc'
+  Plug 'janko-m/vim-test'
+  Plug 'ternjs/tern_for_vim'
+  call plug#end()
 "}
 
 " General {
@@ -214,7 +221,7 @@
 
   " quick access to this .vimrc
   map <leader>vi :tabe ~/dotfiles/.vimrc<CR>
-  map <leader>vs :source ~/.vimrc<CR>
+  map <leader>vs :source $MYVIMRC<CR>
 
   " set all windows to equal width
   map <leader>= <C-w>=
@@ -252,12 +259,12 @@
 
 " }
 
-" Plugins {
+" Plugin Configs {
 
-  " Vundle {
+  " Plug {
     " Update / Install bundles
-    map <leader>vbi :PluginInstall<CR>
-    map <leader>vbu :PluginUpdate<CR>
+    map <leader>vpi :PlugInstall<CR>
+    map <leader>vpu :PlugUpdate<CR>
   " }
 
   " ctrlP {
