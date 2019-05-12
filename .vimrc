@@ -62,11 +62,11 @@
 
 " General {
   filetype plugin indent on " automatically detect files types
-  syntax on                " syntax highlighting
-  set mouse=a              " automatically enable mouse usage
+  syntax on                 " syntax highlighting
+  set mouse=a               " automatically enable mouse usage
   scriptencoding utf-8
   set history=1000          " store more history (default is 20)
-  set nospell              " spell checking off
+  set nospell               " spell checking off
   set noswapfile            " don't use swapfiles
 
   " don't create backup files
