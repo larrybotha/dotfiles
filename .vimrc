@@ -55,6 +55,7 @@
   Plug 'airblade/vim-gitgutter'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
+  Plug 'ludovicchabant/vim-gutentags'
   Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
   call plug#end()
 "}
