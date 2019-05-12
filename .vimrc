@@ -290,7 +290,7 @@
       \ 'coc-phpls',
       \ 'coc-python',
       \ 'coc-json',
-    ]
+    \]
   " }
 
   " delimitMate {
