@@ -72,6 +72,7 @@ brew install python
 brew install qt
 brew install redis
 brew install rename
+brew install ripgrep
 brew install rhino
 brew install sbt
 brew install sequel-pro
