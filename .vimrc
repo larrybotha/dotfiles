@@ -27,7 +27,6 @@
   Plug 'tpope/vim-fugitive'
   Plug 'tpope/vim-surround'
   Plug 'Raimondi/delimitMate'
-  Plug 'ctrlpvim/ctrlp.vim'
   Plug 'ervandew/supertab'
   Plug 'ddollar/nerdcommenter'
   Plug 'tpope/vim-endwise'
@@ -54,6 +53,8 @@
   Plug 'ternjs/tern_for_vim'
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'airblade/vim-gitgutter'
+  Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+  Plug 'junegunn/fzf.vim'
   call plug#end()
 "}
 
@@ -275,9 +276,6 @@
     map <leader>vbu :PlugUpdate<CR>
   " }
 
-  " ctrlP {
-    let g:ctrlp_max_height = 25
-    let g:ctrlp_show_hidden = 1
   " }
 
   " delimitMate {
@@ -303,6 +301,16 @@
     " git diff
     map <leader>gd :Gdiff<CR>
   " }
+
+  " fzf {
+    nnoremap <C-p> :Files<CR>
+    nnoremap <Leader>b :Buffers<CR>
+    nnoremap <Leader>h :History<CR>
+
+    nnoremap <Leader>t :BTags<CR>
+    nnoremap <Leader>T :Tags<CR>
+  " }
+
 
   " JsDoc {
   let g:jsdoc_enable_es6 = 1
@@ -375,17 +383,6 @@
     let g:tsuquyomi_completion_detail = 1
     autocmd FileType typescript setlocal completeopt+=menu,preview
     autocmd FileType typescript nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
-  " }
-
-  " The Silver Searcher {
-    " Source: https://github.com/thoughtbot/dotfiles/blob/master/vimrc
-    if executable('ag')
-      " Use Ag over Grep
-      set grepprg=ag\ --nogroup\ --nocolor
-
-      " Use ag in CtrlP for listing files. Lightning fast and respects .gitignore
-      let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
-    endif
   " }
 
   " vdebug {
