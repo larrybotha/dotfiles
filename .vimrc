@@ -55,6 +55,7 @@
   Plug 'airblade/vim-gitgutter'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
+  Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
   call plug#end()
 "}
 
@@ -276,6 +277,19 @@
     map <leader>vbu :PlugUpdate<CR>
   " }
 
+  " coc.vim {
+    " install extensions
+    let g:coc_global_extensions  = [
+      \ 'coc-css',
+      \ 'coc-emmet',
+      \ 'coc-yaml',
+      \ 'coc-tsserver',
+      \ 'coc-html',
+      \ 'coc-json',
+      \ 'coc-phpls',
+      \ 'coc-python',
+      \ 'coc-json',
+    ]
   " }
 
   " delimitMate {
