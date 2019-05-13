@@ -22,7 +22,6 @@
 
   call plug#begin('~/.vim/plugged')
   Plug 'tpope/vim-sensible'
-  Plug 'gmarik/vundle'
   Plug 'rking/ag.vim'
   Plug 'tpope/vim-fugitive'
   Plug 'tpope/vim-surround'
