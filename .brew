@@ -40,7 +40,6 @@ brew install rbenv ruby-build
 
 # Install other useful binaries
 brew install ack
-brew install android-studio
 brew install ansible
 brew install codeception
 brew install composer
@@ -54,13 +53,10 @@ brew install git-crypt
 brew install git-flow
 brew install go
 brew install hub
-brew install httpd
 brew install httpie
 brew install ios-webkit-debug-proxy
 brew install jasmine
 brew install lynx
-brew install mysql
-brew install nginx
 brew install node
 brew install nvm
 brew install php-version
@@ -73,12 +69,10 @@ brew install qt
 brew install redis
 brew install rename
 brew install ripgrep
-brew install rhino
 brew install sbt
 brew install sequel-pro
 brew install the_silver_searcher
 brew install tree
-brew install watchman
 brew install webkit2png
 brew install vim
 brew install zopfli
@@ -87,7 +81,7 @@ brew install yarn
 brew tap homebrew/versions
 brew install lua52
 
-# tmux and depdencies
+# tmux and dependencies
 brew install tmux
 brew install reattach-to-user-namespace
 
@@ -121,6 +115,7 @@ installcask integrity
 installcask iterm2
 installcask libreoffice
 installcask moom
+installcask mysqlworkbench
 installcask pckeyboardhack
 installcask plex-home-theater
 installcask plex-media-server
@@ -136,13 +131,14 @@ installcask robo-3t
 installcask skype
 installcask slack
 installcask sourcetree
-installcask sublime-text
+installcask spectacle
 installcask tastyworks
 installcask the-unarchiver
 installcask thinkorswim
 installcask transmission
 installcask virtualbox
 installcask vlc
+installcask visual-studio-code
 installcask witch
 installcask xscope
 
