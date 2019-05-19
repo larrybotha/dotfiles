@@ -105,6 +105,7 @@ installcask commander-one
 installcask dash
 installcask dropbox
 installcask firefox
+installcask firefox-developer-edition
 installcask flux
 installcask google-app-engine-launcher
 installcask google-chrome
