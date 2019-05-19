@@ -137,7 +137,9 @@ installcask skype
 installcask slack
 installcask sourcetree
 installcask sublime-text
+installcask tastyworks
 installcask the-unarchiver
+installcask thinkorswim
 installcask transmission
 installcask virtualbox
 installcask vlc
