@@ -38,6 +38,9 @@ brew tap homebrew/services
 # eval "$(rbenv init -)" is already added in .bash_profile
 brew install rbenv ruby-build
 
+# Install MySQL so we can run mysql commands from the host
+brew install mysql
+
 # Install other useful binaries
 brew install ack
 brew install ansible
