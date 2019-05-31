@@ -61,6 +61,8 @@ brew install ios-webkit-debug-proxy
 brew install jasmine
 brew install lynx
 brew install node
+brew install mongodb@3.2
+brew install mongodb-compass
 brew install nvm
 brew install php-version
 brew install phppgadmin
