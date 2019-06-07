@@ -122,6 +122,7 @@ installcask imageoptim
 installcask integrity
 installcask iterm2
 installcask libreoffice
+installcask kap
 installcask moom
 installcask mysqlworkbench
 installcask pckeyboardhack
