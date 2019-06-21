@@ -223,9 +223,6 @@
   " paste, fix indentation and clear the mark by default
   nnoremap p p=`]`<esc>
 
-  " clear trailing white space across file
-  nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
-
   " quickly move to next and previous buffers
   map <leader>bn :bn<CR>
   map <leader>bp :bp<CR>
