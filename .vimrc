@@ -83,9 +83,14 @@
   set fillchars=diff:·
 
   " check for external file changes, and suppress notices from appearing in command line
-  if has("autocmd")
-    autocmd CursorHold,CursorMoved,BufEnter silent * checktime
-  endif
+  " requires tmux-focus-events plugin for tmux support
+  au FocusGained,BufEnter * :checktime " when buffer is changed
+  " when cursor stops moving
+  " https://vi.stackexchange.com/questions/14315/how-can-i-tell-if-im-in-the-command-window
+  autocmd FocusGained,BufEnter,CursorHold,CursorHoldI *
+                \ if mode() == 'n' && getcmdwintype() == '' | checktime | endif
+  set autoread
+
 
   if has('mouse_sgr')
     set ttymouse=sgr
@@ -120,12 +125,6 @@
   set foldenable                                 " auto fold code
   set nospell                                    " disable spellcheck
   set shortmess=atI                              " prevent 'Press ENTER' prompt
-
-  " update buffer if file is saved outside of vim
-  " requires tmux-focus-events plugin for tmux support
-  au FocusGained,BufEnter * :checktime " when buffer is changed
-  au CursorHold,CursorHoldI * checktime " when cursor stops moving
-  set autoread
 
   " highlight trailing white space
   highlight ExtraWhitespace ctermbg=red guibg=red
@@ -301,7 +300,7 @@
     set cmdheight=2
 
     " Smaller updatetime for CursorHold & CursorHoldI
-    set updatetime=300
+    set updatetime=301
 
     " don't give |ins-completion-menu| messages.
     set shortmess+=c
