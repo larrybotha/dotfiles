@@ -55,7 +55,7 @@ fi
 # enable bash completion
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
 # use ripgrep for searching files
-export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow \
+export FZF_DEFAULT_COMMAND='rg --files --hidden --follow \
   -g "!{.git,node_modules,vendor,build,dist}/*" 2> /dev/null'
 # insert file from fzf into command
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"

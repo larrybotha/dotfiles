@@ -444,7 +444,7 @@
     " --glob: Additional conditions for search (in this case ignore everything in the .git/ folder)
     " --color: Search color options
     let g:rg_command = 'rg --column --line-number --no-heading --fixed-strings
-      \ --ignore-case --no-ignore --hidden --follow --color "always"
+      \ --ignore-case --hidden --follow --color "always"
       \ -g "!{.git,node_modules,vendor,build,dist}/*" '
 
     " use :F to search everything with ripgrep
