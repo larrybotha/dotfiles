@@ -33,9 +33,6 @@ export GOROOT=/usr/local/opt/go/libexec
 export PATH=$PATH:$GOPATH/bin
 export PATH=$PATH:$GOROOT/bin
 
-# ripgrep
-export FZF_DEFAULT_COMMAND='rg --files --follow --hidden'
-
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
 # * ~/.extra can be used for other settings you don’t want to commit.
@@ -53,6 +50,17 @@ fi
 if [ -f ~/code/git-completion/git-completion.bash ]; then
 	. ~/code/git-completion/git-completion.bash
 fi
+
+# fzf
+# enable bash completion
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash
+# use ripgrep for searching files
+export FZF_DEFAULT_COMMAND='rg --files --no-ignore --hidden --follow \
+  -g "!{.git,node_modules,vendor,build,dist}/*" 2> /dev/null'
+# insert file from fzf into command
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+# use ctrl-p to open a file in vim
+bind -x '"\C-p": vim $(fzf);'
 
 #add git aliases to git-completion
 complete -o default -o nospace -F _git g
