@@ -300,7 +300,7 @@
     set cmdheight=2
 
     " Smaller updatetime for CursorHold & CursorHoldI
-    set updatetime=301
+    set updatetime=300
 
     " don't give |ins-completion-menu| messages.
     set shortmess+=c
