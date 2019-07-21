@@ -8,6 +8,7 @@ function installmodule() {
 	fi
 }
 
+installmodule alfred-npms
 installmodule elm
 installmodule elm-format@exp
 installmodule elm-oracle
