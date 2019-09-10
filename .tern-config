@@ -1,6 +1,7 @@
 {
   "libs": [
     "browser",
+    "cypress",
     "ecmascript",
     "jquery",
     "react",
