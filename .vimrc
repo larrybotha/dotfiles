@@ -279,14 +279,14 @@
     let g:coc_global_extensions  = [
       \ 'coc-css',
       \ 'coc-emmet',
-      \ 'coc-yaml',
-      \ 'coc-tsserver',
-      \ 'coc-tslint-plugin',
       \ 'coc-html',
+      \ 'coc-java',
       \ 'coc-json',
       \ 'coc-phpls',
       \ 'coc-python',
-      \ 'coc-json',
+      \ 'coc-tslint-plugin',
+      \ 'coc-tsserver',
+      \ 'coc-yaml',
     \]
 
     " if hidden is not set, TextEdit might fail.
