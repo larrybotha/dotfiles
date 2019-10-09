@@ -10,30 +10,17 @@ sudo bash < <( curl https://raw.github.com/jamiew/git-friendly/master/install.sh
 # you need the code CLI tools YOU FOOL.
 ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
 
-# install node the right way
-# https://gist.github.com/DanHerbert/9520689
-if type -P node &> /dev/null; then
-	echo "node already installed"
-else
-	if [ -d /usr/local/lib/node_modules ]; then
-		rm -rf /usr/local/lib/node_modules
-	fi
-
-	echo "installing node"
-
-	brew uninstall node
-	brew install node --without-npm
-	echo prefix=~/.node >> ~/.npmrc
-	curl -L https://www.npmjs.org/install.sh | sh
-fi
-
-# install Node Version Manager
+# install Node Version Manager and node
 if type -P nvm &> /dev/null; then
 	echo "nvm already installed"
 else
 	echo "installing nvm"
 
 	curl https://raw.githubusercontent.com/creationix/nvm/v0.24.0/install.sh | bash
+
+  echo "installing node"
+
+  nvm install node
 fi
 
 # make a code directory for dependencies
