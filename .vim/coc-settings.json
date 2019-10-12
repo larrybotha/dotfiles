@@ -33,6 +33,13 @@
       "args": ["start"],
       "filetypes": ["sh"],
       "ignoredRootPaths": ["~"]
+    },
+
+    "reason": {
+      "command": "reason-language-server",
+      "filetypes": ["reason"]
     }
-  }
+  },
+
+  "coc.preferences.formatOnSaveFiletypes": ["reason"]
 }
