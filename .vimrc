@@ -536,10 +536,8 @@
     let g:syntastic_typescript_checkers = ['tsuquyomi']
     " makes completion slow
     let g:tsuquyomi_completion_detail = 1
-    autocmd FileType typescript     setlocal completeopt+=menu,preview
-    autocmd FileType typescript.tsx setlocal completeopt+=menu,preview
-    autocmd FileType typescript     nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
-    autocmd FileType typescript.tsx nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
+    autocmd FileType typescript      setlocal completeopt+=menu,preview
+    autocmd FileType typescript      nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
   " }
 
   " vdebug {
