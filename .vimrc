@@ -21,12 +21,12 @@
   endif
 
   call plug#begin('~/.vim/plugged')
+  Plug 'ervandew/supertab'
   Plug 'tpope/vim-sensible'
   Plug 'rking/ag.vim'
   Plug 'tpope/vim-fugitive'
   Plug 'tpope/vim-surround'
   Plug 'Raimondi/delimitMate'
-  Plug 'ervandew/supertab'
   Plug 'ddollar/nerdcommenter'
   Plug 'tpope/vim-endwise'
   Plug 'scrooloose/syntastic'
@@ -314,7 +314,7 @@
           \ pumvisible() ? "\<C-n>" :
           \ <SID>check_back_space() ? "\<TAB>" :
           \ coc#refresh()
-    inoremap <expr><S-TAB> pumvisible() ? "\<C-p>" : "\<C-h>"
+    inoremap <expr> <S-TAB> pumvisible() ? "\<C-p>" : "\<S-TAB>"
 
     function! s:check_back_space() abort
       let col = col('.') - 1
@@ -528,7 +528,10 @@
   " }
 
   " Typescript Vim {
-    autocmd BufNewFile,BufRead *.tsx setfiletype typescript
+    " We force typescript as a file everywhere because Vim added typescriptreact
+    " filetype, breaking detection for a whole bunch of plugins
+    " https://github.com/vim/vim/issues/4830
+    autocmd BufNewFile,BufRead *.tsx set filetype=typescript.tsx
   " }
 
   " Tsuquyomi {
