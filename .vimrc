@@ -314,7 +314,8 @@
           \ pumvisible() ? "\<C-n>" :
           \ <SID>check_back_space() ? "\<TAB>" :
           \ coc#refresh()
-    inoremap <expr> <S-TAB> pumvisible() ? "\<C-p>" : "\<S-TAB>"
+    " GAAAAAAAAAAAAAAAARRRHHH WTF IS WRONG WITH THIS GODDAMN CONFIG
+    " inoremap <expr> <S-TAB> pumvisible() ? "\<C-p>" : "\<S-TAB>"
 
     function! s:check_back_space() abort
       let col = col('.') - 1
