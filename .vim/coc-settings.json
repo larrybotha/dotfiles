@@ -41,5 +41,5 @@
     }
   },
 
-  "coc.preferences.formatOnSaveFiletypes": ["reason"]
+  "coc.preferences.formatOnSaveFiletypes": ["reason", "svelte"]
 }
