@@ -284,6 +284,7 @@
       \ 'coc-json',
       \ 'coc-phpls',
       \ 'coc-python',
+      \ 'coc-svelte',
       \ 'coc-tslint-plugin',
       \ 'coc-tsserver',
       \ 'coc-yaml',
