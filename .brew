@@ -83,6 +83,7 @@ brew install vim
 brew install watchman
 brew install yarn
 brew install zopfli
+brew install watch
 
 brew tap homebrew/versions
 brew install lua52
