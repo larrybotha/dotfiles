@@ -41,5 +41,5 @@
     }
   },
 
-  "coc.preferences.formatOnSaveFiletypes": ["reason", "svelte"]
+  "coc.preferences.formatOnSaveFiletypes": ["reason", "svelte", "php"]
 }
