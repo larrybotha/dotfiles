@@ -546,6 +546,10 @@
   " }
 
   " vdebug {
+  if !exists('g:vdebug_options')
+    let g:vdebug_options = {}
+  endif
+
   let g:vdebug_options["break_on_open"] = 0
   let g:vdebug_options["path_maps"] = {
   \ "/var/www/html": "/Users/larry/Sites/sa-trust/knowledge-hub/src"
