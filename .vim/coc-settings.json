@@ -16,13 +16,12 @@
       "initializationOptions": {}
     },
 
-    "intelephense": {
-      "command": "intelephense",
-      "args": ["--stdio"],
-      "filetypes": ["php"],
-      "initializationOptions": {
-        "storagePath": "/tmp/intelephense"
-      }
+    "phplang": {
+      "command": "php",
+      "args": [
+        "/Users/larry/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"
+      ],
+      "filetypes": ["php"]
     },
 
     "dockerfile": {
