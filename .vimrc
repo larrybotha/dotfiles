@@ -52,6 +52,7 @@
   Plug 'ternjs/tern_for_vim'
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'airblade/vim-gitgutter'
+  Plug 'fatih/vim-go'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
   Plug 'ludovicchabant/vim-gutentags'
