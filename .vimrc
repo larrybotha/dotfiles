@@ -412,6 +412,11 @@
     let delimitMate_expand_space = 1
   " }
 
+  " vim-go {
+    " format and rewrite imports on save
+    let g:go_fmt_command = "goimports"
+  " }
+
   " Fugitive {
     " git push
     nmap <leader>gp :exec ':Git push origin ' . fugitive#head()<CR>
