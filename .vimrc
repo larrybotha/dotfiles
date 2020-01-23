@@ -31,6 +31,7 @@
   Plug 'tpope/vim-endwise'
   Plug 'scrooloose/syntastic'
   Plug 'scrooloose/nerdtree'
+  Plug 'brett-griffin/phpdocblocks.vim'
   Plug 'godlygeek/tabular'
   Plug 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
   Plug 'jistr/vim-nerdtree-tabs'
