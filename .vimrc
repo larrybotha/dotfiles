@@ -27,7 +27,7 @@
   Plug 'tpope/vim-fugitive'
   Plug 'tpope/vim-surround'
   Plug 'Raimondi/delimitMate'
-  Plug 'ddollar/nerdcommenter'
+  Plug 'preservim/nerdcommenter'
   Plug 'tpope/vim-endwise'
   Plug 'scrooloose/syntastic'
   Plug 'scrooloose/nerdtree'
