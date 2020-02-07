@@ -33,7 +33,7 @@
   Plug 'scrooloose/nerdtree'
   Plug 'brett-griffin/phpdocblocks.vim'
   Plug 'godlygeek/tabular'
-  Plug 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
+  Plug 'vim-airline/vim-airline'
   Plug 'jistr/vim-nerdtree-tabs'
   Plug 'terryma/vim-multiple-cursors'
   Plug 'moll/vim-node'
@@ -494,8 +494,8 @@
 
   " }
 
-  " Powerline {
-    let g:Powerline_symbols = 'fancy'
+  " Airline {
+    "let g:airline_powerline_fonts = 1
   " }
 
   " Syntastic {
