@@ -59,6 +59,7 @@
   Plug 'ludovicchabant/vim-gutentags'
   Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
   Plug 'rhysd/git-messenger.vim'
+  Plug 'jodosha/vim-godebug'
   call plug#end()
 "}
 
