@@ -34,6 +34,7 @@
   Plug 'brett-griffin/phpdocblocks.vim'
   Plug 'godlygeek/tabular'
   Plug 'vim-airline/vim-airline'
+  Plug 'edkolev/tmuxline.vim'
   Plug 'jistr/vim-nerdtree-tabs'
   Plug 'terryma/vim-multiple-cursors'
   Plug 'moll/vim-node'
