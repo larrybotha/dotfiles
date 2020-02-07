@@ -134,8 +134,19 @@
   set shortmess=atI                              " prevent 'Press ENTER' prompt
 
   " highlight trailing white space
-  highlight ExtraWhitespace ctermbg=red guibg=red
+  hi ExtraWhitespace ctermbg=197 guibg=red
   match ExtraWhitespace /\s\+$/
+
+  " make error messages more legible
+  hi Error        ctermfg=0   ctermbg=1   guifg=black   guibg=red
+  hi ErrorMsg     ctermfg=0   ctermbg=1   guifg=black   guibg=red
+  hi SpellBad     ctermfg=0   ctermbg=1   guifg=black   guibg=red
+  hi WarningMsg   ctermfg=0   ctermbg=1   guifg=black   guibg=red
+
+  " make debugger lines more legible
+  hi RedrawDebugComposed ctermbg=2 guibg=green
+  hi RedrawDebugRecompose ctermbg=1 guibg=red
+
 
   " switch relative line numbers to absolute when Vim is not in focus
   :au FocusLost * :set number
