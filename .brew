@@ -114,7 +114,6 @@ installcask brave-browser
 installcask commander-one
 installcask dash
 installcask dropbox
-installcask eclipse-java
 installcask firefox
 installcask firefox-developer-edition
 installcask flux
