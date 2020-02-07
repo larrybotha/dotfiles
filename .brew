@@ -46,8 +46,8 @@ brew install ack
 brew install ansible
 brew install codeception
 brew install composer
-brew install docker
 brew install ctags
+brew install docker
 brew install editorconfig
 brew install elasticsearch
 brew install flow
@@ -56,17 +56,18 @@ brew install git
 brew install git-crypt
 brew install git-flow
 brew install go
-brew install hub
 brew install httpie
+brew install hub
 brew install ios-webkit-debug-proxy
 brew install jasmine
 brew install lynx
-brew install mongodb@3.2
 brew install mongodb-compass
+brew install mongodb@3.2
+brew install neovim
 brew install nvm
+brew install phantomjs
 brew install php-version
 brew install phppgadmin
-brew install phantomjs
 brew install pigz
 brew install postgresql
 brew install python
@@ -78,12 +79,12 @@ brew install sbt
 brew install sequel-pro
 brew install the_silver_searcher
 brew install tree
-brew install webkit2png
 brew install vim
+brew install watch
 brew install watchman
+brew install webkit2png
 brew install yarn
 brew install zopfli
-brew install watch
 
 brew tap homebrew/versions
 brew install lua52
