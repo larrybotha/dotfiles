@@ -77,7 +77,10 @@
   set nowritebackup
 
   " remove the delay when hitting esc in insert mode
-  set noesckeys
+  if !has('nvim')
+      set noesckeys
+  endif
+
   set ttimeout
   set ttimeoutlen=1
 
@@ -495,7 +498,8 @@
   " }
 
   " Airline {
-    "let g:airline_powerline_fonts = 1
+    let g:airline_powerline_fonts = 1
+    let g:airline#extensions#tabline#enabled = 1
   " }
 
   " Syntastic {
