@@ -60,7 +60,8 @@
   Plug 'ludovicchabant/vim-gutentags'
   Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
   Plug 'rhysd/git-messenger.vim'
-  Plug 'jodosha/vim-godebug'
+  " only load if we are in Neovim
+  Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   call plug#end()
 "}
 
@@ -77,9 +78,9 @@
   set nobackup
   set nowritebackup
 
-  " remove the delay when hitting esc in insert mode
   if !has('nvim')
-      set noesckeys
+    " remove the delay when hitting esc in insert mode
+    set noesckeys
   endif
 
   set ttimeout
@@ -339,6 +340,12 @@
     function! s:check_back_space() abort
       let col = col('.') - 1
       return !col || getline('.')[col - 1]  =~# '\s'
+    endfunction
+
+    " conditionally get options
+    function! Cond(cond, ...)
+      let opts = get(a:000, 0, {})
+      return a:cond ? opts : extend(opts, { 'on': [], 'for': [] })
     endfunction
 
     " Use <c-space> to trigger completion.
