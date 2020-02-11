@@ -20,6 +20,12 @@
     autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
   endif
 
+  " conditionally get options
+  function! Cond(cond, ...)
+    let opts = get(a:000, 0, {})
+    return a:cond ? opts : extend(opts, { 'on': [], 'for': [] })
+  endfunction
+
   call plug#begin('~/.vim/plugged')
   Plug 'ervandew/supertab'
   Plug 'tpope/vim-sensible'
@@ -340,12 +346,6 @@
     function! s:check_back_space() abort
       let col = col('.') - 1
       return !col || getline('.')[col - 1]  =~# '\s'
-    endfunction
-
-    " conditionally get options
-    function! Cond(cond, ...)
-      let opts = get(a:000, 0, {})
-      return a:cond ? opts : extend(opts, { 'on': [], 'for': [] })
     endfunction
 
     " Use <c-space> to trigger completion.
