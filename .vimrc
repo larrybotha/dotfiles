@@ -57,7 +57,6 @@
   Plug 'Quramy/tsuquyomi'
   Plug 'heavenshell/vim-jsdoc'
   Plug 'janko-m/vim-test'
-  Plug 'ternjs/tern_for_vim'
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'airblade/vim-gitgutter'
   Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
