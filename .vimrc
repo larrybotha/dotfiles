@@ -262,10 +262,10 @@
     au!
 
     " For all text files set 'textwidth' to 78 characters.
-    autocmd BufRead *.txt,*.md,*.textile set textwidth=80
+    autocmd BufRead *.txt,*.md,*.svx,*.textile set textwidth=80
 
-    " Never wrap slim files
-    autocmd FileType slim setlocal textwidth=0
+    " Set .svx files as markdown
+    autocmd BufRead *.svx set ft=markdown
 
     " Delete trailing white space on save
     autocm BufWritePre * :%s/\s\+$//e
