@@ -32,7 +32,6 @@
   Plug 'rking/ag.vim'
   Plug 'tpope/vim-fugitive'
   Plug 'tpope/vim-surround'
-  Plug 'Raimondi/delimitMate'
   Plug 'preservim/nerdcommenter'
   Plug 'tpope/vim-endwise'
   Plug 'scrooloose/syntastic'
@@ -296,6 +295,7 @@
     " install extensions
     let g:coc_global_extensions  = [
       \ 'coc-css',
+      \ 'coc-pairs',
       \ 'coc-emmet',
       \ 'coc-html',
       \ 'coc-java',
@@ -420,13 +420,6 @@
     " Resume latest coc list
     nnoremap <silent> <space>p  :<C-u>CocListResume<CR>
 
-  " }
-
-  " delimitMate {
-    " expand a new line after a brace to autoindent
-    let delimitMate_expand_cr = 1
-    " if parentheses are opened with a space, add a matching space after the cursor
-    let delimitMate_expand_space = 1
   " }
 
   " vim-go {
