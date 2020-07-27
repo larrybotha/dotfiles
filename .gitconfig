@@ -74,6 +74,9 @@
 [merge]
   # Include summaries of merged commits in newly created merge commit messages
   log = true
+[pull]
+  # Stop Git from emitting a warning when pulling branches
+  rebase = false
 
 [init]
   templatedir = ~/.git_template
