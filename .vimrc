@@ -64,6 +64,7 @@
   Plug 'ludovicchabant/vim-gutentags'
   Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
   Plug 'rhysd/git-messenger.vim'
+  Plug 'evanleck/vim-svelte', {'branch': 'main'}
   " only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   call plug#end()
