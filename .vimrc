@@ -65,6 +65,7 @@
   Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
   Plug 'rhysd/git-messenger.vim'
   Plug 'evanleck/vim-svelte', {'branch': 'main'}
+  Plug 'Raimondi/delimitMate'
   " only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   call plug#end()
@@ -296,7 +297,6 @@
     " install extensions
     let g:coc_global_extensions  = [
       \ 'coc-css',
-      \ 'coc-pairs',
       \ 'coc-emmet',
       \ 'coc-html',
       \ 'coc-java',
@@ -423,7 +423,14 @@
 
   " }
 
-  " vim-go {
+  " delimitMate {
+    " expand a new line after a brace to autoindent
+    let delimitMate_expand_cr = 1
+    " if parentheses are opened with a space, add a matching space after the cursor
+    let delimitMate_expand_space = 1
+  " }
+
+ " vim-go {
     " format and rewrite imports on save
     let g:go_fmt_command = 'goimports'
     " show type info under cursor
