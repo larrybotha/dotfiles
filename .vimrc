@@ -297,6 +297,7 @@
     " install extensions
     let g:coc_global_extensions  = [
       \ 'coc-css',
+      \ 'coc-svg',
       \ 'coc-emmet',
       \ 'coc-html',
       \ 'coc-java',
