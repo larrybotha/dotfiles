@@ -66,6 +66,7 @@
   Plug 'rhysd/git-messenger.vim'
   Plug 'evanleck/vim-svelte', {'branch': 'main'}
   Plug 'Raimondi/delimitMate'
+  Plug 'rust-lang/rust.vim'
   " only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   call plug#end()
@@ -297,6 +298,7 @@
     " install extensions
     let g:coc_global_extensions  = [
       \ 'coc-css',
+      \ 'coc-rust-analyzer',
       \ 'coc-svg',
       \ 'coc-emmet',
       \ 'coc-html',
@@ -429,6 +431,11 @@
     let delimitMate_expand_cr = 1
     " if parentheses are opened with a space, add a matching space after the cursor
     let delimitMate_expand_space = 1
+  " }
+
+  " rust-lang/rust {
+    let g:autofmt_autosave = 1
+
   " }
 
  " vim-go {
