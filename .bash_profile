@@ -12,6 +12,9 @@ export PATH="$PATH:~/code/depot_tools"
 # Add Rust's Cargo to path
 export PATH="$PATH:~/.cargo/bin"
 
+# Add global composer vendors to path
+export PATH="$PATH:~/.composer/vendor/bin"
+
 # Add Node and NVM to `$PATH`
 export NVM_DIR="$HOME/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
