@@ -59,7 +59,7 @@ else
 fi
 
 if [ "$SHELL" == "/bin/zsh" ]; then
-  echo "TODO: bind CTRL-P in vim to fzf for zsh"
+  echo "TODO: case, history, spelling, ..."
 else
   # Case-insensitive globbing (used in pathname expansion)
   shopt -s nocaseglob
