@@ -6,15 +6,6 @@ for file in ~/.{path,exports,aliases,functions,extra}; do
 done
 unset file
 
-# add npm script completion
-if type "npm" > /dev/null; then
-  if [ "$SHELL" == "/bin/zsh" ]; then
-    npm completion >> ~/.zshrc
-  else
-    npm completion >> ~/.bash_profile
-  fi
-fi
-
 # fzf
 # enable bash completion
 if [ "$SHELL" == "/bin/zsh" ]; then
