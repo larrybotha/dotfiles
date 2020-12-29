@@ -1,4 +1,5 @@
 #!/usr/bin/env bash
+
 cd "$(dirname "${BASH_SOURCE}")"
 git pull origin master
 
@@ -13,7 +14,11 @@ function doIt() {
   # copy coc-settings.json for Neovim
   cp ~/.vim/coc-settings.json ~/.config/nvim/coc-settings.json
 
-	source ~/.bash_profile
+  if [ "$SHELL" == "/bin/zsh" ]; then
+    source ~/.zshrc
+  else
+    source ~/.bash_profile
+  fi
 }
 
 if [ "$1" == "--force" -o "$1" == "-f" ]; then
