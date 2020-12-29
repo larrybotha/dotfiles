@@ -1,0 +1,23 @@
+# Add homebrew's installs to the `$PATH` before non-Homebrew things
+export PATH="/usr/local/bin:$PATH"
+# Add `~/bin` to the `$PATH`
+export PATH="$HOME/bin:$PATH"
+# Add `~/.local/bin` to the `$PATH` for Haskell Tool Stack
+export PATH="$HOME/.local/bin:$PATH"
+# Add Google's depot_tools for adding Chrome to iOS Simulator to path
+# Installation: https://chromium.googlesource.com/chromium/src/+/master/docs/ios/build_instructions.md
+# Install to ~/code/depot_tools
+export PATH="$PATH:~/code/depot_tools"
+
+# Add Rust's Cargo to path
+export PATH="$PATH:~/.cargo/bin"
+
+# Add global composer vendors to path
+export PATH="$PATH:~/.composer/vendor/bin"
+
+# go lang
+export GOPATH=$HOME/golang
+export GOROOT=/usr/local/opt/go/libexec
+export PATH=$PATH:$GOPATH/bin
+export PATH=$PATH:$GOROOT/bin
+
