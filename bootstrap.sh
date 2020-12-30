@@ -20,7 +20,7 @@ function doIt() {
   fi
 
   if [ "$SHELL" == "/bin/zsh" ]; then
-    source ~/.zshrc
+    zsh ~/.zshrc
   else
     source ~/.bash_profile
   fi
