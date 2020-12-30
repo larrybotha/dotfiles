@@ -28,9 +28,7 @@ fi
 eval "$(rbenv init -)"
 
 # activate tmux autocomplete
-if [ "$SHELL" == "/bin/zsh" ]; then
-  echo "TODO: zsh tmux-completion"
-else
+if [ "$SHELL" != "/bin/zsh" ]; then
   source ~/.tmux/tmux_completion.sh
 fi
 
@@ -40,23 +38,17 @@ if [ -f ~/code/git-completion/git-completion.bash ] && [ "$SHELL" == "/bin/bash"
 fi
 
 #add git aliases to git-completion
-if [ "$SHELL" == "/bin/zsh" ]; then
-  echo "TODO: zsh git-completion"
-else
+if [ "$SHELL" != "/bin/zsh" ]; then
   complete -o default -o nospace -F _git g
   complete -o default -o nospace -F _git_checkout co
 fi
 
 # use ctrl-p to open a file in vim
-if [ "$SHELL" == "/bin/zsh" ]; then
-  echo "TODO: bind CTRL-P in vim to fzf for zsh"
-else
+if [ "$SHELL" != "/bin/zsh" ]; then
   bind -x '"\C-p": vim $(fzf);'
 fi
 
-if [ "$SHELL" == "/bin/zsh" ]; then
-  echo "TODO: case, history, spelling, ..."
-else
+if [ "$SHELL" != "/bin/zsh" ]; then
   # Case-insensitive globbing (used in pathname expansion)
   shopt -s nocaseglob
 
@@ -79,29 +71,10 @@ fi
 
 # Add tab completion for SSH hostnames based on ~/.ssh/config, ignoring wildcards
 if [ -e "$HOME/.ssh/config" ]; then
-  if [ "$SHELL" == "/bin/zsh" ]; then
-    echo "TODO: zsh tab completion for hostnames"
-  else
+  if [ "$SHELL" != "/bin/zsh" ]; then
     complete -o "default" \
       -o "nospace" \
       -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2 | tr ' ' '\n')" \
       scp sftp ssh
   fi
-fi
-
-# Add tab completion for `defaults read|write NSGlobalDomain`
-# You could just use `-g` instead, but I like being explicit
-if [ "$SHELL" == "/bin/zsh" ]; then
-  echo "TODO: zsh tab completion"
-else
-  complete -W "NSGlobalDomain" defaults
-fi
-
-# Add `killall` tab completion for common apps
-if [ "$SHELL" == "/bin/zsh" ]; then
-  echo "TODO: zsh killall completion"
-else
-  complete -o "nospace" \
-    -W "Contacts Calendar Dock Finder Mail Safari iTunes SystemUIServer Terminal Twitter" \
-    killall
 fi
