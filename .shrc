@@ -13,7 +13,7 @@ set -o vi
 
 # fzf
 # enable bash completion
-if [ "$SHELL" == "/bin/zsh" ]; then
+if [ "$ZSH_VERSION" ]; then
   [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 else
   [ -f ~/.fzf.bash ] && source ~/.fzf.bash
@@ -28,27 +28,27 @@ fi
 eval "$(rbenv init -)"
 
 # activate tmux autocomplete
-if [ "$SHELL" != "/bin/zsh" ]; then
+if ! [ "$ZSH_VERSION" ]; then
   source ~/.tmux/tmux_completion.sh
 fi
 
 # init git-completion https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
-if [ -f ~/code/git-completion/git-completion.bash ] && [ "$SHELL" == "/bin/bash" ]; then
+if [ -f ~/code/git-completion/git-completion.bash ] && ! [ "$ZSH_VERSION" ]; then
   . ~/code/git-completion/git-completion.bash
 fi
 
 #add git aliases to git-completion
-if [ "$SHELL" != "/bin/zsh" ]; then
+if ! [ "$ZSH_VERSION" ]; then
   complete -o default -o nospace -F _git g
   complete -o default -o nospace -F _git_checkout co
 fi
 
 # use ctrl-p to open a file in vim
-if [ "$SHELL" != "/bin/zsh" ]; then
+if ! [ "$ZSH_VERSION" ]; then
   bind -x '"\C-p": vim $(fzf);'
 fi
 
-if [ "$SHELL" != "/bin/zsh" ]; then
+if ! [ "$ZSH_VERSION" ]; then
   # Case-insensitive globbing (used in pathname expansion)
   shopt -s nocaseglob
 
@@ -71,7 +71,7 @@ fi
 
 # Add tab completion for SSH hostnames based on ~/.ssh/config, ignoring wildcards
 if [ -e "$HOME/.ssh/config" ]; then
-  if [ "$SHELL" != "/bin/zsh" ]; then
+  if ! [ "$ZSH_VERSION" ]; then
     complete -o "default" \
       -o "nospace" \
       -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2 | tr ' ' '\n')" \
