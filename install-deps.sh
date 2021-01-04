@@ -1,5 +1,5 @@
 # up to you (me) if you want to run this as a file or copy paste at your leisure
-
+pushd -n "$(dirname 0)" > /dev/null
 
 # homebrew!
 # you need the code CLI tools YOU FOOL.
@@ -19,7 +19,6 @@ else
 	nvm install node
 fi
 
-
 # make a code directory for dependencies
 if [ ! -d ~/code ]; then
 	mkdir ~/code
@@ -36,9 +35,10 @@ fi
 # z
 # https://github.com/rupa/z
 # z binary is already referenced from .shrc
-cd ~/code
+pushd ~/code > /dev/null
 git clone https://github.com/rupa/z.git
 chmod +x ~/code/z/z.sh
+popd
 # also consider moving over your current .z file if possible. it's painful to rebuild :)
 
 
@@ -47,12 +47,9 @@ chmod +x ~/code/z/z.sh
 if [ ! -d ~/code/git-completion ]; then
 	mkdir ~/code/git-completion
 fi
-cd ~/code/git-completion
+pushd ~/code/git-completion/ > /dev/null
 curl https://raw.github.com/git/git/master/contrib/completion/git-completion.bash -OL
 chmod -X ~/code/git-completion/git-completion.bash
+popd
 
 # git-completion binary is already referenced from .shrc
-
-
-# for the c alias (syntax highlighted cat)
-sudo easy_install Pygments
