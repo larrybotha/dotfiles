@@ -62,7 +62,6 @@ brew install ios-webkit-debug-proxy
 brew install jasmine
 brew install lynx
 brew install mongodb-compass
-brew install mongodb@3.2
 brew install neovim
 brew install nvm
 brew install phantomjs
