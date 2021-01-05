@@ -6,11 +6,16 @@ brew update
 # Upgrade any already-installed formulae
 brew upgrade
 
+# Install Mojave deps
+brew install openldap libiconv
+
 # Install GNU core utilities (those that come with OS X are outdated)
 brew install coreutils
 echo "Don’t forget to add $(brew --prefix coreutils)/libexec/gnubin to \$PATH."
+
 # Install GNU `find`, `locate`, `updatedb`, and `xargs`, g-prefixed
 brew install findutils
+
 # Install Bash 4
 brew install bash
 
@@ -25,8 +30,7 @@ brew install narwhal
 # Install more recent versions of some OS X tools
 brew tap homebrew/dupes
 brew install homebrew/dupes/grep
-# brew tap josegonzalez/homebrew-php
-brew install php56 --with-fpm --with-apache --with-mysql --with-pgsql
+brew install php@73
 
 brew tap homebrew/services
 
@@ -34,56 +38,58 @@ brew tap homebrew/services
 # eval "$(rbenv init -)" is already added in .bash_profile
 brew install rbenv ruby-build
 
+# Install MySQL so we can run mysql commands from the host
+brew install mysql
+
 # Install other useful binaries
 brew install ack
-brew install android-studio
 brew install ansible
-brew install autoenv
 brew install codeception
 brew install composer
-brew install docker
-brew install docker-machine
 brew install ctags
+brew install docker
 brew install editorconfig
 brew install elasticsearch
 brew install flow
+brew install fzf
 brew install git
 brew install git-crypt
 brew install git-flow
 brew install go
-brew install hub
 brew install httpie
+brew install hub
 brew install ios-webkit-debug-proxy
 brew install jasmine
 brew install lynx
-brew install mysql
-brew install nginx
-brew install node
+brew install mongodb-compass
+brew install mongodb@3.2
+brew install neovim
 brew install nvm
+brew install phantomjs
 brew install php-version
 brew install phppgadmin
-brew install phantomjs
 brew install pigz
 brew install postgresql
 brew install python
 brew install qt
 brew install redis
 brew install rename
-brew install rhino
+brew install ripgrep
 brew install sbt
 brew install sequel-pro
 brew install the_silver_searcher
 brew install tree
+brew install vim
+brew install watch
 brew install watchman
 brew install webkit2png
-brew install vim
-brew install zopfli
 brew install yarn
+brew install zopfli
 
 brew tap homebrew/versions
 brew install lua52
 
-# tmux and depdencies
+# tmux and dependencies
 brew install tmux
 brew install reattach-to-user-namespace
 
@@ -99,51 +105,52 @@ function installcask() {
 	fi
 }
 
+installcask a-better-finder-rename
 installcask alfred
 installcask anki
-installcask betterzipql
+installcask bitbar
+installcask betterzip
+installcask brave-browser
+installcask commander-one
 installcask dash
 installcask dropbox
-installcask flux
-installcask filezilla
 installcask firefox
+installcask firefox-developer-edition
+installcask flux
 installcask google-app-engine-launcher
 installcask google-chrome
 installcask google-cloud-sdk
-installcask haskell-platform
 installcask imagealpha
 installcask imageoptim
 installcask integrity
 installcask iterm2
 installcask libreoffice
-installcask miro-video-converter
+installcask kap
 installcask moom
-installcask muzzle
-installcask opera-next
+installcask mysqlworkbench
 installcask pckeyboardhack
-installcask plex-media-server
 installcask plex-home-theater
-installcask quicklook-csv
-installcask quicklook-json
+installcask plex-media-server
+installcask postman
+installcask qlImageSize
 installcask qlcolorcode
 installcask qlmarkdown
 installcask qlstephen
 installcask qlvideo
-installcask recordit
-installcask robomongo
-installcask postman
+installcask quicklook-csv
+installcask quicklook-json
+installcask robo-3t
+installcask skype
 installcask slack
-installcask smoothmouse
 installcask sourcetree
-installcask sublime-text
+installcask spectacle
+installcask tastyworks
 installcask the-unarchiver
-installcask thunderbird
+installcask thinkorswim
 installcask transmission
-installcask vagrant
-installcask vagrant-manager
 installcask virtualbox
 installcask vlc
-installcask vox
+installcask visual-studio-code
 installcask witch
 installcask xscope
 

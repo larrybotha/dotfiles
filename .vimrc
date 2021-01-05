@@ -12,56 +12,84 @@
   "}
 "}
 
-" Bundles {
-  set rtp+=~/.vim/bundle/vundle/
-  call vundle#rc()
-  Bundle 'tpope/vim-sensible'
-  Bundle 'gmarik/vundle'
-  Bundle 'rking/ag.vim'
-  Bundle 'tpope/vim-fugitive'
-  Bundle 'tpope/vim-surround'
-  Bundle 'Raimondi/delimitMate'
-  Bundle 'ctrlpvim/ctrlp.vim'
-  Bundle 'ervandew/supertab'
-  Bundle 'ddollar/nerdcommenter'
-  Bundle 'tpope/vim-endwise'
-  Bundle 'scrooloose/syntastic'
-  Bundle 'scrooloose/nerdtree'
-  Bundle 'godlygeek/tabular'
-  Bundle 'majutsushi/tagbar'
-  Bundle 'powerline/powerline', {'rtp': 'powerline/bindings/vim/'}
-  Bundle 'jistr/vim-nerdtree-tabs'
-  Bundle 'terryma/vim-multiple-cursors'
-  Bundle 'moll/vim-node'
-  Bundle 'joonty/vdebug.git'
-  Bundle 'mattn/emmet-vim'
-  Bundle 'editorconfig/editorconfig-vim'
-  Bundle 'maxbrunsfeld/vim-yankstack'
-  Bundle 'christoomey/vim-tmux-navigator'
-  Bundle 'elmcast/elm-vim'
-  Bundle 'metakirby5/codi.vim'
-  Bundle 'prettier/vim-prettier'
-  Bundle 'sheerun/vim-polyglot'
-  Bundle 'leafgarland/typescript-vim'
-  Bundle 'Quramy/tsuquyomi'
-  Bundle 'heavenshell/vim-jsdoc'
+" Plugin Installation {
+  " install Plug if it isn't already
+  if empty(glob('~/.vim/autoload/plug.vim'))
+    silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
+      \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
+    autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+  endif
+
+  " conditionally get options
+  function! Cond(cond, ...)
+    let opts = get(a:000, 0, {})
+    return a:cond ? opts : extend(opts, { 'on': [], 'for': [] })
+  endfunction
+
+  call plug#begin('~/.vim/plugged')
+  Plug 'ervandew/supertab'
+  Plug 'tpope/vim-sensible'
+  Plug 'rking/ag.vim'
+  Plug 'tpope/vim-fugitive'
+  Plug 'tpope/vim-surround'
+  Plug 'preservim/nerdcommenter'
+  Plug 'tpope/vim-endwise'
+  Plug 'scrooloose/syntastic'
+  Plug 'scrooloose/nerdtree'
+  Plug 'brett-griffin/phpdocblocks.vim'
+  Plug 'godlygeek/tabular'
+  Plug 'vim-airline/vim-airline'
+  Plug 'edkolev/tmuxline.vim'
+  Plug 'jistr/vim-nerdtree-tabs'
+  Plug 'terryma/vim-multiple-cursors'
+  Plug 'moll/vim-node'
+  Plug 'vim-vdebug/vdebug'
+  Plug 'mattn/emmet-vim'
+  Plug 'editorconfig/editorconfig-vim'
+  Plug 'maxbrunsfeld/vim-yankstack'
+  Plug 'christoomey/vim-tmux-navigator'
+  Plug 'elmcast/elm-vim'
+  Plug 'metakirby5/codi.vim'
+  Plug 'prettier/vim-prettier'
+  Plug 'sheerun/vim-polyglot'
+  Plug 'leafgarland/typescript-vim'
+  Plug 'Quramy/tsuquyomi'
+  Plug 'heavenshell/vim-jsdoc'
+  Plug 'janko-m/vim-test'
+  Plug 'tmux-plugins/vim-tmux-focus-events'
+  Plug 'airblade/vim-gitgutter'
+  Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
+  Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+  Plug 'junegunn/fzf.vim'
+  Plug 'ludovicchabant/vim-gutentags'
+  Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
+  Plug 'rhysd/git-messenger.vim'
+  Plug 'evanleck/vim-svelte', {'branch': 'main'}
+  Plug 'Raimondi/delimitMate'
+  Plug 'rust-lang/rust.vim'
+  " only load if we are in Neovim
+  Plug 'jodosha/vim-godebug', Cond(has('nvim'))
+  call plug#end()
 "}
 
 " General {
   filetype plugin indent on " automatically detect files types
-  syntax on                " syntax highlighting
-  set mouse=a              " automatically enable mouse usage
+  syntax on                 " syntax highlighting
+  set mouse=a               " automatically enable mouse usage
   scriptencoding utf-8
   set history=1000          " store more history (default is 20)
-  set nospell              " spell checking off
+  set nospell               " spell checking off
   set noswapfile            " don't use swapfiles
 
   " don't create backup files
   set nobackup
   set nowritebackup
 
-  " remove the delay when hitting esc in insert mode
-  set noesckeys
+  if !has('nvim')
+    " remove the delay when hitting esc in insert mode
+    set noesckeys
+  endif
+
   set ttimeout
   set ttimeoutlen=1
 
@@ -70,9 +98,14 @@
   set fillchars=diff:·
 
   " check for external file changes, and suppress notices from appearing in command line
-  if has("autocmd")
-    autocmd CursorHold,CursorMoved,BufEnter silent * checktime
-  endif
+  " requires tmux-focus-events plugin for tmux support
+  au FocusGained,BufEnter * :checktime " when buffer is changed
+  " when cursor stops moving
+  " https://vi.stackexchange.com/questions/14315/how-can-i-tell-if-im-in-the-command-window
+  autocmd FocusGained,BufEnter,CursorHold,CursorHoldI *
+                \ if mode() == 'n' && getcmdwintype() == '' | checktime | endif
+  set autoread
+
 
   if has('mouse_sgr')
     set ttymouse=sgr
@@ -109,8 +142,19 @@
   set shortmess=atI                              " prevent 'Press ENTER' prompt
 
   " highlight trailing white space
-  highlight ExtraWhitespace ctermbg=red guibg=red
+  hi ExtraWhitespace ctermbg=197 guibg=red
   match ExtraWhitespace /\s\+$/
+
+  " make error messages more legible
+  hi Error        ctermfg=0   ctermbg=1   guifg=black   guibg=red
+  hi ErrorMsg     ctermfg=0   ctermbg=1   guifg=black   guibg=red
+  hi SpellBad     ctermfg=0   ctermbg=1   guifg=black   guibg=red
+  hi WarningMsg   ctermfg=0   ctermbg=1   guifg=black   guibg=red
+
+  " make debugger lines more legible
+  hi RedrawDebugComposed ctermbg=2 guibg=green
+  hi RedrawDebugRecompose ctermbg=1 guibg=red
+
 
   " switch relative line numbers to absolute when Vim is not in focus
   :au FocusLost * :set number
@@ -152,19 +196,13 @@
   " set custom leader
   let mapleader = ','
 
-  " navigate panes with <c-hhkl>
-  nmap <silent> <c-k> :wincmd k<CR>
-  nmap <silent> <c-j> :wincmd j<CR>
-  nmap <silent> <c-h> :wincmd h<CR>
-  nmap <silent> <c-l> :wincmd l<CR>
-
   " j and k navigate through wrapped lines
   nmap k gk
   nmap j gj
 
   " map common shift keys
   cmap Qall qall
-  cmap Wa wall
+  cmap W w
   cmap Tabe tabe
 
   " yank from cursor to EOL the same as C and D do
@@ -204,16 +242,13 @@
   " paste, fix indentation and clear the mark by default
   nnoremap p p=`]`<esc>
 
-  " clear trailing white space across file
-  nnoremap <leader>T :%s/\s\+$//<cr>:let @/=''<CR>
-
   " quickly move to next and previous buffers
   map <leader>bn :bn<CR>
   map <leader>bp :bp<CR>
 
   " quick access to this .vimrc
   map <leader>vi :tabe ~/dotfiles/.vimrc<CR>
-  map <leader>vs :source ~/.vimrc<CR>
+  map <leader>vs :source $MYVIMRC<CR>
 
   " set all windows to equal width
   map <leader>= <C-w>=
@@ -229,10 +264,10 @@
     au!
 
     " For all text files set 'textwidth' to 78 characters.
-    autocmd BufRead *.txt,*.md,*.textile set textwidth=80
+    autocmd BufRead *.txt,*.md,*.svx,*.textile set textwidth=80
 
-    " Never wrap slim files
-    autocmd FileType slim setlocal textwidth=0
+    " Set .svx files as markdown
+    autocmd BufRead *.svx set ft=markdown
 
     " Delete trailing white space on save
     autocm BufWritePre * :%s/\s\+$//e
@@ -251,17 +286,144 @@
 
 " }
 
-" Plugins {
+" Plugin Configs {
 
-  " Vundle {
+  " Plug {
     " Update / Install bundles
-    map <leader>vbi :PluginInstall<CR>
-    map <leader>vbu :PluginUpdate<CR>
+    map <leader>vbi :PlugInstall<CR>
+    map <leader>vbu :PlugUpdate<CR>
   " }
 
-  " ctrlP {
-    let g:ctrlp_max_height = 25
-    let g:ctrlp_show_hidden = 1
+  " coc.vim {
+    " install extensions
+    let g:coc_global_extensions  = [
+      \ 'coc-css',
+      \ 'coc-rust-analyzer',
+      \ 'coc-svg',
+      \ 'coc-emmet',
+      \ 'coc-html',
+      \ 'coc-java',
+      \ 'coc-json',
+      \ 'coc-phpls',
+      \ 'coc-python',
+      \ 'coc-svelte',
+      \ 'coc-tslint-plugin',
+      \ 'coc-tsserver',
+      \ 'coc-yaml',
+    \]
+
+    " if hidden is not set, TextEdit might fail.
+    set hidden
+
+    " Some servers have issues with backup files, see #649
+    set nobackup
+    set nowritebackup
+
+    " Better display for messages
+    set cmdheight=2
+
+    " Smaller updatetime for CursorHold & CursorHoldI
+    set updatetime=300
+
+    " don't give |ins-completion-menu| messages.
+    set shortmess+=c
+
+    " always show signcolumns
+    set signcolumn=yes
+
+    " Use tab for trigger completion with characters ahead and navigate.
+    " Use command ':verbose imap <tab>' to make sure tab is not mapped by other plugin.
+    inoremap <silent><expr> <TAB>
+          \ pumvisible() ? "\<C-n>" :
+          \ <SID>check_back_space() ? "\<TAB>" :
+          \ coc#refresh()
+    " GAAAAAAAAAAAAAAAARRRHHH WTF IS WRONG WITH THIS GODDAMN CONFIG
+    " inoremap <expr> <S-TAB> pumvisible() ? "\<C-p>" : "\<S-TAB>"
+
+    function! s:check_back_space() abort
+      let col = col('.') - 1
+      return !col || getline('.')[col - 1]  =~# '\s'
+    endfunction
+
+    " Use <c-space> to trigger completion.
+    inoremap <silent><expr> <c-space> coc#refresh()
+
+    " Use <cr> to confirm completion, `<C-g>u` means break undo chain at current position.
+    " Coc only does snippet and additional edit on confirm.
+    " inoremap <expr> <cr> pumvisible() ? "\<C-y>" : "\<C-g>u\<CR>"
+
+    " Use `[c` and `]c` to navigate diagnostics
+    nmap <silent> [c <Plug>(coc-diagnostic-prev)
+    nmap <silent> ]c <Plug>(coc-diagnostic-next)
+
+    " Remap keys for gotos
+    nmap <silent> gd <Plug>(coc-definition)
+    nmap <silent> gy <Plug>(coc-type-definition)
+    nmap <silent> gi <Plug>(coc-implementation)
+    nmap <silent> gr <Plug>(coc-references)
+
+    " Use K to show documentation in preview window
+    nnoremap <silent> K :call <SID>show_documentation()<CR>
+
+    function! s:show_documentation()
+      if (index(['vim','help'], &filetype) >= 0)
+        execute 'h '.expand('<cword>')
+      else
+        call CocAction('doHover')
+      endif
+    endfunction
+
+    " Highlight symbol under cursor on CursorHold
+    autocmd CursorHold * silent call CocActionAsync('highlight')
+
+    " Remap for rename current word
+    nmap <leader>rn <Plug>(coc-rename)
+
+    " Remap for format selected region
+    xmap <leader>f  <Plug>(coc-format-selected)
+    nmap <leader>f  <Plug>(coc-format-selected)
+
+    augroup mygroup
+      autocmd!
+      " Setup formatexpr specified filetype(s).
+      autocmd FileType typescript,json setl formatexpr=CocAction('formatSelected')
+      " Update signature help on jump placeholder
+      autocmd User CocJumpPlaceholder call CocActionAsync('showSignatureHelp')
+    augroup end
+
+    " Remap for do codeAction of selected region, ex: `<leader>aap` for current paragraph
+    xmap <leader>a  <Plug>(coc-codeaction-selected)
+    nmap <leader>a  <Plug>(coc-codeaction-selected)
+
+    " Remap for do codeAction of current line
+    nmap <leader>ac  <Plug>(coc-codeaction)
+    " Fix autofix problem of current line
+    nmap <leader>qf  <Plug>(coc-fix-current)
+
+    " Use `:Format` to format current buffer
+    command! -nargs=0 Format :call CocAction('format')
+
+    " Use `:Fold` to fold current buffer
+    command! -nargs=? Fold :call     CocAction('fold', <f-args>)
+
+    " Using CocList
+    " Show all diagnostics
+    nnoremap <silent> <space>a  :<C-u>CocList diagnostics<cr>
+    " Manage extensions
+    nnoremap <silent> <space>e  :<C-u>CocList extensions<cr>
+    " Show commands
+    nnoremap <silent> <space>c  :<C-u>CocList commands<cr>
+    " Find symbol of current document
+    nnoremap <silent> <space>o  :<C-u>CocList outline<cr>
+    " Search workspace symbols
+    nnoremap <silent> <space>s  :<C-u>CocList -I symbols<cr>
+    " Do default action for next item.
+    nnoremap <silent> <space>j  :<C-u>CocNext<CR>
+    " Do default action for previous item.
+    nnoremap <silent> <space>k  :<C-u>CocPrev<CR>
+    " Resume latest coc list
+    nnoremap <silent> <space>p  :<C-u>CocListResume<CR>
+
   " }
 
   " delimitMate {
@@ -271,15 +433,24 @@
     let delimitMate_expand_space = 1
   " }
 
+  " rust-lang/rust {
+    let g:autofmt_autosave = 1
+
+  " }
+
+ " vim-go {
+    " format and rewrite imports on save
+    let g:go_fmt_command = 'goimports'
+    " show type info under cursor
+    let g:go_auto_type_info = 1
+  " }
+
   " Fugitive {
     " git push
     nmap <leader>gp :exec ':Git push origin ' . fugitive#head()<CR>
 
-    " git push to heroku
-    nmap <leader>ghp :exec ':Git push heroku ' . fugitive#head()<CR>
-
     " git status
-    map <silent> <leader>gss :Gstatus<CR>/not staged<CR>/modified<CR>
+    map <silent> <leader>gs :Gstatus<CR>
 
     " git commit -am "
     map <leader>gci :Git commit -am "
@@ -289,14 +460,35 @@
 
     " git diff
     map <leader>gd :Gdiff<CR>
-
-    " open source tree
-    map <leader>gstree :exec ':!stree'<CR>
-
   " }
 
+  " fzf {
+    nnoremap <C-p> :Files<CR>
+    nnoremap <Leader>b :Buffers<CR>
+    nnoremap <Leader>h :History<CR>
+
+    nnoremap <Leader>T :Tags<CR>
+
+    " --column: Show column number
+    " --line-number: Show line number
+    " --no-heading: Do not show file headings in results
+    " --fixed-strings: Search term as a literal string
+    " --ignore-case: Case insensitive search
+    " --no-ignore: Do not respect .gitignore, etc...
+    " --hidden: Search hidden files and folders
+    " --follow: Follow symlinks
+    " --glob: Additional conditions for search (in this case ignore everything in the .git/ folder)
+    " --color: Search color options
+    let g:rg_command = 'rg --column --line-number --no-heading --fixed-strings
+      \ --ignore-case --hidden --follow --color "always"
+      \ -g "!{.git,node_modules,vendor,build,dist}/*" '
+
+    " use :F to search everything with ripgrep
+    command! -bang -nargs=* F call fzf#vim#grep(g:rg_command .shellescape(<q-args>).'| tr -d "\017"', 1, <bang>0)
+  " }
+
+
   " JsDoc {
-  let g:jsdoc_enable_es6 = 1
   " }
 
   " NERDTree {
@@ -321,11 +513,14 @@
 
     " let g:prettier#quickfix_enabled = 0
     let g:prettier#autoformat = 0
-    autocmd BufWritePre *.js,*.json,*.ts,*.tsx,*.vue PrettierAsync
+    autocmd BufWritePre *.js,*.json,*.ts,*.tsx,*.vue,*.graphql PrettierAsync
+
   " }
 
-  " Powerline {
-    let g:Powerline_symbols = 'fancy'
+  " Airline {
+    let g:airline_powerline_fonts = 1
+    let g:airline#extensions#tabline#enabled = 1
+    let g:airline#extensions#tabline#buffer_nr_show = 1
   " }
 
   " Syntastic {
@@ -333,13 +528,16 @@
     let g:syntastic_auto_loc_list = 0
     let g:syntastic_check_on_open = 1
     let g:syntastic_check_on_wq = 0
+    " requires yamllint to be installed with pip
+    let g:syntastic_yaml_checkers = ['yamllint']
+    " install jsonlint via npm for json linting
   " }
 
   " Vim JSX (via vim-polyglot) {
     let g:jsx_ext_required = 0
   " }
 
-  " Tabularize {
+  " Tabular {
     if exists(":Tabularize")
       " align equal signs in normal and visual mode
       nmap <Leader>a= :Tabularize /=<CR>
@@ -349,10 +547,28 @@
       nmap <Leader>a: :Tabularize /:\zs<CR>
       vmap <Leader>a: :Tabularize /:\zs<CR>
     endif
+
+    " use Tabularize when in insert mode and a | is typed
+    " http://vimcasts.org/episodes/aligning-text-with-tabular-vim/
+    inoremap <silent> <Bar>   <Bar><Esc>:call <SID>align()<CR>a
+
+    function! s:align()
+      let p = '^\s*|\s.*\s|\s*$'
+      if exists(':Tabularize') && getline('.') =~# '^\s*|' && (getline(line('.')-1) =~# p || getline(line('.')+1) =~# p)
+        let column = strlen(substitute(getline('.')[0:col('.')],'[^|]','','g'))
+        let position = strlen(matchstr(getline('.')[0:col('.')],'.*|\s*\zs.*'))
+        Tabularize/|/l1
+        normal! 0
+        call search(repeat('[^|]*|',column).'\s\{-\}'.repeat('.',position),'ce',line('.'))
+      endif
+    endfunction
   " }
 
   " Typescript Vim {
-    au BufRead,BufNewFile *.tsx   setfiletype typescript
+    " We force typescript as a file everywhere because Vim added typescriptreact
+    " filetype, breaking detection for a whole bunch of plugins
+    " https://github.com/vim/vim/issues/4830
+    autocmd BufNewFile,BufRead *.tsx set filetype=typescript.tsx
   " }
 
   " Tsuquyomi {
@@ -360,39 +576,19 @@
     let g:syntastic_typescript_checkers = ['tsuquyomi']
     " makes completion slow
     let g:tsuquyomi_completion_detail = 1
-    autocmd FileType typescript setlocal completeopt+=menu,preview
-    autocmd FileType typescript nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
-  " }
-
-  " The Silver Searcher {
-    " Source: https://github.com/thoughtbot/dotfiles/blob/master/vimrc
-    if executable('ag')
-      " Use Ag over Grep
-      set grepprg=ag\ --nogroup\ --nocolor
-
-      " Use ag in CtrlP for listing files. Lightning fast and respects .gitignore
-      let g:ctrlp_user_command = 'ag %s -l --nocolor -g ""'
-    endif
+    autocmd FileType typescript      setlocal completeopt+=menu,preview
+    autocmd FileType typescript      nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
   " }
 
   " vdebug {
-  let g:vdebug_options = {
-  \  "port" : 9000,
-  \  "server" : 'localhost',
-  \  "timeout" : 20,
-  \  "on_close" : 'detach',
-  \  "break_on_open" : 0,
-  \  "ide_key" : '',
-  \  "path_maps" : {},
-  \  "debug_window_level" : 0,
-  \  "debug_file_level" : 0,
-  \  "debug_file" : "",
-  \  "watch_window_style" : 'expanded',
-  \  "marker_default" : '⬦',
-  \  "marker_closed_tree" : '▸',
-  \  "marker_open_tree" : '▾'
+  if !exists('g:vdebug_options')
+    let g:vdebug_options = {}
+  endif
+
+  let g:vdebug_options["break_on_open"] = 0
+  let g:vdebug_options["path_maps"] = {
+  \ "/var/www/html": "/Users/larry/Sites/sa-trust/knowledge-hub/src"
   \}
-  " }
 
   " Emmet {
   let g:user_emmet_settings = {
@@ -412,7 +608,7 @@
   " }
 
   " Editorconfig {
-    let g:EditorConfig_core_mode = 'external_command'
+    let g:EditorConfig_exclude_patterns = ['fugitive://.\*']
   " }
 
   " Elm {
@@ -428,5 +624,20 @@
     nmap π <Plug>yankstack_substitute_older_paste
     " alt-P
     nmap ∏ <Plug>yankstack_substitute_newer_paste
+  " }
+
+  " Vim Test {
+    let test#strategy = "vimterminal"
+    let g:test#preserve_screen = 1
+    " run Jest tests in debug mode at port 9222, running in band, so that
+    " debugger breakpoints are respected
+    let test#javascript#jest#executable = 'node --inspect=9222 $(npm bin)/jest --runInBand'
+    let g:test#javascript#jest#file_pattern = '\v(__tests__/.*|(spec|test))(.*)?\.(js|jsx|ts|tsx)$'
+
+    nmap <silent> t<C-n> :TestNearest<CR> " t Ctrl+n
+    nmap <silent> t<C-f> :TestFile<CR>    " t Ctrl+f
+    nmap <silent> t<C-s> :TestSuite<CR>   " t Ctrl+s
+    nmap <silent> t<C-l> :TestLast<CR>    " t Ctrl+l
+    nmap <silent> t<C-g> :TestVisit<CR>   " t Ctrl+g
   " }
 " }

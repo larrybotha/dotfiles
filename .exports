@@ -1,5 +1,5 @@
-# Make sublime text the default editor
-# export EDITOR="subl -w"
+# make Vim the editor for tmux
+export EDITOR="vim"
 
 # Larger bash history (allow 32³ entries; default is 500)
 export HISTSIZE=32768
@@ -24,3 +24,14 @@ export GREP_OPTIONS="--color=auto"
 # Link Homebrew casks in `/Applications` rather than `~/Applications`
 export HOMEBREW_CASK_OPTS="--appdir=/Applications"
 
+# fzf
+# use ripgrep for searching files
+export FZF_DEFAULT_COMMAND='rg --files --hidden --follow \
+  -g "!{.git,node_modules,vendor,build,dist}/*" 2> /dev/null'
+# insert file from fzf into command
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+
+# Add Node and NVM to `$PATH`
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && [ type complete &>/dev/null ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion

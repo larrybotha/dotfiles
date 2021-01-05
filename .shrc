@@ -1,0 +1,80 @@
+# Load the shell dotfiles, and then some:
+# * ~/.path can be used to extend `$PATH`.
+# * ~/.extra can be used for other settings you don’t want to commit.
+for file in ~/.{path,sh_prompt,exports,aliases,functions,extra}; do
+  [ -r "$file" ] && source "$file"
+done
+unset file
+
+
+# use vi mode
+set -o vi
+
+
+# fzf
+# enable bash completion
+if [ "$ZSH_VERSION" ]; then
+  [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+else
+  [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+fi
+
+# init z   https://github.com/rupa/z
+if [ -f ~/code/z/z.sh ]; then
+  . ~/code/z/z.sh
+fi
+
+# init rbenv
+eval "$(rbenv init -)"
+
+# activate tmux autocomplete
+if ! [ "$ZSH_VERSION" ]; then
+  source ~/.tmux/tmux_completion.sh
+fi
+
+# init git-completion https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
+if [ -f ~/code/git-completion/git-completion.bash ] && ! [ "$ZSH_VERSION" ]; then
+  . ~/code/git-completion/git-completion.bash
+fi
+
+#add git aliases to git-completion
+if ! [ "$ZSH_VERSION" ]; then
+  complete -o default -o nospace -F _git g
+  complete -o default -o nospace -F _git_checkout co
+fi
+
+# use ctrl-p to open a file in vim
+if ! [ "$ZSH_VERSION" ]; then
+  bind -x '"\C-p": vim $(fzf);'
+fi
+
+if ! [ "$ZSH_VERSION" ]; then
+  # Case-insensitive globbing (used in pathname expansion)
+  shopt -s nocaseglob
+
+  # Append to the Bash history file, rather than overwriting it
+  shopt -s histappend
+
+  # Autocorrect typos in path names when using `cd`
+  shopt -s cdspell
+
+  # Enable some Bash 4 features when possible:
+  # * `autocd`, e.g. `**/qux` will enter `./foo/bar/baz/qux`
+  # * Recursive globbing, e.g. `echo **/*.txt`
+  for option in autocd globstar; do
+    shopt -s "$option" 2> /dev/null
+  done
+
+  # If possible, add tab completion for many more commands
+  [ -f /etc/bash_completion ] && source /etc/bash_completion
+fi
+
+# Add tab completion for SSH hostnames based on ~/.ssh/config, ignoring wildcards
+if [ -e "$HOME/.ssh/config" ]; then
+  if ! [ "$ZSH_VERSION" ]; then
+    complete -o "default" \
+      -o "nospace" \
+      -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2 | tr ' ' '\n')" \
+      scp sftp ssh
+  fi
+fi

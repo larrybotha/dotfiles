@@ -8,17 +8,22 @@ function installmodule() {
 	fi
 }
 
-installmodule coffee-script
+installmodule alfred-npms
+installmodule alfred-fkill
+
 installmodule elm
 installmodule elm-format@exp
 installmodule elm-oracle
 installmodule elm-test
 installmodule feathers-cli
 installmodule gulp-cli
-installmodule nodemon
-installmodule server
 installmodule imageoptim-cli
+installmodule jsonlint
+installmodule localtunnel
+installmodule ndb
 installmodule ngrok
+installmodule nodemon
 installmodule prettier
+installmodule server
 installmodule typescript
 installmodule yo
