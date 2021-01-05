@@ -105,54 +105,56 @@ function installcask() {
 	fi
 }
 
-installcask a-better-finder-rename
-installcask alfred
-installcask anki
-installcask bitbar
-installcask betterzip
-installcask brave-browser
-installcask commander-one
-installcask dash
-installcask dropbox
-installcask firefox
-installcask firefox-developer-edition
-installcask flux
-installcask google-app-engine-launcher
-installcask google-chrome
-installcask google-cloud-sdk
-installcask imagealpha
-installcask imageoptim
-installcask integrity
-installcask iterm2
-installcask libreoffice
-installcask kap
-installcask moom
-installcask mysqlworkbench
-installcask pckeyboardhack
-installcask plex-home-theater
-installcask plex-media-server
-installcask postman
-installcask qlImageSize
-installcask qlcolorcode
-installcask qlmarkdown
-installcask qlstephen
-installcask qlvideo
-installcask quicklook-csv
-installcask quicklook-json
-installcask robo-3t
-installcask skype
-installcask slack
-installcask sourcetree
-installcask spectacle
-installcask tastyworks
-installcask the-unarchiver
-installcask thinkorswim
-installcask transmission
-installcask virtualbox
-installcask vlc
-installcask visual-studio-code
-installcask witch
-installcask xscope
+if [ "$(uname -s)" == "Darwin" ]; then
+	installcask a-better-finder-rename
+	installcask alfred
+	installcask anki
+	installcask bitbar
+	installcask betterzip
+	installcask brave-browser
+	installcask commander-one
+	installcask dash
+	installcask dropbox
+	installcask firefox
+	installcask firefox-developer-edition
+	installcask flux
+	installcask google-app-engine-launcher
+	installcask google-chrome
+	installcask google-cloud-sdk
+	installcask imagealpha
+	installcask imageoptim
+	installcask integrity
+	installcask iterm2
+	installcask libreoffice
+	installcask kap
+	installcask moom
+	installcask mysqlworkbench
+	installcask pckeyboardhack
+	installcask plex-home-theater
+	installcask plex-media-server
+	installcask postman
+	installcask qlImageSize
+	installcask qlcolorcode
+	installcask qlmarkdown
+	installcask qlstephen
+	installcask qlvideo
+	installcask quicklook-csv
+	installcask quicklook-json
+	installcask robo-3t
+	installcask skype
+	installcask slack
+	installcask sourcetree
+	installcask spectacle
+	installcask tastyworks
+	installcask the-unarchiver
+	installcask thinkorswim
+	installcask transmission
+	installcask virtualbox
+	installcask vlc
+	installcask visual-studio-code
+	installcask witch
+	installcask xscope
+fi
 
 # Remove outdated versions from the cellar
 brew cleanup
