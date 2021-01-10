@@ -15,8 +15,8 @@ export PATH="$PATH:~/.cargo/bin"
 # Add global composer vendors to path
 export PATH="$PATH:~/.composer/vendor/bin"
 
-# homebrew
-if [ "$(uname -s)" == "Linux" ]; then
+# homebrew on Linux
+if [ "$(uname -s)" = "Linux" ]; then
   export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
   export PATH="/home/linuxbrew/.linuxbrew/sbin:$PATH"
 fi
