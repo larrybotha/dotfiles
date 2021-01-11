@@ -8,8 +8,10 @@ function installmodule() {
 	fi
 }
 
-installmodule alfred-npms
-installmodule alfred-fkill
+if [ $(uname -s) = "Darwin" ]; then
+	installmodule alfred-npms
+	installmodule alfred-fkill
+fi
 
 installmodule elm
 installmodule elm-format@exp
