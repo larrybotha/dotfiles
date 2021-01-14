@@ -5,3 +5,6 @@ source ~/code/antigen/antigen.zsh
 antigen use oh-my-zsh
 
 antigen apply
+
+# fzf must be sourced last before it's enable
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
