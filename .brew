@@ -69,6 +69,7 @@ brew install php-version
 brew install phppgadmin
 brew install pigz
 brew install postgresql
+brew install pyenv
 brew install python
 brew install qt
 brew install redis

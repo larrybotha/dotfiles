@@ -27,6 +27,11 @@ fi
 # init rbenv
 eval "$(rbenv init -)"
 
+# init pyenv
+if type -p "pyenv" > /dev/null; then
+  eval "$(pyenv init -)"
+fi
+
 # activate tmux autocomplete
 if ! [ "$ZSH_VERSION" ]; then
   source ~/.tmux/tmux_completion.sh
