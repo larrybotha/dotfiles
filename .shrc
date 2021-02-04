@@ -25,7 +25,9 @@ if [ -f ~/code/z/z.sh ]; then
 fi
 
 # init rbenv
-eval "$(rbenv init -)"
+if type -p rbenv &> /dev/null; then
+  eval "$(rbenv init -)"
+fi
 
 # init pyenv
 if type -p "pyenv" > /dev/null; then
