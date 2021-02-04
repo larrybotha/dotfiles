@@ -7,7 +7,7 @@ ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
 
 
 # install Node Version Manager and node
-if type -P nvm &> /dev/null; then
+if type -p nvm &> /dev/null; then
 	echo "nvm already installed"
 else
 	echo "installing nvm"
