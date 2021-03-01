@@ -47,6 +47,7 @@ brew install ansible
 brew install codeception
 brew install composer
 brew install ctags
+brew install direnv
 brew install docker
 brew install editorconfig
 brew install elasticsearch
