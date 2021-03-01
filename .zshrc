@@ -8,3 +8,7 @@ antigen apply
 
 # fzf must be sourced last before it's enable
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+# enable direnv
+eval "$(direnv hook zsh)"
+
