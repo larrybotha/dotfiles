@@ -17,7 +17,7 @@
   # Checkout a branch
   br = branch
   # Show verbose output about tags, branches or remotes
-  tags = tag -l
+  tags = tag -l --sort=taggerdate
   branches = branch -a
   remotes = remote -v
   # Update ctags
