@@ -631,7 +631,7 @@
     let g:test#preserve_screen = 1
     " run Jest tests in debug mode at port 9222, running in band, so that
     " debugger breakpoints are respected
-    let test#javascript#jest#executable = 'node --inspect=9222 $(npm bin)/jest --runInBand'
+    let test#javascript#jest#executable = 'node --inspect=9222 $(npm bin)/jest --runInBand --no-cache'
     let g:test#javascript#jest#file_pattern = '\v(__tests__/.*|(spec|test))(.*)?\.(js|jsx|ts|tsx)$'
 
     nmap <silent> t<C-n> :TestNearest<CR> " t Ctrl+n
