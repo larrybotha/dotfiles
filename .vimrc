@@ -50,7 +50,7 @@
   Plug 'christoomey/vim-tmux-navigator'
   Plug 'elmcast/elm-vim'
   Plug 'metakirby5/codi.vim'
-  Plug 'prettier/vim-prettier'
+  "Plug 'prettier/vim-prettier'
   Plug 'sheerun/vim-polyglot'
   Plug 'leafgarland/typescript-vim'
   Plug 'Quramy/tsuquyomi'
@@ -270,7 +270,7 @@
     autocmd BufRead *.svx set ft=markdown
 
     " Delete trailing white space on save
-    autocm BufWritePre * :%s/\s\+$//e
+    autocmd BufWritePre * :%s/\s\+$//e
 
     " When editing a file, always jump to the last known cursor position.
     " Don't do it when the position is invalid or when inside an event handler
@@ -509,12 +509,13 @@
 
 
   " Prettier {
-    let g:prettier#config#trailing_comma = 'es5'
+    if exists(":Prettier")
+      let g:prettier#config#trailing_comma = 'es5'
 
-    " let g:prettier#quickfix_enabled = 0
-    let g:prettier#autoformat = 0
-    autocmd BufWritePre *.js,*.json,*.ts,*.tsx,*.vue,*.graphql PrettierAsync
-
+      " let g:prettier#quickfix_enabled = 0
+      let g:prettier#autoformat = 0
+      autocmd BufWritePre *.js,*.json,*.ts,*.tsx,*.vue,*.graphql PrettierAsync
+    endif
   " }
 
   " Airline {
