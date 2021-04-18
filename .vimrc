@@ -27,6 +27,7 @@
   endfunction
 
   call plug#begin('~/.vim/plugged')
+  Plug 'prabirshrestha/vim-lsp'
   Plug 'dense-analysis/ale'
   Plug 'ervandew/supertab'
   Plug 'tpope/vim-sensible'
@@ -35,7 +36,7 @@
   Plug 'tpope/vim-surround'
   Plug 'preservim/nerdcommenter'
   Plug 'tpope/vim-endwise'
-  Plug 'scrooloose/syntastic'
+  "Plug 'scrooloose/syntastic'
   Plug 'scrooloose/nerdtree'
   Plug 'brett-griffin/phpdocblocks.vim'
   Plug 'godlygeek/tabular'
@@ -51,10 +52,10 @@
   Plug 'christoomey/vim-tmux-navigator'
   Plug 'elmcast/elm-vim'
   Plug 'metakirby5/codi.vim'
-  Plug 'prettier/vim-prettier'
+  "Plug 'prettier/vim-prettier'
   Plug 'sheerun/vim-polyglot'
   Plug 'leafgarland/typescript-vim'
-  Plug 'Quramy/tsuquyomi'
+  "Plug 'Quramy/tsuquyomi'
   Plug 'heavenshell/vim-jsdoc'
   Plug 'janko-m/vim-test'
   Plug 'tmux-plugins/vim-tmux-focus-events'
@@ -63,7 +64,7 @@
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
   Plug 'ludovicchabant/vim-gutentags'
-  Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
+  "Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
   Plug 'rhysd/git-messenger.vim'
   Plug 'evanleck/vim-svelte', {'branch': 'main'}
   Plug 'Raimondi/delimitMate'
@@ -295,8 +296,8 @@
   " }
 
   " coc.vim {
-    if exists(":CocInfo")
       " install extensions
+      if exists(":CocInfo")
       let g:coc_global_extensions  = [
         \ 'coc-css',
         \ 'coc-rust-analyzer',
@@ -306,7 +307,7 @@
         \ 'coc-java',
         \ 'coc-json',
         \ 'coc-phpls',
-        \ 'coc-python',
+        \ 'coc-pyright',
         \ 'coc-svelte',
         \ 'coc-tslint-plugin',
         \ 'coc-tsserver',
@@ -436,18 +437,18 @@
       "let g:ale_disable_lsp = 1
 
       let g:ale_fixers = {
-	\ 'graphql': ['prettier'],
-	\ 'html': ['prettier'],
-	\ 'javascript': ['prettier', 'eslint'],
-	\ 'javascriptreact': ['prettier', 'eslint'],
-	\ 'json': ['prettier', 'fixjson'],
-	\ 'markdown': ['prettier'],
-	\ "python": [ 'isort', 'autoimport', 'ale#fixers#generic_python#BreakUpLongLines', 'black'],
-	\ 'svelte': ['prettier'],
-	\ 'typescript': ['prettier', 'eslint'],
-	\ 'typescriptreact': ['prettier', 'eslint'],
-	\ 'vue': ['prettier'],
-	\ 'yaml': ['prettier'],
+        \ 'graphql': ['prettier'],
+        \ 'html': ['prettier'],
+        \ 'javascript': ['prettier', 'eslint'],
+        \ 'javascriptreact': ['prettier', 'eslint'],
+        \ 'json': ['prettier', 'fixjson'],
+        \ 'markdown': ['prettier'],
+        \ "python": [ 'isort', 'autoimport', 'ale#fixers#generic_python#BreakUpLongLines', 'black'],
+        \ 'svelte': ['prettier'],
+        \ 'typescript': ['prettier', 'eslint'],
+        \ 'typescriptreact': ['prettier', 'eslint'],
+        \ 'vue': ['prettier'],
+        \ 'yaml': ['prettier'],
       \}
 
       let g:ale_fix_on_save = 1
@@ -543,13 +544,7 @@
 
 
   " Prettier {
-    if exists(":Prettier")
-      let g:prettier#config#trailing_comma = 'es5'
-
-      " let g:prettier#quickfix_enabled = 0
-      let g:prettier#autoformat = 0
-      autocmd BufWritePre *.js,*.json,*.ts,*.tsx,*.vue,*.graphql PrettierAsync
-    endif
+    "autocmd BufWritePre *.js,*.mjs,*.json,*.ts,*.tsx,*.vue,*.graphql,*.yaml,*.yml PrettierAsync
   " }
 
   " Airline {
@@ -559,12 +554,14 @@
   " }
 
   " Syntastic {
-    let g:syntastic_always_populate_loc_list = 1
-    let g:syntastic_auto_loc_list = 0
-    let g:syntastic_check_on_open = 1
-    let g:syntastic_check_on_wq = 0
-    " requires yamllint to be installed with pip
-    let g:syntastic_yaml_checkers = ['yamllint']
+    if exists(":SyntasticInfo")
+      let g:syntastic_always_populate_loc_list = 1
+      let g:syntastic_auto_loc_list = 0
+      let g:syntastic_check_on_open = 1
+      let g:syntastic_check_on_wq = 0
+      " requires yamllint to be installed with pip
+      let g:syntastic_yaml_checkers = ['yamllint']
+    endif
     " install jsonlint via npm for json linting
   " }
 
@@ -607,12 +604,12 @@
   " }
 
   " Tsuquyomi {
-    let g:tsuquyomi_disable_quickfix = 1
-    let g:syntastic_typescript_checkers = ['tsuquyomi']
-    " makes completion slow
-    let g:tsuquyomi_completion_detail = 1
-    autocmd FileType typescript      setlocal completeopt+=menu,preview
-    autocmd FileType typescript      nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
+    "let g:tsuquyomi_disable_quickfix = 1
+    "let g:syntastic_typescript_checkers = ['tsuquyomi']
+    "" makes completion slow
+    "let g:tsuquyomi_completion_detail = 1
+    "autocmd FileType typescript      setlocal completeopt+=menu,preview
+    "autocmd FileType typescript      nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
   " }
 
   " vdebug {
