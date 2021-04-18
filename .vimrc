@@ -27,6 +27,7 @@
   endfunction
 
   call plug#begin('~/.vim/plugged')
+  Plug 'dense-analysis/ale'
   Plug 'ervandew/supertab'
   Plug 'tpope/vim-sensible'
   Plug 'rking/ag.vim'
@@ -423,9 +424,41 @@
       nnoremap <silent> <space>k  :<C-u>CocPrev<CR>
       " Resume latest coc list
       nnoremap <silent> <space>p  :<C-u>CocListResume<CR>
-
     endif
   " }
+
+  " vim-svelte {
+    let g:svelte_preprocessors = ['typescript', 'scss']
+  " }
+
+  " ale {
+      " don't use ale for LSP
+      "let g:ale_disable_lsp = 1
+
+      let g:ale_fixers = {
+	\ 'graphql': ['prettier'],
+	\ 'html': ['prettier'],
+	\ 'javascript': ['prettier', 'eslint'],
+	\ 'javascriptreact': ['prettier', 'eslint'],
+	\ 'json': ['prettier', 'fixjson'],
+	\ 'markdown': ['prettier'],
+	\ "python": [ 'isort', 'autoimport', 'ale#fixers#generic_python#BreakUpLongLines', 'black'],
+	\ 'svelte': ['prettier'],
+	\ 'typescript': ['prettier', 'eslint'],
+	\ 'typescriptreact': ['prettier', 'eslint'],
+	\ 'vue': ['prettier'],
+	\ 'yaml': ['prettier'],
+      \}
+
+      let g:ale_fix_on_save = 1
+  " }
+
+  " gitutter {
+    if exists(":GitGutterInfo")
+      let g:gitgutter_sign_column_always = 1
+    endif
+  " }
+
 
   " delimitMate {
     " expand a new line after a brace to autoindent
