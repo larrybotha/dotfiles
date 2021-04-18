@@ -5,8 +5,22 @@
 # http://docs.python-guide.org/en/latest/starting/install/osx/
 pip install virtualenv
 
-# install yamllint for vim-syntastic integration
+# linting
+# - used by ALE
 pip install yamllint
 
 # add python3 support to neovim
 python3 -m pip install --user --upgrade pynvim
+
+# environments
+pip install pipenv
+
+# auto formatting
+pip install black
+
+# autoformatting / autoimporting
+pip install isort
+pip install autoimport
+
+# generate requirements.txt
+pip install pipreqs
