@@ -13,11 +13,13 @@ if [ $(uname -s) = "Darwin" ]; then
 	installmodule alfred-fkill
 fi
 
+installmodule alex
 installmodule elm
 installmodule elm-format@exp
 installmodule elm-oracle
 installmodule elm-test
 installmodule feathers-cli
+installmodule fixjson
 installmodule gulp-cli
 installmodule imageoptim-cli
 installmodule jsonlint
@@ -26,6 +28,7 @@ installmodule ndb
 installmodule ngrok
 installmodule nodemon
 installmodule prettier
+installmodule prettier-plugin-svelte
 installmodule server
 installmodule typescript
 installmodule yo
