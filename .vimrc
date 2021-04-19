@@ -528,7 +528,7 @@
 
   " NERDTree {
     " quick access to NERDTree
-    map <leader>n :NERDTreeTabsToggle<CR>
+    map <leader>n :NERDTreeToggle<CR>
     map <leader>ff :NERDTreeFind<CR>
 
     " open NERDTree on startup
