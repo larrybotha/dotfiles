@@ -459,12 +459,14 @@ source ~/.vim/user/plugins/endwise.vim
   " }
 
   " Tsuquyomi {
-    "let g:tsuquyomi_disable_quickfix = 1
-    "let g:syntastic_typescript_checkers = ['tsuquyomi']
-    "" makes completion slow
-    "let g:tsuquyomi_completion_detail = 1
-    "autocmd FileType typescript      setlocal completeopt+=menu,preview
-    "autocmd FileType typescript      nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
+    if exists(":TsuOpen")
+      let g:tsuquyomi_disable_quickfix = 1
+      let g:syntastic_typescript_checkers = ['tsuquyomi']
+      " makes completion slow
+      let g:tsuquyomi_completion_detail = 1
+      autocmd FileType typescript      setlocal completeopt+=menu,preview
+      autocmd FileType typescript      nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
+    endif
   " }
 
   " vdebug {
