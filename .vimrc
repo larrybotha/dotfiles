@@ -301,10 +301,14 @@
 
 "source ~/.vim/user/plugins/coc.vim
 source ~/.vim/user/plugins/nerdtree.vim
+source ~/.vim/user/plugins/endwise.vim
+
+
 
   " vim-svelte {
     let g:svelte_preprocessors = ['typescript', 'scss']
   " }
+
 
   " ale {
       " don't use ale for LSP
