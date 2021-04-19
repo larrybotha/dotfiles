@@ -404,17 +404,6 @@ source ~/.vim/user/plugins/endwise.vim
   " JsDoc {
   " }
 
-  " NERDTree {
-    " quick access to NERDTree
-    map <leader>n :NERDTreeToggle<CR>
-    map <leader>ff :NERDTreeFind<CR>
-
-    " open NERDTree on startup
-    let g:nerdtree_tabs_open_on_console_startup = 1
-
-    " show hidden files by default
-    let NERDTreeShowHidden=1
-  " }
 
   " PHPFmt {
     let g:phpfmt_standard = 'PSR2'
