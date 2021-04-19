@@ -48,7 +48,6 @@
   Plug 'vim-vdebug/vdebug'
   Plug 'mattn/emmet-vim'
   Plug 'editorconfig/editorconfig-vim'
-  Plug 'maxbrunsfeld/vim-yankstack'
   Plug 'christoomey/vim-tmux-navigator'
   Plug 'elmcast/elm-vim'
   Plug 'metakirby5/codi.vim'
@@ -648,16 +647,6 @@
   " Elm {
     let g:elm_syntastic_show_warnings = 1
     let g:elm_format_autosave = 1
-  " }
-
-  " YankStack {
-    " don't use default key mappings
-    let g:yankstack_map_keys = 0
-
-    " alt-p
-    nmap π <Plug>yankstack_substitute_older_paste
-    " alt-P
-    nmap ∏ <Plug>yankstack_substitute_newer_paste
   " }
 
   " Vim Test {
