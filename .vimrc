@@ -27,49 +27,53 @@
   endfunction
 
   call plug#begin('~/.vim/plugged')
-  Plug 'prabirshrestha/vim-lsp'
-  Plug 'dense-analysis/ale'
-  Plug 'ervandew/supertab'
-  Plug 'tpope/vim-sensible'
-  Plug 'rking/ag.vim'
-  Plug 'tpope/vim-fugitive'
-  Plug 'tpope/vim-surround'
-  Plug 'preservim/nerdcommenter'
-  Plug 'tpope/vim-endwise'
-  "Plug 'scrooloose/syntastic'
-  Plug 'scrooloose/nerdtree'
-  Plug 'brett-griffin/phpdocblocks.vim'
-  Plug 'godlygeek/tabular'
-  Plug 'vim-airline/vim-airline'
-  Plug 'edkolev/tmuxline.vim'
-  Plug 'jistr/vim-nerdtree-tabs'
-  Plug 'terryma/vim-multiple-cursors'
-  Plug 'moll/vim-node'
-  Plug 'vim-vdebug/vdebug'
-  Plug 'mattn/emmet-vim'
-  Plug 'editorconfig/editorconfig-vim'
-  Plug 'christoomey/vim-tmux-navigator'
-  Plug 'elmcast/elm-vim'
-  Plug 'metakirby5/codi.vim'
-  "Plug 'prettier/vim-prettier'
-  Plug 'sheerun/vim-polyglot'
+
   Plug 'leafgarland/typescript-vim'
-  "Plug 'Quramy/tsuquyomi'
-  Plug 'heavenshell/vim-jsdoc'
-  Plug 'janko-m/vim-test'
-  Plug 'tmux-plugins/vim-tmux-focus-events'
-  Plug 'airblade/vim-gitgutter'
-  Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
+  Plug 'Quramy/tsuquyomi'
+
+  Plug 'dense-analysis/ale'
+  "Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
+
+  Plug 'lifepillar/vim-mucomplete'
+
+  Plug 'rking/ag.vim'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
-  Plug 'ludovicchabant/vim-gutentags'
-  "Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
-  Plug 'rhysd/git-messenger.vim'
-  Plug 'evanleck/vim-svelte', {'branch': 'main'}
+
+  Plug 'tpope/vim-sensible'
+  Plug 'tpope/vim-fugitive'
+  Plug 'tpope/vim-surround'
+  Plug 'tpope/vim-endwise'
+
+  Plug 'scrooloose/nerdtree'
+  Plug 'preservim/nerdcommenter'
+  Plug 'godlygeek/tabular'
+  Plug 'vim-airline/vim-airline'
+  Plug 'terryma/vim-multiple-cursors'
+  Plug 'edkolev/tmuxline.vim'
+  Plug 'editorconfig/editorconfig-vim'
+  Plug 'airblade/vim-gitgutter'
   Plug 'Raimondi/delimitMate'
+  Plug 'rhysd/git-messenger.vim'
+
+  Plug 'christoomey/vim-tmux-navigator'
+  Plug 'tmux-plugins/vim-tmux-focus-events'
+
+  Plug 'brett-griffin/phpdocblocks.vim'
+  Plug 'heavenshell/vim-jsdoc'
+  Plug 'janko-m/vim-test'
+  Plug 'mattn/emmet-vim'
+  Plug 'prettier/vim-prettier'
+  Plug 'vim-vdebug/vdebug'
+
+  Plug 'evanleck/vim-svelte', {'branch': 'main'}
+  Plug 'sheerun/vim-polyglot'
+  Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
   Plug 'rust-lang/rust.vim'
-  " only load if we are in Neovim
+
+  "only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
+  Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   call plug#end()
 "}
 

@@ -27,8 +27,20 @@ installmodule localtunnel
 installmodule ndb
 installmodule ngrok
 installmodule nodemon
+installmodule neovim
 installmodule prettier
 installmodule prettier-plugin-svelte
 installmodule server
 installmodule typescript
 installmodule yo
+
+# language servers
+installmodule vscode-css-languageserver-bin
+installmodule vscode-html-languageserver-bin
+installmodule dockerfile-language-server-nodejs
+installmodule typescript-language-server
+installmodule vscode-json-languageserver
+installmodule pyright
+installmodule intelephense
+installmodule bash-language-server
+installmodule tsserver
