@@ -436,7 +436,7 @@
 
   " ale {
       " don't use ale for LSP
-      "let g:ale_disable_lsp = 1
+      let g:ale_disable_lsp = 1
 
       let g:ale_fixers = {
         \ 'graphql': ['prettier'],
