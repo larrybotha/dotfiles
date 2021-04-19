@@ -300,6 +300,7 @@
   " }
 
 "source ~/.vim/user/plugins/coc.vim
+source ~/.vim/user/plugins/nerdtree.vim
 
   " vim-svelte {
     let g:svelte_preprocessors = ['typescript', 'scss']
