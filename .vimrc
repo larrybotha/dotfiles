@@ -119,7 +119,9 @@
   set splitbelow                                 " open split panes underneath the current pane
 
   set cursorline                                 " highlight current line
+  set cursorcolumn                               " highlight current column
   hi CursorLine term=bold cterm=bold ctermbg=233
+  hi CursorColumn term=bold cterm=bold ctermbg=234
 
   set colorcolumn=85                             " show column length hint for long lines
 
