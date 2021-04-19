@@ -257,27 +257,6 @@ function gi() {
 	eval npm install --save-dev grunt-{"$*"}
 }
 
-# Update ctags in current project
-# Function moves up project until it comes to a .gitignore, and then writes new
-# tag file in that directory
-function upctags() {
-  if [ -f ".gitignore"  ]; then
-    if [ -f ".srclist"  ]; then
-      ctags -R --exclude='.git' --exclude='node_modules' -L .srclist
-    else
-      ctags -R --exclude='.git' --exclude='node_modules' .
-    fi
-  else
-    HERE=$PWD
-    cd ..
-    if [ "$PWD" = "$HERE"  ]; then
-      echo "Got to /, have not found your project root, abort!"
-      exit 1
-    fi
-    exec "$0"
-  fi
-}
-
 
 # kill processes at a port
 function killprt() {

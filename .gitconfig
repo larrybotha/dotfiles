@@ -20,8 +20,6 @@
   tags = tag -l --sort=taggerdate
   branches = branch -a
   remotes = remote -v
-  # Update ctags
-  ctags = !.git/hooks/ctags
   # git flow feature
   ff = "flow feature"
   # git flow release
