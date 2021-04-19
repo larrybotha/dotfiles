@@ -2,46 +2,69 @@
   "languageserver": {
     "golang": {
       "command": "gopls",
-      "rootPatterns": ["go.mod", ".vim/", ".git/", ".hg/"],
-      "filetypes": ["go"],
+      "rootPatterns": [
+        "go.mod",
+        ".vim/",
+        ".git/",
+        ".hg/"
+      ],
+      "filetypes": [
+        "go"
+      ],
       "initializationOptions": {
         "usePlaceholders": true
       }
     },
-
     "haskell": {
       "command": "hie-wrapper",
-      "rootPatterns": [".stack.yaml", "cabal.config", "package.yaml"],
-      "filetypes": ["hs", "lhs", "haskell"],
+      "rootPatterns": [
+        ".stack.yaml",
+        "cabal.config",
+        "package.yaml"
+      ],
+      "filetypes": [
+        "hs",
+        "lhs",
+        "haskell"
+      ],
       "initializationOptions": {}
     },
-
     "phplang": {
       "command": "php",
       "args": [
         "/Users/larry/.composer/vendor/felixfbecker/language-server/bin/php-language-server.php"
       ],
-      "filetypes": ["php"]
+      "filetypes": [
+        "php"
+      ]
     },
-
     "dockerfile": {
       "command": "docker-langserver",
-      "filetypes": ["dockerfile"],
-      "args": ["--stdio"]
+      "filetypes": [
+        "dockerfile"
+      ],
+      "args": [
+        "--stdio"
+      ]
     },
-
     "bash": {
       "command": "bash-language-server",
-      "args": ["start"],
-      "filetypes": ["sh"],
-      "ignoredRootPaths": ["~"]
+      "args": [
+        "start"
+      ],
+      "filetypes": [
+        "sh"
+      ],
+      "ignoredRootPaths": [
+        "~"
+      ]
     },
-
     "reason": {
       "command": "reason-language-server",
-      "filetypes": ["reason"]
+      "filetypes": [
+        "reason"
+      ]
     }
   },
-
-  "coc.preferences.formatOnSaveFiletypes": ["reason", "svelte", "php"]
+  "diagnostic.displayByAle": true
 }
