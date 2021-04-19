@@ -431,18 +431,6 @@ source ~/.vim/user/plugins/endwise.vim
     let g:airline#extensions#tabline#buffer_nr_show = 1
   " }
 
-  " Syntastic {
-    if exists(":SyntasticInfo")
-      let g:syntastic_always_populate_loc_list = 1
-      let g:syntastic_auto_loc_list = 0
-      let g:syntastic_check_on_open = 1
-      let g:syntastic_check_on_wq = 0
-      " requires yamllint to be installed with pip
-      let g:syntastic_yaml_checkers = ['yamllint']
-    endif
-    " install jsonlint via npm for json linting
-  " }
-
   " Vim JSX (via vim-polyglot) {
     let g:jsx_ext_required = 0
   " }
