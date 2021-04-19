@@ -8,6 +8,7 @@ function doIt() {
     --exclude ".DS_Store" \
     --exclude "bootstrap.sh" \
     --exclude "README.md" \
+    --exclude "Makefile" \
     --exclude "tags" \
     --exclude "LICENSE-MIT.txt" -av --no-perms . ~
 
