@@ -45,21 +45,19 @@
   Plug 'editorconfig/editorconfig-vim'
   Plug 'edkolev/tmuxline.vim'
   Plug 'godlygeek/tabular'
-  Plug 'hrsh7th/nvim-compe'
   Plug 'preservim/nerdcommenter'
   Plug 'rhysd/git-messenger.vim'
   Plug 'scrooloose/nerdtree'
   Plug 'terryma/vim-multiple-cursors'
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
-
   Plug 'brett-griffin/phpdocblocks.vim'
   Plug 'heavenshell/vim-jsdoc'
   Plug 'janko-m/vim-test'
   Plug 'mattn/emmet-vim'
   Plug 'prettier/vim-prettier'
   Plug 'vim-vdebug/vdebug'
-
+  Plug 'hrsh7th/nvim-compe'
   Plug 'evanleck/vim-svelte', {'branch': 'main'}
   Plug 'sheerun/vim-polyglot'
   Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
