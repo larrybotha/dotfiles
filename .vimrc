@@ -51,7 +51,7 @@
   Plug 'airblade/vim-gitgutter'
   Plug 'Raimondi/delimitMate'
   Plug 'rhysd/git-messenger.vim'
-
+  Plug 'hrsh7th/nvim-compe'
   Plug 'christoomey/vim-tmux-navigator'
   Plug 'tmux-plugins/vim-tmux-focus-events'
 
@@ -298,6 +298,7 @@
 source ~/.vim/user/plugins/ale.vim
 source ~/.vim/user/plugins/nerdtree.vim
 source ~/.vim/user/plugins/endwise.vim
+source ~/.vim/user/plugins/compe.vim
 
 
 
