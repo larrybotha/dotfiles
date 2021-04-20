@@ -334,7 +334,7 @@ source ~/.vim/user/plugins/compe.vim
     nmap <leader>gp :exec ':Git push origin ' . fugitive#head()<CR>
 
     " git status
-    map <silent> <leader>gs :Gstatus<CR>
+    map <silent> <leader>gs :Git<CR>
 
     " git commit -am "
     map <leader>gci :Git commit -am "
