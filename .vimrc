@@ -39,19 +39,19 @@
   Plug 'tpope/vim-surround'
   Plug 'tpope/vim-endwise'
 
-  Plug 'scrooloose/nerdtree'
-  Plug 'preservim/nerdcommenter'
-  Plug 'godlygeek/tabular'
-  Plug 'vim-airline/vim-airline'
-  Plug 'terryma/vim-multiple-cursors'
-  Plug 'edkolev/tmuxline.vim'
-  Plug 'editorconfig/editorconfig-vim'
-  Plug 'airblade/vim-gitgutter'
   Plug 'Raimondi/delimitMate'
-  Plug 'rhysd/git-messenger.vim'
-  Plug 'hrsh7th/nvim-compe'
+  Plug 'airblade/vim-gitgutter'
   Plug 'christoomey/vim-tmux-navigator'
+  Plug 'editorconfig/editorconfig-vim'
+  Plug 'edkolev/tmuxline.vim'
+  Plug 'godlygeek/tabular'
+  Plug 'hrsh7th/nvim-compe'
+  Plug 'preservim/nerdcommenter'
+  Plug 'rhysd/git-messenger.vim'
+  Plug 'scrooloose/nerdtree'
+  Plug 'terryma/vim-multiple-cursors'
   Plug 'tmux-plugins/vim-tmux-focus-events'
+  Plug 'vim-airline/vim-airline'
 
   Plug 'brett-griffin/phpdocblocks.vim'
   Plug 'heavenshell/vim-jsdoc'
@@ -68,6 +68,7 @@
   "only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
+  Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
   call plug#end()
 "}
 
