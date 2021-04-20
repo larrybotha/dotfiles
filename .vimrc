@@ -30,8 +30,6 @@
 
   Plug 'dense-analysis/ale'
 
-  Plug 'lifepillar/vim-mucomplete'
-
   Plug 'rking/ag.vim'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
