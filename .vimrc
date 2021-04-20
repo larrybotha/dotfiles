@@ -28,9 +28,6 @@
 
   call plug#begin('~/.vim/plugged')
 
-  Plug 'leafgarland/typescript-vim'
-  Plug 'Quramy/tsuquyomi'
-
   Plug 'dense-analysis/ale'
 
   Plug 'lifepillar/vim-mucomplete'
@@ -454,17 +451,6 @@ source ~/.vim/user/plugins/endwise.vim
     " filetype, breaking detection for a whole bunch of plugins
     " https://github.com/vim/vim/issues/4830
     autocmd BufNewFile,BufRead *.tsx set filetype=typescript.tsx
-  " }
-
-  " Tsuquyomi {
-    if exists(":TsuOpen")
-      let g:tsuquyomi_disable_quickfix = 1
-      let g:syntastic_typescript_checkers = ['tsuquyomi']
-      " makes completion slow
-      let g:tsuquyomi_completion_detail = 1
-      autocmd FileType typescript      setlocal completeopt+=menu,preview
-      autocmd FileType typescript      nmap <buffer> <Leader>ts : <C-u>echo tsuquyomi#hint()<CR>
-    endif
   " }
 
   " vdebug {
