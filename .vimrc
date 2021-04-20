@@ -67,6 +67,7 @@
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
+  Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
   call plug#end()
 "}
 
