@@ -32,7 +32,6 @@
   Plug 'Quramy/tsuquyomi'
 
   Plug 'dense-analysis/ale'
-  "Plug 'neoclide/coc.nvim', {'do': { -> coc#util#install()}}
 
   Plug 'lifepillar/vim-mucomplete'
 
@@ -299,7 +298,6 @@
     map <leader>vbu :PlugUpdate<CR>
   " }
 
-"source ~/.vim/user/plugins/coc.vim
 source ~/.vim/user/plugins/nerdtree.vim
 source ~/.vim/user/plugins/endwise.vim
 
