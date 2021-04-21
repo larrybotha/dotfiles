@@ -9,7 +9,8 @@ pip install virtualenv
 # - used by ALE
 pip install yamllint
 
-# add python3 support to neovim
+# add python support to neovim
+python2 -m pip install --user --upgrade pynvim
 python3 -m pip install --user --upgrade pynvim
 
 # environments
