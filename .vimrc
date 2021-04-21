@@ -52,7 +52,10 @@
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
   Plug 'brett-griffin/phpdocblocks.vim'
-  Plug 'heavenshell/vim-jsdoc'
+  Plug 'heavenshell/vim-jsdoc', {
+  \ 'for': ['javascript', 'javascript.jsx','typescript'],
+  \ 'do': 'make install'
+  \}
   Plug 'janko-m/vim-test'
   Plug 'mattn/emmet-vim'
   Plug 'prettier/vim-prettier'
@@ -371,11 +374,6 @@ source ~/.vim/user/plugins/compe.vim
     " use :F to search everything with ripgrep
     command! -bang -nargs=* F call fzf#vim#grep(g:rg_command .shellescape(<q-args>).'| tr -d "\017"', 1, <bang>0)
   " }
-
-
-  " JsDoc {
-  " }
-
 
   " PHPFmt {
     let g:phpfmt_standard = 'PSR2'
