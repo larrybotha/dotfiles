@@ -43,4 +43,6 @@ installmodule vscode-json-languageserver
 installmodule pyright
 installmodule intelephense
 installmodule bash-language-server
+installmodule svelte-language-server
+installmodule vim-language-server
 installmodule tsserver
