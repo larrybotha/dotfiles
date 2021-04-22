@@ -15,6 +15,7 @@ fi
 
 installmodule alex
 installmodule elm
+installmodule eslint_d
 installmodule elm-format@exp
 installmodule elm-oracle
 installmodule elm-test
@@ -29,6 +30,7 @@ installmodule ngrok
 installmodule nodemon
 installmodule neovim
 installmodule prettier
+installmodule prettier_d_slim
 installmodule prettier-plugin-svelte
 installmodule server
 installmodule typescript
