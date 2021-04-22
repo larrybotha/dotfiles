@@ -9,7 +9,11 @@ function doIt() {
     --exclude "bootstrap.sh" \
     --exclude "README.md" \
     --exclude "Makefile" \
-    --exclude "tags" \
+    --exclude ".vimrc" \
+    --exclude ".vim" \
+    --exclude ".config/nvim/init.vim" \
+    --exclude ".config/kitty/kitty.conf" \
+    --exclude ".tmux.conf" \
     --exclude "LICENSE-MIT.txt" -av --no-perms . ~
 
   # add npm script completion
@@ -22,6 +26,37 @@ function doIt() {
   else
     source ~/.bash_profile
   fi
+
+  linkScripts
+}
+
+function linkScripts() {
+  echo ""
+  configs=(
+    ".vimrc"
+    ".vim"
+    ".tmux.conf"
+    ".config/kitty/kitty.conf"
+    ".config/nvim/init.vim"
+  )
+
+  for config in "${configs[@]}"
+  do
+    user_path=$HOME/$config
+    config_path=$PWD/$config
+
+    if [ ! -e "$user_path" ]; then
+      echo "linking: ~/$config -> $config"
+      folder=${user_path%/*}
+      mkdir -p $folder
+      ln -s $config_path $user_path
+    elif [ -L "$user_path" ]; then
+      echo "linked: ~/$config -> ./$config"
+    else
+      echo "not linked: ~/$config -> ./$config"
+      echo "   => consider removing ~/$config"
+    fi
+  done
 }
 
 if [ "$1" == "--force" -o "$1" == "-f" ]; then
