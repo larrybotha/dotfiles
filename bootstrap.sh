@@ -12,9 +12,6 @@ function doIt() {
     --exclude "tags" \
     --exclude "LICENSE-MIT.txt" -av --no-perms . ~
 
-  # copy coc-settings.json for Neovim
-  cp ~/.vim/coc-settings.json ~/.config/nvim/coc-settings.json
-
   # add npm script completion
   if type "npm" > /dev/null; then
     npm completion >> ~/.shrc
