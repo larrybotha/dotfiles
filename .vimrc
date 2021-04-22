@@ -205,7 +205,6 @@
 
   " map common shift keys
   cmap Qall qall
-  cmap W w
   cmap Tabe tabe
 
   " yank from cursor to EOL the same as C and D do
