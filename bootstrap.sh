@@ -13,6 +13,7 @@ function doIt() {
     --exclude ".vim" \
     --exclude ".config/nvim/init.vim" \
     --exclude ".config/kitty/kitty.conf" \
+    --exclude ".config/alacritty/alacritty.yml" \
     --exclude ".tmux.conf" \
     --exclude "LICENSE-MIT.txt" -av --no-perms . ~
 
@@ -37,6 +38,7 @@ function linkScripts() {
     ".vim"
     ".tmux.conf"
     ".config/kitty/kitty.conf"
+    ".config/alacritty/alacritty.yml"
     ".config/nvim/init.vim"
   )
 
