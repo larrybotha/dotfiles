@@ -58,13 +58,9 @@ brew install git-flow
 brew install go
 brew install httpie
 brew install hub
-brew install ios-webkit-debug-proxy
-brew install jasmine
 brew install lynx
-brew install mongodb-compass
 brew install neovim
 brew install nvm
-brew install phantomjs
 brew install php-version
 brew install phppgadmin
 brew install pigz
@@ -76,7 +72,6 @@ brew install redis
 brew install rename
 brew install ripgrep
 brew install sbt
-brew install sequel-pro
 brew install the_silver_searcher
 brew install tree
 brew install vim
@@ -112,7 +107,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
 	installcask bitbar
 	installcask betterzip
 	installcask brave-browser
-	installcask commander-one
 	installcask dash
 	installcask dropbox
 	installcask firefox
@@ -129,10 +123,8 @@ if [ "$(uname -s)" == "Darwin" ]; then
 	installcask kap
 	installcask moom
 	installcask mysqlworkbench
-	installcask pckeyboardhack
-	installcask plex-home-theater
-	installcask plex-media-server
 	installcask postman
+	installcask proxyman
 	installcask qlImageSize
 	installcask qlcolorcode
 	installcask qlmarkdown
@@ -145,15 +137,12 @@ if [ "$(uname -s)" == "Darwin" ]; then
 	installcask skype
 	installcask slack
 	installcask sourcetree
-	installcask spectacle
-	installcask tastyworks
 	installcask the-unarchiver
 	installcask thinkorswim
 	installcask transmission
 	installcask virtualbox
 	installcask vlc
 	installcask visual-studio-code
-	installcask witch
 	installcask xscope
 fi
 
