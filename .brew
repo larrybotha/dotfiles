@@ -101,7 +101,7 @@ function installcask() {
 }
 
 if [ "$(uname -s)" == "Darwin" ]; then
-	installcask WebPQuickLook
+	installcask webpquicklook
 	installcask a-better-finder-rename
 	installcask alacritty
 	installcask alfred
