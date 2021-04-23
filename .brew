@@ -101,11 +101,13 @@ function installcask() {
 }
 
 if [ "$(uname -s)" == "Darwin" ]; then
+	installcask WebPQuickLook
 	installcask a-better-finder-rename
+	installcask alacritty
 	installcask alfred
 	installcask anki
-	installcask bitbar
 	installcask betterzip
+	installcask bitbar
 	installcask brave-browser
 	installcask dash
 	installcask dropbox
@@ -119,8 +121,9 @@ if [ "$(uname -s)" == "Darwin" ]; then
 	installcask imageoptim
 	installcask integrity
 	installcask iterm2
-	installcask libreoffice
 	installcask kap
+	installcask kitty
+	installcask libreoffice
 	installcask moom
 	installcask mysqlworkbench
 	installcask postman
@@ -132,7 +135,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
 	installcask qlvideo
 	installcask quicklook-csv
 	installcask quicklook-json
-	installcask WebPQuickLook
 	installcask robo-3t
 	installcask skype
 	installcask slack
@@ -141,8 +143,8 @@ if [ "$(uname -s)" == "Darwin" ]; then
 	installcask thinkorswim
 	installcask transmission
 	installcask virtualbox
-	installcask vlc
 	installcask visual-studio-code
+	installcask vlc
 	installcask xscope
 fi
 
