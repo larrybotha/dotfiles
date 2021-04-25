@@ -4,7 +4,10 @@
 
 # Compiled Python files
 *.pyc
-tags
+
+# karabiner-elements
+.config/karabiner/*
+!.config/karabiner/karabiner.json
 
 # Folder view configuration files
 .DS_Store

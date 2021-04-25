@@ -11,9 +11,7 @@ function doIt() {
     --exclude "Makefile" \
     --exclude ".vimrc" \
     --exclude ".vim" \
-    --exclude ".config/nvim/init.vim" \
-    --exclude ".config/kitty/kitty.conf" \
-    --exclude ".config/alacritty/alacritty.yml" \
+    --exclude ".config" \
     --exclude ".tmux.conf" \
     --exclude "LICENSE-MIT.txt" -av --no-perms . ~
 
@@ -37,9 +35,12 @@ function linkScripts() {
     ".vimrc"
     ".vim"
     ".tmux.conf"
-    ".config/kitty/kitty.conf"
-    ".config/alacritty/alacritty.yml"
-    ".config/nvim/init.vim"
+    ".config/alacritty"
+    ".config/karabiner"
+    ".config/kitty"
+    ".config/nvim"
+    ".config/skhd"
+    ".config/yabai"
   )
 
   for config in "${configs[@]}"
