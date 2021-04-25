@@ -92,6 +92,11 @@ brew install reattach-to-user-namespace
 brew tap phinze/homebrew-cask
 brew install brew-cask
 
+# Install yabai deps
+brew install koekeishiya/formulae/yabai
+brew install jq
+brew install koekeishiya/formulae/skhd
+
 function installcask() {
 	if brew cask info "${@}" | grep "Not installed" > /dev/null; then
 		brew install --cask "${@}"
