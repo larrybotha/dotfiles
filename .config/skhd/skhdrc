@@ -2,6 +2,9 @@
 # in a terminal and type a key. Pretty cool! Or just check the wiki.
 # $ skhd --observe
 
+###############################
+# YABAI
+###############################
 ## Quickly restart the yabai launch agent
 ctrl + alt + cmd - r : launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
 ## Quickly restart the skhd launch agent
@@ -65,6 +68,11 @@ shift + lalt + lcmd + ctrl + ralt - 3 : yabai -m query --spaces --space | \
 ###############################
 hyper - s : ~/.config/yabai/scripts/toggle-stack
 
+# go to next item in stack
+hyper - j : yabai -m window --focus stack.next || yabai -m window --focus stack.first
+# go to previous item in stack
+hyper - k : yabai -m window --focus stack.prev || yabai -m window --focus stack.last
+
 
 
 ###############################
@@ -72,7 +80,7 @@ hyper - s : ~/.config/yabai/scripts/toggle-stack
 ###############################
 
 # go to previous window WITHOUT going into a stack
-ctrl + alt + cmd + lshift - p : yabai -m query --spaces | \
+hyper - p : yabai -m query --spaces | \
   jq -re ".[] | select(.visible == 1).index" | \
   xargs -I{} yabai -m query --windows --space {} | \
   jq -re "[.[] | select(.app != \"Hammerspoon\")]" | \
@@ -80,7 +88,7 @@ ctrl + alt + cmd + lshift - p : yabai -m query --spaces | \
   xargs -I{} yabai -m window --focus {}
 
 # go to next window WITHOUT going into a stack
-ctrl + alt + cmd + lshift - n : yabai -m query --spaces | \
+hyper - n : yabai -m query --spaces | \
   jq -re ".[] | select(.visible == 1).index" | \
   xargs -I{} yabai -m query --windows --space {} | \
   jq -re "[.[] | select(.app != \"Hammerspoon\")]" | \
