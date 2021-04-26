@@ -463,8 +463,8 @@ source ~/.vim/user/plugins/compe.vim
     let g:elm_format_autosave = 1
   " }
 
-  " Vim Test {
-    let test#strategy = "vimterminal"
+  " vim-test {
+    let test#strategy = has('nvim') ? 'neovim' : "vimterminal"
     let g:test#preserve_screen = 1
     " run Jest tests in debug mode at port 9222, running in band, so that
     " debugger breakpoints are respected
