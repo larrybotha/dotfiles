@@ -38,10 +38,10 @@ yabai -m config mouse_drop_action            swap
 
 # general space settings
 yabai -m config layout                       bsp
-yabai -m config top_padding                  12
-yabai -m config bottom_padding               12
-yabai -m config left_padding                 12
-yabai -m config right_padding                12
+yabai -m config top_padding                  0
+yabai -m config bottom_padding               0
+yabai -m config left_padding                 0
+yabai -m config right_padding                0
 yabai -m config window_gap                   12
 
 # float system preferences
@@ -55,6 +55,7 @@ yabai -m rule --add app="^Karabiner-Elements$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Karabiner-EventViewer$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Sourcetree$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Hammerspoon$" sticky=on layer=above manage=off
+yabai -m rule --add app="^Dash$" sticky=on layer=above manage=off
 
 
 echo "yabai configuration loaded.."
