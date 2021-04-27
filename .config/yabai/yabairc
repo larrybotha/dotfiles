@@ -57,6 +57,7 @@ yabai -m rule --add app="^Sourcetree$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Hammerspoon$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Dash$" sticky=on layer=above manage=off
 yabai -m rule --add app="^XDM$" sticky=on layer=above manage=off
+yabai -m rule --add app="^App Store$" sticky=on layer=above manage=off
 
 
 echo "yabai configuration loaded.."
