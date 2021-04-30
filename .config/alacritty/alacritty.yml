@@ -114,7 +114,7 @@ font:
     family: Roboto Mono Thin for Powerline
 
     # The `style` can be specified to pick a specific face.
-    #style: Regular
+    style: Thin
 
   # Bold font face
   bold:
@@ -125,7 +125,7 @@ font:
     family: Roboto Mono Light for Powerline
 
     # The `style` can be specified to pick a specific face.
-    #style: Regular
+    style: Light
 
   # Italic font face
   italic:
