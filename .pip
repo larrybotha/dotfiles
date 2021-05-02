@@ -3,11 +3,11 @@
 # Once python is installed, via homebrew, we have pip and Distribute. Let's ensure
 # we can work in virtual environments, too
 # http://docs.python-guide.org/en/latest/starting/install/osx/
-pip install virtualenv
+pip install --user virtualenv
 
 # linting
 # - used by ALE
-pip install yamllint
+pip install --user yamllint
 
 # add python support to neovim
 python2 -m pip install --user --upgrade pynvim
@@ -17,11 +17,11 @@ python3 -m pip install --user --upgrade pynvim
 pip install --user pipenv
 
 # auto formatting
-pip install black
+pip install --user black
 
 # autoformatting / autoimporting
-pip install isort
-pip install autoimport
+pip install --user isort
+pip install --user autoimport
 
 # generate requirements.txt
-pip install pipreqs
+pip install --user pipreqs
