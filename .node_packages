@@ -8,43 +8,58 @@ function installmodule() {
 	fi
 }
 
+local node_modules=(
+	alex
+	eslint_d
+	feathers-cli
+	fixjson
+	gulp-cli
+	imageoptim-cli
+	jsonlint
+	localtunnel
+	ndb
+	ngrok
+	nodemon
+	neovim
+	prettier
+	prettier_d_slim
+	prettier-plugin-svelte
+	server
+	typescript
+	yo
+
+	# language servers
+	vscode-css-languageserver-bin
+	vscode-html-languageserver-bin
+	dockerfile-language-server-nodejs
+	typescript-language-server
+	vscode-json-languageserver
+	pyright
+	intelephense
+	bash-language-server
+	svelte-language-server
+	vim-language-server
+
+	# vim-imports-sort deps
+	import-sort-cli
+	import-sort-parser-babylon
+	import-sort-parser-typescript
+	import-sort-style-renke
+)
+
+local mac_modules=(
+	alfred-npms
+	alfred-fkill
+)
+
+for module in "${node_modules[@]}"
+do
+	installmodule $module
+done
+
 if [ $(uname -s) = "Darwin" ]; then
-	installmodule alfred-npms
-	installmodule alfred-fkill
+	for module in "${mac_modules[@]}"
+	do
+		installmodule $module
+	done
 fi
-
-installmodule alex
-installmodule elm
-installmodule eslint_d
-installmodule elm-format@exp
-installmodule elm-oracle
-installmodule elm-test
-installmodule feathers-cli
-installmodule fixjson
-installmodule gulp-cli
-installmodule imageoptim-cli
-installmodule jsonlint
-installmodule localtunnel
-installmodule ndb
-installmodule ngrok
-installmodule nodemon
-installmodule neovim
-installmodule prettier
-installmodule prettier_d_slim
-installmodule prettier-plugin-svelte
-installmodule server
-installmodule typescript
-installmodule yo
-
-# language servers
-installmodule vscode-css-languageserver-bin
-installmodule vscode-html-languageserver-bin
-installmodule dockerfile-language-server-nodejs
-installmodule typescript-language-server
-installmodule vscode-json-languageserver
-installmodule pyright
-installmodule intelephense
-installmodule bash-language-server
-installmodule svelte-language-server
-installmodule vim-language-server
-installmodule tsserver

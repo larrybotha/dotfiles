@@ -15,7 +15,7 @@ function doIt() {
     --exclude ".tmux.conf" \
     --exclude "LICENSE-MIT.txt" -av --no-perms . ~
 
-  # add npm script completion
+  # append npm script completion
   if type "npm" > /dev/null; then
     npm completion >> ~/.shrc
   fi
