@@ -1,2 +1,2 @@
-" sort imports on save
-let g:import_sort_auto = 1
+" don't sort imports on save - takes too long. Rather use :SortImports
+let g:import_sort_auto = 0
