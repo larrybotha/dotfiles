@@ -65,7 +65,7 @@
   Plug 'sheerun/vim-polyglot'
   Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
   Plug 'rust-lang/rust.vim'
-
+  Plug 'ruanyl/vim-sort-imports'
   "only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
@@ -299,6 +299,7 @@ source ~/.vim/user/plugins/ale.vim
 source ~/.vim/user/plugins/nerdtree.vim
 source ~/.vim/user/plugins/endwise.vim
 source ~/.vim/user/plugins/compe.vim
+source ~/.vim/user/plugins/vim-sort-imports.vim
 
 
 
