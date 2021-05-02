@@ -14,7 +14,7 @@ python2 -m pip install --user --upgrade pynvim
 python3 -m pip install --user --upgrade pynvim
 
 # environments
-pip install pipenv
+pip install --user pipenv
 
 # auto formatting
 pip install black
