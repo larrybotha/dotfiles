@@ -22,3 +22,10 @@ let g:ale_fixers = {
 
 let g:ale_fix_on_save = 1
 
+" format .html.php files with prettier on save
+let g:ale_pattern_options = {
+  \ '\.html\.php$': {
+    \ 'ale_fixers': ['prettier'],
+  \ },
+\}
+autocmd BufWritePost *.html.php let b:ale_javascript_prettier_options = '--parser=html'
