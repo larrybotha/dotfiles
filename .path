@@ -7,13 +7,13 @@ export PATH="$HOME/.local/bin:$PATH"
 # Add Google's depot_tools for adding Chrome to iOS Simulator to path
 # Installation: https://chromium.googlesource.com/chromium/src/+/master/docs/ios/build_instructions.md
 # Install to ~/code/depot_tools
-export PATH="$PATH:~/code/depot_tools"
+export PATH="$PATH:$HOME/code/depot_tools"
 
 # Add Rust's Cargo to path
-export PATH="$PATH:~/.cargo/bin"
+export PATH="$PATH:$HOME/.cargo/bin"
 
 # Add global composer vendors to path
-export PATH="$PATH:~/.composer/vendor/bin"
+export PATH="$PATH:$HOME/.composer/vendor/bin"
 
 # homebrew on Linux
 if [ "$(uname -s)" = "Linux" ]; then
