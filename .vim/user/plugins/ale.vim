@@ -12,6 +12,7 @@ let g:ale_fixers = {
   \ 'javascriptreact': ['prettier', 'eslint'],
   \ 'json': ['prettier', 'fixjson'],
   \ 'markdown': ['prettier'],
+  \ 'php': ['php_cs_fixer'],
   \ "python": [ 'isort', 'autoimport', 'ale#fixers#generic_python#BreakUpLongLines', 'black'],
   \ 'svelte': ['prettier'],
   \ 'typescript': ['prettier', 'eslint'],
@@ -21,6 +22,7 @@ let g:ale_fixers = {
 \}
 
 let g:ale_fix_on_save = 1
+let g:ale_linters_ignore = {'php': ['phpcs']}
 
 " format .html.php files with prettier on save
 let g:ale_pattern_options = {
