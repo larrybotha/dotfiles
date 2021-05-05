@@ -20,3 +20,6 @@ Thumbs.db
 # Files that might appear on external disks
 .Spotlight-V100
 .Trashes
+
+# ignore php cs fixer generated files
+.php_cs.cache
