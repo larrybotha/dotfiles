@@ -24,10 +24,10 @@ let g:ale_fixers = {
 
 let g:ale_linters_ignore = {'php': ['phpcs']}
 
-" format .html.php files with prettier on save
+" format .html.php files with prettier on save, don't use prettier_d_slim
 let g:ale_pattern_options = {
   \ '\.html\.php$': {
-    \ 'ale_fixers': ['prettier', 'php_cs_fixer'],
+    \ 'ale_fixers': ['prettier'],
   \ },
 \}
-autocmd BufWritePost *.html.php let b:ale_javascript_prettier_options = '--parser=html'
+autocmd BufRead *.html.php let b:ale_javascript_prettier_executable = 'prettier'
