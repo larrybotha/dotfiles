@@ -24,20 +24,31 @@ let g:ale_fixers = {
 
 let g:ale_linters_ignore = {'php': ['phpcs']}
 
-"format .html.php files with prettier on save
+"format .html.php files with custom prettier formats
 let g:ale_pattern_options = {
   \ '\.html\.php$': {
-    \ 'ale_fixers': ['prettier', 'custom_prettier_php'],
+    \ 'ale_fixers': ['custom_prettier_html', 'custom_prettier_php'],
   \ },
 \}
-" parse *.html.php files using html parser
-autocmd BufWritePre *.html.php let b:ale_javascript_prettier_options = '--parser html'
 
-" add custom prettier formatter that can be referenced in fixers
-function! PrettierPhpOutput(buffer) abort
+function! GetPrettierFixer(...)
+  let l:options = join(a:000, ' ')
+
   return {
-    \ 'command': 'prettier --parser php --stdin-filepath %s --stdin'
+    \ 'command': join(['prettier', '--stdin-filepath %s', '--stdin', options])
   \}
 endfunction
-" add custom fixer to Ale's registry
+
+" add custom html prettier formatter
+function! PrettierHtmlOutput(buffer) abort
+  return GetPrettierFixer('--parser html')
+endfunction
+
+" add custom php prettier formatter
+function! PrettierPhpOutput(buffer) abort
+  return GetPrettierFixer('--parser php')
+endfunction
+
+" add custom fixers to Ale's registry
+execute ale#fix#registry#Add('custom_prettier_html', 'PrettierHtmlOutput', [], 'format html with prettier')
 execute ale#fix#registry#Add('custom_prettier_php', 'PrettierPhpOutput', [], 'format php with prettier')
