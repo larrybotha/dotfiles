@@ -24,10 +24,20 @@ let g:ale_fixers = {
 
 let g:ale_linters_ignore = {'php': ['phpcs']}
 
-" format .html.php files with prettier on save, don't use prettier_d_slim
+"format .html.php files with prettier on save
 let g:ale_pattern_options = {
   \ '\.html\.php$': {
-    \ 'ale_fixers': ['prettier'],
+    \ 'ale_fixers': ['prettier', 'custom_prettier_php'],
   \ },
 \}
-autocmd BufRead *.html.php let b:ale_javascript_prettier_executable = 'prettier'
+" parse *.html.php files using html parser
+autocmd BufWritePre *.html.php let b:ale_javascript_prettier_options = '--parser html'
+
+" add custom prettier formatter that can be referenced in fixers
+function! PrettierPhpOutput(buffer) abort
+  return {
+    \ 'command': 'prettier --parser php --stdin-filepath %s --stdin'
+  \}
+endfunction
+" name custom formatter as customprettierphpfixer
+execute ale#fix#registry#Add('custom_prettier_php', 'PrettierPhpOutput', [], 'format php with prettier')
