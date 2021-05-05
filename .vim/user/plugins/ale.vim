@@ -39,5 +39,5 @@ function! PrettierPhpOutput(buffer) abort
     \ 'command': 'prettier --parser php --stdin-filepath %s --stdin'
   \}
 endfunction
-" name custom formatter as customprettierphpfixer
+" add custom fixer to Ale's registry
 execute ale#fix#registry#Add('custom_prettier_php', 'PrettierPhpOutput', [], 'format php with prettier')
