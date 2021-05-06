@@ -13,7 +13,7 @@ let g:ale_fixers = {
   \ 'javascriptreact': ['prettier', 'eslint'],
   \ 'json': ['prettier', 'fixjson'],
   \ 'markdown': ['prettier'],
-  \ 'php': ['php_cs_fixer'],
+  \ 'php': ['custom_prettier_php'],
   \ "python": [ 'isort', 'autoimport', 'ale#fixers#generic_python#BreakUpLongLines', 'black'],
   \ 'svelte': ['prettier'],
   \ 'typescript': ['prettier', 'eslint'],
