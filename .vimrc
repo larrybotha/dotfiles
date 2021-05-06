@@ -52,6 +52,7 @@
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
   Plug 'brett-griffin/phpdocblocks.vim'
+  Plug 'heavenshell/vim-pydocstring', { 'do': 'make install' }
   Plug 'heavenshell/vim-jsdoc', {
   \ 'for': ['javascript', 'javascript.jsx','typescript'],
   \ 'do': 'make install'
@@ -300,6 +301,7 @@ source ~/.vim/user/plugins/nerdtree.vim
 source ~/.vim/user/plugins/endwise.vim
 source ~/.vim/user/plugins/compe.vim
 source ~/.vim/user/plugins/vim-sort-imports.vim
+source ~/.vim/user/plugins/vim-pydocstring.vim
 
 
 
