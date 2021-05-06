@@ -1,5 +1,3 @@
-augroup custom_pydocstring
-  autocmd! custom_pydocstring
-  " map pydocstring from <C-L> to <C-_>
-  autocmd Filetype python nmap <silent> <C-_> <Plug>(pydocstring)
-augroup END
+" map Pydocstring from <C-L> to <C-L>
+" TODO: make specific to python files
+nmap <silent> <C-_> <Plug>(pydocstring)
