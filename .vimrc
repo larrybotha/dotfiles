@@ -67,6 +67,8 @@
   Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
   Plug 'rust-lang/rust.vim'
   Plug 'ruanyl/vim-sort-imports'
+  Plug 'dkarter/bullets.vim'
+
   "only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
