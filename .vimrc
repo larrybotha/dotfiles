@@ -74,6 +74,11 @@
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
   Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
+
+  " telescope and deps
+  Plug 'nvim-lua/popup.nvim'
+  Plug 'nvim-lua/plenary.nvim'"
+  Plug 'nvim-telescope/telescope.nvim', Cond(has('nvim'))
   call plug#end()
 "}
 
@@ -357,12 +362,6 @@ source ~/.vim/user/plugins/telescope.vim
   " }
 
   " fzf {
-    nnoremap <C-p> :Files<CR>
-    nnoremap <Leader>b :Buffers<CR>
-    nnoremap <Leader>h :History<CR>
-
-    nnoremap <Leader>T :Tags<CR>
-
     " --column: Show column number
     " --line-number: Show line number
     " --no-heading: Do not show file headings in results
