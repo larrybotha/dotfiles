@@ -27,6 +27,7 @@ function doIt() {
   fi
 
   linkScripts
+  copyFiles
 }
 
 function linkScripts() {
@@ -49,15 +50,39 @@ function linkScripts() {
     config_path=$PWD/$config
 
     if [ ! -e "$user_path" ]; then
-      echo "linking: ~/$config -> $config"
+      echo -e "linking: ~/$config -> $config"
       folder=${user_path%/*}
       mkdir -p $folder
       ln -s $config_path $user_path
     elif [ -L "$user_path" ]; then
-      echo "linked: ~/$config -> ./$config"
+      echo -e "linked: ~/$config -> ./$config"
     else
-      echo "not linked: ~/$config -> ./$config"
-      echo "   => consider removing ~/$config"
+      echo -e "not linked: ~/$config -> ./$config"
+      echo -e "\t=> consider removing ~/$config"
+    fi
+  done
+}
+
+# TODO: use symlinks for this to prevent having to source bootstrap.sh when
+# changes are made
+function copyFiles() {
+  echo ""
+  configs=(
+    ".vim/user/plugins/vimspector/vimspector-global-config.json .vim/plugged/vimspector/configurations/macos/_all/vimspect-global-config.json"
+  )
+
+  for config in "${configs[@]}"
+  do
+    set -- $config
+    source_file=$PWD/$1
+    dest_file=$HOME/$2
+
+    if [ ! -e "$dest_file" ]; then
+      echo -e "copying: $source_file \n\t-> $dest_file"
+      cp $source_file $dest_file
+    else
+      echo -e "replacing: $source_file \n\t-> $dest_file"
+      cp -f $source_file $dest_file
     fi
   done
 }
