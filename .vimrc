@@ -304,6 +304,7 @@ source ~/.vim/user/plugins/endwise.vim
 source ~/.vim/user/plugins/compe.vim
 source ~/.vim/user/plugins/vim-sort-imports.vim
 source ~/.vim/user/plugins/vim-pydocstring.vim
+source ~/.vim/user/plugins/telescope.vim
 
 
 
