@@ -62,7 +62,6 @@
   Plug 'prettier/vim-prettier'
   Plug 'hrsh7th/nvim-compe'
   Plug 'evanleck/vim-svelte', {'branch': 'main'}
-  Plug 'sheerun/vim-polyglot'
   Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
   Plug 'rust-lang/rust.vim'
   Plug 'ruanyl/vim-sort-imports'
@@ -380,11 +379,6 @@ source ~/.vim/user/plugins/telescope.vim
     command! -bang -nargs=* F call fzf#vim#grep(g:rg_command .shellescape(<q-args>).'| tr -d "\017"', 1, <bang>0)
   " }
 
-  " PHPFmt {
-    let g:phpfmt_standard = 'PSR2'
-  " }
-
-
   " Prettier {
     "autocmd BufWritePre *.js,*.mjs,*.json,*.ts,*.tsx,*.vue,*.graphql,*.yaml,*.yml PrettierAsync
   " }
@@ -393,10 +387,6 @@ source ~/.vim/user/plugins/telescope.vim
     let g:airline_powerline_fonts = 1
     let g:airline#extensions#tabline#enabled = 1
     let g:airline#extensions#tabline#buffer_nr_show = 1
-  " }
-
-  " Vim JSX (via vim-polyglot) {
-    let g:jsx_ext_required = 0
   " }
 
   " Tabular {
