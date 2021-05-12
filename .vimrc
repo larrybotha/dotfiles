@@ -60,7 +60,6 @@
   Plug 'janko-m/vim-test'
   Plug 'mattn/emmet-vim'
   Plug 'prettier/vim-prettier'
-  Plug 'vim-vdebug/vdebug'
   Plug 'hrsh7th/nvim-compe'
   Plug 'evanleck/vim-svelte', {'branch': 'main'}
   Plug 'sheerun/vim-polyglot'
@@ -432,16 +431,6 @@ source ~/.vim/user/plugins/telescope.vim
     " https://github.com/vim/vim/issues/4830
     autocmd BufNewFile,BufRead *.tsx set filetype=typescript.tsx
   " }
-
-  " vdebug {
-  if !exists('g:vdebug_options')
-    let g:vdebug_options = {}
-  endif
-
-  let g:vdebug_options["break_on_open"] = 0
-  let g:vdebug_options["path_maps"] = {
-  \ "/var/www/html": "/Users/larry/Sites/sa-trust/knowledge-hub/src"
-  \}
 
   " Emmet {
   let g:user_emmet_settings = {
