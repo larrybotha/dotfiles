@@ -67,6 +67,7 @@
   Plug 'rust-lang/rust.vim'
   Plug 'ruanyl/vim-sort-imports'
   Plug 'dkarter/bullets.vim'
+  Plug 'puremourning/vimspector'
 
   "only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
@@ -303,6 +304,7 @@ source ~/.vim/user/plugins/endwise.vim
 source ~/.vim/user/plugins/compe.vim
 source ~/.vim/user/plugins/vim-sort-imports.vim
 source ~/.vim/user/plugins/vim-pydocstring.vim
+source ~/.vim/user/plugins/vimspector/index.vim
 source ~/.vim/user/plugins/telescope.vim
 
 
