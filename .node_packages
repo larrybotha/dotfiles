@@ -45,6 +45,9 @@ local node_modules=(
 	import-sort-parser-babylon
 	import-sort-parser-typescript
 	import-sort-style-renke
+
+  # ale deps
+  lua-fmt
 )
 
 local mac_modules=(

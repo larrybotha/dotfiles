@@ -8,6 +8,8 @@ let g:ale_javascript_prettier_executable = 'prettier_d_slim'
 
 let g:ale_fixers = {
   \ 'graphql': ['prettier'],
+  \ 'sh': ['shfmt'],
+  \ 'lua': ['luafmt'],
   \ 'html': ['prettier'],
   \ 'javascript': ['prettier', 'eslint'],
   \ 'javascriptreact': ['prettier', 'eslint'],
