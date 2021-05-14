@@ -2,6 +2,21 @@
 " ~/.vim/<plugins-folder>/vimspector/configurations/macos/_all/<filename>
 let g:vimspector_enable_mappings = 'HUMAN'
 
+
+"| Key          | Mapping                                       | Function
+"| ---          | ---                                           | ---
+"| `F5`         | `<Plug>VimspectorContinue`                    | Start / continue
+"| `F3`         | `<Plug>VimspectorStop`                        | Stop
+"| `F4`         | `<Plug>VimspectorRestart`                     | Restart
+"| `F6`         | `<Plug>VimspectorPause`                       | Pause
+"| `F9`         | `<Plug>VimspectorToggleBreakpoint`            | Toggle line breakpoint
+"| `<leader>F9` | `<Plug>VimspectorToggleConditionalBreakpoint` | Toggle conditional line breakpoint
+"| `F8`         | `<Plug>VimspectorAddFunctionBreakpoint`       | Add a function breakpoint for the expression under cursor
+"| `<leader>F8` | `<Plug>VimspectorRunToCursor`                 | Run to Cursor
+"| `F10`        | `<Plug>VimspectorStepOver`                    | Step Over
+"| `F11`        | `<Plug>VimspectorStepInto`                    | Step Into
+"| `F12`        | `<Plug>VimspectorStepOut`                     | Step out of current function scope
+
 " for PHP, place a .vimspect.json containing the PHP section in
 " ./vimspector-global-config.json in the root of the project
 
@@ -15,3 +30,7 @@ nnoremap <F5> :call vimspector#Continue()<CR>
 " doesn't appear to work
 nnoremap <Leader>di <Plug>VimspectorBalloonEval
 xnoremap <Leader>di <Plug>VimspectorBalloonEval
+
+" navigate up and down the call stack
+nnoremap <LocalLeader><F11> <Plug>VimspectorUpFrame
+nnoremap <LocalLeader><F12> <Plug>VimspectorDownFrame

@@ -36,6 +36,44 @@
           "/var/www/html": "${workspaceRoot}/src"
         }
       }
+    },
+    "lua": {
+      "adapter": "lua-local",
+      "configuration": {
+        "request": "launch",
+        "type": "lua-local",
+        "cwd": "${workspaceFolder}",
+        "program": {
+          "lua": "lua",
+          "file": "${file}"
+        }
+      }
+    },
+    "luajit": {
+      "adapter": "lua-local",
+      "configuration": {
+        "request": "launch",
+        "type": "lua-local",
+        "cwd": "${workspaceFolder}",
+        "program": {
+          "lua": "luajit",
+          "file": "${file}"
+        }
+      }
+    },
+    "lualove": {
+      "adapter": "lua-local",
+      "configuration": {
+        "request": "launch",
+        "type": "lua-local",
+        "cwd": "${workspaceFolder}",
+        "program": {
+          "command": "love"
+        },
+        "args": [
+          "${workspaceFolder}"
+        ]
+      }
     }
   }
 }
