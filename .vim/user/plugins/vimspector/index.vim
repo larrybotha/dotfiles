@@ -7,3 +7,11 @@ let g:vimspector_enable_mappings = 'HUMAN'
 
 " see https://www.youtube.com/watch?app=desktop&v=-AZUIL1rY3U for mapping with
 " vim-test
+
+nnoremap <leader>dw :call vimspector#AddWatch()
+nnoremap <leader>dr :call vimspector#Reset()<CR>
+nnoremap <F5> :call vimspector#Continue()<CR>
+
+" doesn't appear to work
+nnoremap <Leader>di <Plug>VimspectorBalloonEval
+xnoremap <Leader>di <Plug>VimspectorBalloonEval
