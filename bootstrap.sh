@@ -16,8 +16,8 @@ function doIt() {
     --exclude "LICENSE-MIT.txt" -av --no-perms . ~
 
   # append npm script completion
-  if type "npm" > /dev/null; then
-    npm completion >> ~/.shrc
+  if type "npm" >/dev/null; then
+    npm completion >>~/.shrc
   fi
 
   if [ "$SHELL" == "/bin/zsh" ]; then
@@ -44,8 +44,7 @@ function linkScripts() {
     ".config/yabai"
   )
 
-  for config in "${configs[@]}"
-  do
+  for config in "${configs[@]}"; do
     user_path=$HOME/$config
     config_path=$PWD/$config
 
@@ -71,8 +70,7 @@ function copyFiles() {
     ".vim/user/plugins/vimspector/vimspector-global-config.json .vim/plugged/vimspector/configurations/macos/_all/vimspect-global-config.json"
   )
 
-  for config in "${configs[@]}"
-  do
+  for config in "${configs[@]}"; do
     set -- $config
     source_file=$PWD/$1
     dest_file=$HOME/$2

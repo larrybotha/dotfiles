@@ -100,59 +100,59 @@ brew install koekeishiya/formulae/skhd
 brew install hammerspoon
 
 function installcask() {
-	if brew cask info "${@}" | grep "Not installed" > /dev/null; then
-		brew install --cask "${@}"
-	else
-		echo "${@} is already installed."
-	fi
+  if brew cask info "${@}" | grep "Not installed" >/dev/null; then
+    brew install --cask "${@}"
+  else
+    echo "${@} is already installed."
+  fi
 }
 
 if [ "$(uname -s)" == "Darwin" ]; then
-	installcask webpquicklook
-	installcask a-better-finder-rename
-	installcask alacritty
-	installcask alfred
-	installcask anki
-	installcask betterzip
-	installcask bitbar
-	installcask brave-browser
-	installcask dash
-	installcask dropbox
-	installcask firefox
-	installcask firefox-developer-edition
-	installcask flux
-	installcask google-app-engine-launcher
-	installcask google-chrome
-	installcask google-cloud-sdk
-	installcask imagealpha
-	installcask imageoptim
-	installcask integrity
-	installcask iterm2
-	installcask kap
-	installcask kitty
-	installcask libreoffice
-	installcask moom
-	installcask mysqlworkbench
-	installcask postman
-	installcask proxyman
-	installcask qlImageSize
-	installcask qlcolorcode
-	installcask qlmarkdown
-	installcask qlstephen
-	installcask qlvideo
-	installcask quicklook-csv
-	installcask quicklook-json
-	installcask robo-3t
-	installcask skype
-	installcask slack
-	installcask sourcetree
-	installcask the-unarchiver
-	installcask thinkorswim
-	installcask transmission
-	installcask virtualbox
-	installcask visual-studio-code
-	installcask vlc
-	installcask xscope
+  installcask webpquicklook
+  installcask a-better-finder-rename
+  installcask alacritty
+  installcask alfred
+  installcask anki
+  installcask betterzip
+  installcask bitbar
+  installcask brave-browser
+  installcask dash
+  installcask dropbox
+  installcask firefox
+  installcask firefox-developer-edition
+  installcask flux
+  installcask google-app-engine-launcher
+  installcask google-chrome
+  installcask google-cloud-sdk
+  installcask imagealpha
+  installcask imageoptim
+  installcask integrity
+  installcask iterm2
+  installcask kap
+  installcask kitty
+  installcask libreoffice
+  installcask moom
+  installcask mysqlworkbench
+  installcask postman
+  installcask proxyman
+  installcask qlImageSize
+  installcask qlcolorcode
+  installcask qlmarkdown
+  installcask qlstephen
+  installcask qlvideo
+  installcask quicklook-csv
+  installcask quicklook-json
+  installcask robo-3t
+  installcask skype
+  installcask slack
+  installcask sourcetree
+  installcask the-unarchiver
+  installcask thinkorswim
+  installcask transmission
+  installcask virtualbox
+  installcask visual-studio-code
+  installcask vlc
+  installcask xscope
 fi
 
 # Remove outdated versions from the cellar

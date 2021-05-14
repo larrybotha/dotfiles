@@ -1,68 +1,66 @@
 #!/usr/bin/env bash
 
 function installmodule() {
-	if npm list -g "${@}" | grep "empty" > /dev/null; then
-		npm install -g "${@}"
-	else
-		echo "${@} is already installed."
-	fi
+  if npm list -g "${@}" | grep "empty" >/dev/null; then
+    npm install -g "${@}"
+  else
+    echo "${@} is already installed."
+  fi
 }
 
 local node_modules=(
-	alex
-	eslint_d
-	feathers-cli
-	fixjson
-	gulp-cli
-	imageoptim-cli
-	jsonlint
-	localtunnel
-	ndb
-	ngrok
-	nodemon
-	neovim
-	prettier
-	prettier_d_slim
-	prettier-plugin-svelte
-	server
-	typescript
-	yo
+  alex
+  eslint_d
+  feathers-cli
+  fixjson
+  gulp-cli
+  imageoptim-cli
+  jsonlint
+  localtunnel
+  ndb
+  ngrok
+  nodemon
+  neovim
+  prettier
+  prettier_d_slim
+  prettier-plugin-svelte
+  server
+  typescript
+  yo
 
-	# language servers
-	vscode-css-languageserver-bin
-	vscode-html-languageserver-bin
-	dockerfile-language-server-nodejs
-	typescript-language-server
-	vscode-json-languageserver
-	pyright
-	intelephense
-	bash-language-server
-	svelte-language-server
-	vim-language-server
+  # language servers
+  vscode-css-languageserver-bin
+  vscode-html-languageserver-bin
+  dockerfile-language-server-nodejs
+  typescript-language-server
+  vscode-json-languageserver
+  pyright
+  intelephense
+  bash-language-server
+  svelte-language-server
+  vim-language-server
 
-	# vim-imports-sort deps
-	import-sort-cli
-	import-sort-parser-babylon
-	import-sort-parser-typescript
-	import-sort-style-renke
+  # vim-imports-sort deps
+  import-sort-cli
+  import-sort-parser-babylon
+  import-sort-parser-typescript
+  import-sort-style-renke
 
   # ale deps
   lua-fmt
 )
 
 local mac_modules=(
-	alfred-npms
-	alfred-fkill
+  alfred-npms
+  alfred-fkill
 )
 
-for module in "${node_modules[@]}"
-do
-	installmodule $module
+for module in "${node_modules[@]}"; do
+  installmodule $module
 done
 
 if [ $(uname -s) = "Darwin" ]; then
-	for module in "${mac_modules[@]}"
-	do
-		installmodule $module
-	done
+  for module in "${mac_modules[@]}"; do
+    installmodule $module
+  done
 fi
