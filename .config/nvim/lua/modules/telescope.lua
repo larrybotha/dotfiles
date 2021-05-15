@@ -4,7 +4,7 @@ local action_state = require("telescope.actions.state")
 local M = {}
 local custom_actions = {}
 
-function custom_actions.fzf_multi_select(prompt_bufnr, mode)
+function custom_actions.fzf_multi_select(prompt_bufnr)
     local picker = action_state.get_current_picker(prompt_bufnr)
     local num_selections = table.getn(picker:get_multi_selection())
 
@@ -22,24 +22,24 @@ require("telescope").setup {
     defaults = {
         mappings = {
             i = {
-                -- close on escape
-                ["<esc>"] = actions.close,
-                ["<tab>"] = actions.toggle_selection + actions.move_selection_next,
-                ["<s-tab>"] = actions.toggle_selection + actions.move_selection_previous,
-                ["<cr>"] = custom_actions.fzf_multi_select
-            },
-            n = {
-                ["<tab>"] = actions.toggle_selection + actions.move_selection_next,
-                ["<s-tab>"] = actions.toggle_selection + actions.move_selection_previous,
-                ["<cr>"] = custom_actions.fzf_multi_select
+                ["<esc>"] = actions.close
             }
+        }
+    },
+    extensions = {
+        fzf = {
+            override_generic_sorter = true, -- override the generic sorter
+            override_file_sorter = true, -- override the file sorter
+            case_mode = "smart_case" -- or "ignore_case" or "respect_case"
         }
     }
 }
 
--- add hidden files to find_files
+require("telescope").load_extension("fzf")
+
 M.custom_find_files = function(opts)
     opts = opts or {}
+    -- add hidden files to find_files
     opts.hidden = true
     opts.find_command = {
         "rg",
@@ -52,6 +52,12 @@ M.custom_find_files = function(opts)
         "--smart-case",
         "--color=never"
     }
+    opts.attach_mappings = function(_, map)
+        map("i", "<cr>", custom_actions.fzf_multi_select)
+        map("n", "<cr>", custom_actions.fzf_multi_select)
+
+        return true
+    end
 
     require "telescope.builtin".find_files(opts)
 end
