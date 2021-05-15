@@ -115,7 +115,7 @@
   " when cursor stops moving
   " https://vi.stackexchange.com/questions/14315/how-can-i-tell-if-im-in-the-command-window
   autocmd FocusGained,BufEnter,CursorHold,CursorHoldI *
-                \ if mode() == 'n' && getcmdwintype() == '' | checktime | endif
+    \ if mode() == 'n' && getcmdwintype() == '' | checktime | endif
   set autoread
 
   if has('mouse_sgr')
