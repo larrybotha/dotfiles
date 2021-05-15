@@ -111,7 +111,8 @@ font:
     #   - (macOS) Menlo
     #   - (Linux/BSD) monospace
     #   - (Windows) Consolas
-    family: Roboto Mono Thin for Powerline
+    #family: Roboto Mono Thin for Powerline
+    family: RobotoMono Nerd Font
 
     # The `style` can be specified to pick a specific face.
     style: Thin
@@ -122,7 +123,7 @@ font:
     #
     # If the bold family is not specified, it will fall back to the
     # value specified for the normal font.
-    family: Roboto Mono Light for Powerline
+    family: RobotoMono Nerd Font
 
     # The `style` can be specified to pick a specific face.
     style: Light
@@ -133,7 +134,7 @@ font:
     #
     # If the italic family is not specified, it will fall back to the
     # value specified for the normal font.
-    family: Roboto Mono Thin for Powerline
+    family: RobotoMono Nerd Font
 
     # The `style` can be specified to pick a specific face.
     style: Thin Italic
@@ -144,7 +145,7 @@ font:
     #
     # If the bold italic family is not specified, it will fall back to the
     # value specified for the normal font.
-    family: Roboto Mono Light for Powerline
+    family: RobotoMono Nerd Font
 
     # The `style` can be specified to pick a specific face.
     style: Light Italic
