@@ -150,35 +150,7 @@
 
   set colorcolumn=85                             " show column length hint for long lines
 
-  set cursorline                                 " highlight current line
-  set cursorcolumn                               " highlight current column
-
-  " color the cursor line and column
-  highlight CustomCursorConfig term=bold gui=bold ctermbg=233 guibg=black
-  highlight clear CursorLine
-  highlight clear CursorColumn
-  highlight link  CursorLine   CustomCursorConfig
-  highlight link  CursorColumn CustomCursorConfig
-
-  " make error messages more legible
-  highlight WarningMsg guifg=black
-  highlight clear ErrorMsg
-  highlight ErrorMsg ctermfg=0 ctermbg=1 guifg=black guibg=red
-  highlight clear Error
-  highlight link Error ErrorMsg
-  highlight link SpellBad ErrorMsg
-  highlight clear NvimInternalError
-  highlight link NvimInternalError ErrorMsg
-  highlight link airline_warning_inactive_red ErrorMsg
-  highlight link airline_warning_red ErrorMsg
-
-  " make debugger lines more legible
-  highlight RedrawDebugComposed   ctermfg=0      guifg=black
-  highlight RedrawDebugRecompose   ctermfg=0   ctermbg=1   guifg=black   guibg=red
-
-  " highlight trailing white space
-  highlight link ExtraWhitespace ErrorMsg
-  match ExtraWhitespace /\s\+$/
+  source ~/.vim/local/highlight.vim
 
   " switch relative line numbers to absolute when Vim is not in focus
   autocmd FocusLost * :set number
@@ -311,14 +283,14 @@
     map <leader>vbu :PlugUpdate<CR>
   " }
 
-source ~/.vim/user/plugins/ale.vim
-source ~/.vim/user/plugins/nerdtree.vim
-source ~/.vim/user/plugins/endwise.vim
-source ~/.vim/user/plugins/compe.vim
-source ~/.vim/user/plugins/vim-sort-imports.vim
-source ~/.vim/user/plugins/vim-pydocstring.vim
-source ~/.vim/user/plugins/vimspector/index.vim
-source ~/.vim/user/plugins/telescope.vim
+source ~/.vim/local/plugins/ale.vim
+source ~/.vim/local/plugins/nerdtree.vim
+source ~/.vim/local/plugins/endwise.vim
+source ~/.vim/local/plugins/compe.vim
+source ~/.vim/local/plugins/vim-sort-imports.vim
+source ~/.vim/local/plugins/vim-pydocstring.vim
+source ~/.vim/local/plugins/vimspector/index.vim
+source ~/.vim/local/plugins/telescope.vim
 
 
 

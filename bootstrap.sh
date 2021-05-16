@@ -67,7 +67,7 @@ function linkScripts() {
 function copyFiles() {
   echo ""
   configs=(
-    ".vim/user/plugins/vimspector/vimspector-global-config.json .vim/plugged/vimspector/configurations/macos/_all/vimspect-global-config.json"
+    ".vim/local/plugins/vimspector/vimspector-global-config.json .vim/plugged/vimspector/configurations/macos/_all/vimspect-global-config.json"
   )
 
   for config in "${configs[@]}"; do
