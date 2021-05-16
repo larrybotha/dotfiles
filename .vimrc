@@ -181,8 +181,8 @@
   match ExtraWhitespace /\s\+$/
 
   " switch relative line numbers to absolute when Vim is not in focus
-  :au FocusLost * :set number
-  :au FocusGained * :set relativenumber
+  autocmd FocusLost * :set number
+  autocmd FocusGained * :set relativenumber
 
   " use absolute numbers when in Insert mode
   autocmd InsertEnter * :set number
@@ -284,27 +284,26 @@
 
     " Put these in an autocmd group, so that we can delete them easily.
     augroup vimrcEx
-    au!
+      autocmd!
 
-    " For all text files set 'textwidth' to 78 characters.
-    autocmd BufRead *.txt,*.md,*.svx,*.textile set textwidth=80
+      " For all text files set 'textwidth' to 80 characters.
+      autocmd BufRead *.txt,*.md,*.svx,*.textile set textwidth=80
 
-    " Set .svx files as markdown
-    autocmd BufRead *.svx set ft=markdown
+      " Set .svx files as markdown
+      " TODO: move to filetype plugin
+      autocmd BufRead *.svx set ft=markdown
 
-    " Delete trailing white space on save
-    autocmd BufWritePre * :%s/\s\+$//e
+      " Delete trailing white space on save
+      autocmd BufWritePre * :%s/\s\+$//e
 
-    " When editing a file, always jump to the last known cursor position.
-    " Don't do it when the position is invalid or when inside an event handler
-    " (happens when dropping a file on gvim).
-    autocmd BufReadPost *
-      \ if line("'\"") > 0 && line("'\"") <= line("$") |
-      \  exe "normal g`\"" |
-      \ endif
-
+      " When editing a file, always jump to the last known cursor position.
+      " Don't do it when the position is invalid or when inside an event handler
+      " (happens when dropping a file on gvim).
+      autocmd BufReadPost *
+	\ if line("'\"") > 0 && line("'\"") <= line("$") |
+	\  exe "normal g`\"" |
+	\ endif
     augroup END
-
   endif " has("autocmd")
 
 " }
