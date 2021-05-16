@@ -124,7 +124,8 @@
 " }
 
 " Vim UI {
-  color monokai                                  " load a colourscheme
+  source ~/.vim/local/highlight.vim
+  colorscheme monokai                            " load a colourscheme
   set termguicolors                              " use gui color attributes instead of cterm attributes
   set splitright                                 " open split panes to the right of the current pane
   set splitbelow                                 " open split panes underneath the current pane
@@ -147,10 +148,10 @@
   set foldenable                                 " auto fold code
   set nospell                                    " disable spellcheck
   set shortmess=atI                              " prevent 'Press ENTER' prompt
+  set cursorline                                 " highlight current line
+  set cursorcolumn                               " highlight current column
 
   set colorcolumn=85                             " show column length hint for long lines
-
-  source ~/.vim/local/highlight.vim
 
   " switch relative line numbers to absolute when Vim is not in focus
   autocmd FocusLost * :set number
