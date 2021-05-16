@@ -129,14 +129,6 @@
   set splitright                                 " open split panes to the right of the current pane
   set splitbelow                                 " open split panes underneath the current pane
 
-  set cursorline                                 " highlight current line
-  set cursorcolumn                               " highlight current column
-  set termguicolors
-  hi CursorLine term=bold gui=bold ctermbg=233 guibg=black
-  hi CursorColumn term=bold gui=bold ctermbg=233 guibg=black
-
-  set colorcolumn=85                             " show column length hint for long lines
-
   set backspace=indent,eol,start                 " allow backspacing over everything in insert mode
   set linespace=0                                " No extra spaces between rows
   set relativenumber                             " relative line numbers on
@@ -156,20 +148,37 @@
   set nospell                                    " disable spellcheck
   set shortmess=atI                              " prevent 'Press ENTER' prompt
 
-  " highlight trailing white space
-  hi ExtraWhitespace ctermbg=197 guibg=red
-  match ExtraWhitespace /\s\+$/
+  set colorcolumn=85                             " show column length hint for long lines
+
+  set cursorline                                 " highlight current line
+  set cursorcolumn                               " highlight current column
+
+  " color the cursor line and column
+  highlight CustomCursorConfig term=bold gui=bold ctermbg=233 guibg=black
+  highlight clear CursorLine
+  highlight clear CursorColumn
+  highlight link  CursorLine   CustomCursorConfig
+  highlight link  CursorColumn CustomCursorConfig
 
   " make error messages more legible
-  hi Error        ctermfg=0   ctermbg=1   guifg=black   guibg=red
-  hi ErrorMsg     ctermfg=0   ctermbg=1   guifg=black   guibg=red
-  hi SpellBad     ctermfg=0   ctermbg=1   guifg=black   guibg=red
-  hi WarningMsg   ctermfg=0   ctermbg=1   guifg=black   guibg=red
+  highlight WarningMsg guifg=black
+  highlight clear ErrorMsg
+  highlight ErrorMsg ctermfg=0 ctermbg=1 guifg=black guibg=red
+  highlight clear Error
+  highlight link Error ErrorMsg
+  highlight link SpellBad ErrorMsg
+  highlight clear NvimInternalError
+  highlight link NvimInternalError ErrorMsg
+  highlight link airline_warning_inactive_red ErrorMsg
+  highlight link airline_warning_red ErrorMsg
 
   " make debugger lines more legible
-  hi RedrawDebugComposed ctermbg=2 guibg=green
-  hi RedrawDebugRecompose ctermbg=1 guibg=red
+  highlight RedrawDebugComposed   ctermfg=0      guifg=black
+  highlight RedrawDebugRecompose   ctermfg=0   ctermbg=1   guifg=black   guibg=red
 
+  " highlight trailing white space
+  highlight link ExtraWhitespace ErrorMsg
+  match ExtraWhitespace /\s\+$/
 
   " switch relative line numbers to absolute when Vim is not in focus
   :au FocusLost * :set number
