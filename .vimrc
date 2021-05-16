@@ -125,6 +125,7 @@
 
 " Vim UI {
   color monokai                                  " load a colourscheme
+  set termguicolors                              " use gui color attributes instead of cterm attributes
   set splitright                                 " open split panes to the right of the current pane
   set splitbelow                                 " open split panes underneath the current pane
 
