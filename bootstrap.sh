@@ -37,6 +37,7 @@ function linkScripts() {
     ".vim"
     ".tmux.conf"
     ".config/alacritty"
+    ".config/asynctasks"
     ".config/karabiner"
     ".config/kitty"
     ".config/nvim"

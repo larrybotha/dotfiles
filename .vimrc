@@ -30,6 +30,9 @@
 
   Plug 'dense-analysis/ale'
 
+  Plug 'skywind3000/asynctasks.vim'
+  Plug 'skywind3000/asyncrun.vim'
+
   Plug 'rking/ag.vim'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
@@ -68,6 +71,7 @@
   Plug 'ruanyl/vim-sort-imports'
   Plug 'dkarter/bullets.vim'
   Plug 'puremourning/vimspector'
+  Plug 'preservim/vimux'
 
   "only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
@@ -294,6 +298,7 @@ source ~/.vim/local/plugins/vim-pydocstring.vim
 source ~/.vim/local/plugins/vimspector/index.vim
 source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/airline.vim
+source ~/.vim/local/plugins/asynctasks.vim
 
 
 
