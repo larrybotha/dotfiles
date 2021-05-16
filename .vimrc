@@ -192,10 +192,10 @@
   set showcmd
 
   " moving panes
-  map <leader>mh :wincmd H<CR>
-  map <leader>mj :wincmd J<CR>
-  map <leader>mk :wincmd K<CR>
-  map <leader>ml :wincmd L<CR>
+  noremap <leader>mh :wincmd H<CR>
+  noremap <leader>mj :wincmd J<CR>
+  noremap <leader>mk :wincmd K<CR>
+  noremap <leader>ml :wincmd L<CR>
 
   " change cursor to caret when in insert mode in tmux
   if exists('$TMUX')
@@ -244,7 +244,7 @@
   nmap <leader>f9 :set foldlevel=9<CR>
 
   " clear highlighted searches
-  nmap <silent> <leader>/ :nohlsearch<CR>
+  nnoremap <silent> <leader>/ :nohlsearch<CR>
 
   " visual shifting without exiting visual mode
   vnoremap < <gv
@@ -257,10 +257,6 @@
   inoremap ˚ <Esc>:m .-2<CR>==gi
   vnoremap ∆ :m '>+1<CR>gv=gv
   vnoremap ˚ :m '<-2<CR>gv=gv
-
-  " Emacs-like beginning and end of line
-  imap <c-e> <c-o>$
-  imap <c-a> <c-o>^
 
   " paste, fix indentation and clear the mark by default
   nnoremap p p=`]`<esc>
@@ -300,9 +296,9 @@
       " Don't do it when the position is invalid or when inside an event handler
       " (happens when dropping a file on gvim).
       autocmd BufReadPost *
-	\ if line("'\"") > 0 && line("'\"") <= line("$") |
-	\  exe "normal g`\"" |
-	\ endif
+        \ if line("'\"") > 0 && line("'\"") <= line("$") |
+        \  exe "normal g`\"" |
+        \ endif
     augroup END
   endif " has("autocmd")
 
