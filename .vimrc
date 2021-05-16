@@ -51,6 +51,7 @@
   Plug 'terryma/vim-multiple-cursors'
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
+  Plug 'vim-airline/vim-airline-themes'
   Plug 'brett-griffin/phpdocblocks.vim'
   Plug 'heavenshell/vim-pydocstring', { 'do': 'make install' }
   Plug 'heavenshell/vim-jsdoc', {
@@ -292,6 +293,7 @@ source ~/.vim/local/plugins/vim-sort-imports.vim
 source ~/.vim/local/plugins/vim-pydocstring.vim
 source ~/.vim/local/plugins/vimspector/index.vim
 source ~/.vim/local/plugins/telescope.vim
+source ~/.vim/local/plugins/airline.vim
 
 
 
@@ -363,12 +365,6 @@ source ~/.vim/local/plugins/telescope.vim
 
   " Prettier {
     "autocmd BufWritePre *.js,*.mjs,*.json,*.ts,*.tsx,*.vue,*.graphql,*.yaml,*.yml PrettierAsync
-  " }
-
-  " Airline {
-    let g:airline_powerline_fonts = 1
-    let g:airline#extensions#tabline#enabled = 1
-    let g:airline#extensions#tabline#buffer_nr_show = 1
   " }
 
   " Tabular {
