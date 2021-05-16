@@ -6,6 +6,8 @@ nnoremap <leader>fa <cmd>Telescope builtin<cr>
 nnoremap <leader>fd <cmd>Telescope lsp_document_diagnostics<cr>
 " TODO: determine how to show filenames insstead of code in picker
 "nnoremap <leader>fr <cmd>Telescope lsp_references<cr>
+nnoremap <leader>ft :lua require('telescope').extensions.asynctasks.all()<cr>
+
 
 highlight link TelescopeMultiSelection Identifier
 highlight link TelescopeMatching Function

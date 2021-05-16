@@ -36,6 +36,7 @@ require("telescope").setup {
 }
 
 require("telescope").load_extension("fzf")
+require("telescope").load_extension("asynctasks")
 
 M.custom_find_files = function(opts)
     opts = opts or {}
