@@ -96,4 +96,4 @@ else
   fi
 fi
 
-unset doIt
+unset doIt copyFiles linkScripts
