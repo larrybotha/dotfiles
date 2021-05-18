@@ -133,7 +133,7 @@
 
 " Vim UI {
   source ~/.vim/local/highlight.vim
-  colorscheme bubblegum-256-dark                 " load a colourscheme
+  colorscheme monokai                            " load a colourscheme
   set termguicolors                              " use gui color attributes instead of cterm attributes
   set splitright                                 " open split panes to the right of the current pane
   set splitbelow                                 " open split panes underneath the current pane
