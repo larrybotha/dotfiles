@@ -116,7 +116,6 @@ function installcask() {
 }
 
 if [ "$(uname -s)" == "Darwin" ]; then
-  installcask webpquicklook
   installcask a-better-finder-rename
   installcask alacritty
   installcask alfred
@@ -126,6 +125,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
   installcask brave-browser
   installcask dash
   installcask dropbox
+  installcask figma
   installcask firefox
   installcask firefox-developer-edition
   installcask flux
@@ -155,11 +155,11 @@ if [ "$(uname -s)" == "Darwin" ]; then
   installcask slack
   installcask sourcetree
   installcask the-unarchiver
-  installcask thinkorswim
   installcask transmission
   installcask virtualbox
   installcask visual-studio-code
   installcask vlc
+  installcask webpquicklook
   installcask xscope
 fi
 
