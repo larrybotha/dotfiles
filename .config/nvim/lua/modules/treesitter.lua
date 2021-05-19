@@ -5,8 +5,8 @@ require "nvim-treesitter.configs".setup {
     --ignore_install = { "javascript" },
     highlight = {
         -- false will disable the whole extension
-        enable = true,
+        enable = true
         -- list of language that will be disabled
-        disable = {}
+        --disable = {}
     }
 }
