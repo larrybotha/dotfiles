@@ -26,7 +26,7 @@ let g:vimspector_enable_mappings = 'HUMAN'
 nnoremap <leader>dw :call vimspector#AddWatch()<CR> <C-R><C-A>
 nnoremap <leader>dr :call vimspector#Reset()<CR>
 nnoremap <F5> :call vimspector#Continue()<CR>
-nnoremap <leader>de :VimspectorEval <C-R><C-A>
+nnoremap <leader>de :VimspectorEval <C-R><C-w>
 
 " these won't work if non-recursive is applied (i.e. nnoremap)
 nmap <Leader>di <Plug>VimspectorBalloonEval
