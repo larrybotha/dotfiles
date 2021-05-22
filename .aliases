@@ -25,6 +25,7 @@ alias o='open'
 alias oo='open .'
 
 # Tmux
+alias vmux='tmuxinator start -p ~/.config/tmuxinator/default.yml'
 alias mux='tmuxinator'
 alias tma='tmux attach-session -t'
 alias tmn='tmux new-session -s'
