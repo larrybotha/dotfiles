@@ -68,13 +68,23 @@ function linkScripts() {
 function copyFiles() {
   echo ""
   configs=(
-    ".vim/local/plugins/vimspector/vimspector-global-config.json .vim/plugged/vimspector/configurations/macos/_all/vimspect-global-config.json"
+    "
+      vimspector-global-config.json
+      $PWD/.vim/local/plugins/vimspector
+      $HOME/.vim/plugged/vimspector/configurations/macos/_all
+    "
   )
 
   for config in "${configs[@]}"; do
     set -- $config
-    source_file=$PWD/$1
-    dest_file=$HOME/$2
+    file_name=$1
+    source_file=$2/$file_name
+    dest_file=$3/$file_name
+
+    if [ ! -d "$2" ]; then
+      echo -e "creating folder: $dest_path"
+      mkdir -p $dest_path
+    fi
 
     if [ ! -e "$dest_file" ]; then
       echo -e "copying: $source_file \n\t-> $dest_file"
