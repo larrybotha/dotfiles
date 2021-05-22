@@ -42,6 +42,7 @@ function linkScripts() {
     ".config/kitty"
     ".config/nvim"
     ".config/skhd"
+    ".config/tmuxinator"
     ".config/yabai"
   )
 
