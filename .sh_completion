@@ -1,0 +1,33 @@
+# enable fzf completion
+if [ "$ZSH_VERSION" ]; then
+  [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+else
+  [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+fi
+
+if ! [ "$ZSH_VERSION" ]; then
+  # activate tmux autocomplete
+  source ~/.tmux/tmux_completion.sh
+
+  #add git aliases to git-completion
+  complete -o default -o nospace -F _git g
+  complete -o default -o nospace -F _git_checkout co
+
+  # If possible, add tab completion for many more commands
+  [ -f /etc/bash_completion ] && source /etc/bash_completion
+fi
+
+# init git-completion https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
+if [ -f ~/code/git-completion/git-completion.bash ] && ! [ "$ZSH_VERSION" ]; then
+  . ~/code/git-completion/git-completion.bash
+fi
+
+# Add tab completion for SSH hostnames based on ~/.ssh/config, ignoring wildcards
+if [ -e "$HOME/.ssh/config" ]; then
+  if ! [ "$ZSH_VERSION" ]; then
+    complete -o "default" \
+      -o "nospace" \
+      -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2 | tr ' ' '\n')" \
+      scp sftp ssh
+  fi
+fi
