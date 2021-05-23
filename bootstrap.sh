@@ -41,6 +41,7 @@ function linkScripts() {
     ".config/karabiner"
     ".config/kitty"
     ".config/nvim"
+    ".config/ptpython"
     ".config/skhd"
     ".config/tmuxinator"
     ".config/yabai"
