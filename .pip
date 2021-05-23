@@ -25,3 +25,6 @@ pip install --user autoimport
 
 # generate requirements.txt
 pip install --user pipreqs
+
+# better REPL
+pip install --user ptpython
