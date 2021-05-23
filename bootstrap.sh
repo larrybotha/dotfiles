@@ -17,7 +17,7 @@ function doIt() {
 
   # append npm script completion
   if type "npm" >/dev/null; then
-    npm completion >>~/.shrc
+    npm completion >>~/.sh_completion
   fi
 
   if [ "$SHELL" == "/bin/zsh" ]; then

@@ -45,4 +45,4 @@ if ! [ "$ZSH_VERSION" ]; then
   done
 fi
 
-source ./.sh_completion
+source ~/.sh_completion
