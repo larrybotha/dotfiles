@@ -292,16 +292,17 @@
     map <leader>vbu :PlugUpdate<CR>
   " }
 
-source ~/.vim/local/plugins/ale.vim
-source ~/.vim/local/plugins/nerdtree.vim
-source ~/.vim/local/plugins/endwise.vim
-source ~/.vim/local/plugins/compe.vim
-source ~/.vim/local/plugins/vim-sort-imports.vim
-source ~/.vim/local/plugins/vim-pydocstring.vim
-source ~/.vim/local/plugins/vimspector/index.vim
-source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/airline.vim
+source ~/.vim/local/plugins/ale.vim
 source ~/.vim/local/plugins/asynctasks.vim
+source ~/.vim/local/plugins/compe.vim
+source ~/.vim/local/plugins/endwise.vim
+source ~/.vim/local/plugins/nerdtree.vim
+source ~/.vim/local/plugins/telescope.vim
+source ~/.vim/local/plugins/vim-pydocstring.vim
+source ~/.vim/local/plugins/vim-sort-imports.vim
+source ~/.vim/local/plugins/vimspector/index.vim
+source ~/.vim/local/plugins/vimux.vim
 
 
 
