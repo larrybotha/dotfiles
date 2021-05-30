@@ -8,7 +8,7 @@ function installmodule() {
   fi
 }
 
-local node_modules=(
+node_modules=(
   alex
   eslint_d
   feathers-cli
@@ -50,7 +50,7 @@ local node_modules=(
   lua-fmt
 )
 
-local mac_modules=(
+mac_modules=(
   alfred-npms
   alfred-fkill
 )
