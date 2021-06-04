@@ -146,3 +146,8 @@ alias map="xargs -n1"
 # RStudio not loading libraries because of Java version problems?
 # http://paulklemm.com/blog/2015/02/20/run-rjava-with-rstudio-under-osx-10-dot-10/
 alias rstudio='LD_LIBRARY_PATH=$(/usr/libexec/java_home)/jre/lib/server: open -a RStudio'
+
+# alias python to python3
+if [ "$(uname -s)" = "Linux" ]; then
+  alias python=python3
+fi
