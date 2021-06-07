@@ -24,6 +24,7 @@ node_modules=(
   prettier
   prettier_d_slim
   prettier-plugin-svelte
+  @prettier/plugin-php
   server
   typescript
   yo
