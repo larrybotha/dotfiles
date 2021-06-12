@@ -57,8 +57,10 @@ brew install git
 brew install git-crypt
 brew install git-flow
 brew install go
+brew install htop
 brew install httpie
 brew install hub
+brew install jq
 brew install lynx
 brew install nvm
 brew install php-version
@@ -75,6 +77,7 @@ brew install ripgrep
 brew install sbt
 brew install shfmt
 brew install the_silver_searcher
+brew install tldr
 brew install tree
 brew install vim
 brew install watch
@@ -108,7 +111,6 @@ brew install brew-cask
 
 # Install yabai deps
 brew install koekeishiya/formulae/yabai
-brew install jq
 brew install koekeishiya/formulae/skhd
 brew install hammerspoon
 
