@@ -151,3 +151,8 @@ alias rstudio='LD_LIBRARY_PATH=$(/usr/libexec/java_home)/jre/lib/server: open -a
 if [ "$(uname -s)" = "Linux" ]; then
   alias python=python3
 fi
+
+# use bat instead of cat
+if type -p "bat" >/dev/null; then
+  alias cat="bat"
+fi
