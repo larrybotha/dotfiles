@@ -144,7 +144,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
   installcask integrity
   installcask iterm2
   installcask kap
-  installcask kitty
   installcask libreoffice
   installcask moom
   installcask mysqlworkbench
