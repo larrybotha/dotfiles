@@ -1,9 +1,24 @@
 #!/usr/bin/env bash
 
-function installmodule() {
+update_existing=false
+
+if [ "$1" == --update-existing -o "$1" == '-u' ]; then
+  update_existing=true
+fi
+
+function is_installed() {
+  if npm list -g "${@}" | grep "empty" >/dev/null; then
+    echo false
+  else
+    echo true
+  fi
+}
+
+function install_module() {
+  installed=$(is_installed "${@}")
   message="updating"
 
-  if npm list -g "${@}" | grep "empty" >/dev/null; then
+  if test $installed != true; then
     message="installing"
   fi
 
@@ -16,7 +31,19 @@ function installmodule() {
   echo ""
 }
 
-node_modules=(
+function conditional_install() {
+  local module="$1"
+  local update_existing="$2"
+  local installed=$(is_installed $module)
+
+  if test $installed == 'true' && test $update_existing != 'true'; then
+    echo "$module already installed - skipping"
+  else
+    install_module $module
+  fi
+}
+
+common_modules=(
   alex
   eslint_d
   feathers-cli
@@ -38,14 +65,15 @@ node_modules=(
   yo
 
   # language servers
-  vscode-langservers-extracted
-  dockerfile-language-server-nodejs
-  typescript-language-server
-  pyright
-  intelephense
   bash-language-server
+  dockerfile-language-server-nodejs
+  intelephense
+  pyright
   svelte-language-server
+  typescript-language-server
   vim-language-server
+  vscode-langservers-extracted
+  yaml-language-server
 
   # vim-imports-sort deps
   import-sort-cli
@@ -62,12 +90,12 @@ mac_modules=(
   alfred-fkill
 )
 
-for module in "${node_modules[@]}"; do
-  installmodule $module
+for module in "${common_modules[@]}"; do
+  conditional_install $module $update_existing
 done
 
 if [ $(uname -s) = "Darwin" ]; then
   for module in "${mac_modules[@]}"; do
-    installmodule $module
+    conditional_install $module $update_existing
   done
 fi
