@@ -1,11 +1,19 @@
 #!/usr/bin/env bash
 
 function installmodule() {
+  message="updating"
+
   if npm list -g "${@}" | grep "empty" >/dev/null; then
-    npm install -g "${@}"
-  else
-    echo "${@} is already installed."
+    message="installing"
   fi
+
+  echo '-----------------------------------------------'
+  echo -e "  ${@}: $message..."
+  echo '-----------------------------------------------'
+
+  npm install -g "${@}"
+
+  echo ""
 }
 
 node_modules=(
@@ -30,11 +38,9 @@ node_modules=(
   yo
 
   # language servers
-  vscode-css-languageserver-bin
-  vscode-html-languageserver-bin
+  vscode-langservers-extracted
   dockerfile-language-server-nodejs
   typescript-language-server
-  vscode-json-languageserver
   pyright
   intelephense
   bash-language-server
