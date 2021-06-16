@@ -9,15 +9,15 @@ let g:ale_lua_luacheck_options = '--globals vim'
 
 let g:ale_fixers = {
   \ 'graphql': ['prettier'],
-  \ 'sh': ['shfmt'],
-  \ 'lua': ['luafmt'],
   \ 'html': ['prettier'],
   \ 'javascript': ['prettier', 'eslint'],
   \ 'javascriptreact': ['prettier', 'eslint'],
   \ 'json': ['prettier', 'fixjson'],
+  \ 'lua': ['luafmt'],
   \ 'markdown': ['prettier'],
   \ 'php': ['custom_prettier_php'],
-  \ "python": [ 'isort', 'autoimport', 'ale#fixers#generic_python#BreakUpLongLines', 'black'],
+  \ 'python': [ 'isort', 'autoimport', 'ale#fixers#generic_python#BreakUpLongLines', 'black'],
+  \ 'sh': ['shfmt'],
   \ 'svelte': ['prettier'],
   \ 'typescript': ['prettier', 'eslint'],
   \ 'typescriptreact': ['prettier', 'eslint'],
@@ -25,7 +25,7 @@ let g:ale_fixers = {
   \ 'yaml': ['prettier'],
 \}
 
-let g:ale_linters_ignore = {'php': ['phpcs']}
+let g:ale_linters_ignore = {'php': ['phpcs'], 'svelte': ['eslint']}
 
 "format .html.php files with custom prettier formats
 let g:ale_pattern_options = {
@@ -52,6 +52,12 @@ function! PrettierPhpOutput(buffer) abort
   return GetPrettierFixer('--parser php')
 endfunction
 
+" add custom vanilla prettier formatter
+function! PrettierVanillaOutput(buffer) abort
+  return GetPrettierFixer('')
+endfunction
+
 " add custom fixers to Ale's registry
 execute ale#fix#registry#Add('custom_prettier_html', 'PrettierHtmlOutput', [], 'format html with prettier')
 execute ale#fix#registry#Add('custom_prettier_php', 'PrettierPhpOutput', [], 'format php with prettier')
+execute ale#fix#registry#Add('custom_prettier_vanilla', 'PrettierVanillaOutput', [], 'format with standard prettier')
