@@ -16,7 +16,7 @@ let g:ale_fixers = {
   \ 'lua': ['luafmt'],
   \ 'markdown': ['prettier'],
   \ 'php': ['custom_prettier_php'],
-  \ 'python': [ 'isort', 'autoimport', 'ale#fixers#generic_python#BreakUpLongLines', 'black'],
+  \ 'python': [ 'isort', 'autoimport', 'black'],
   \ 'sh': ['shfmt'],
   \ 'svelte': ['prettier'],
   \ 'typescript': ['prettier', 'eslint'],
