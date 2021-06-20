@@ -1,7 +1,7 @@
 # We can get a quick default mux layout using this file and running:
 # $ tmuxinator start d
 
-name: default
+name: <%= Dir.pwd.split('/')[-1] %>
 
 windows:
   - editor:
