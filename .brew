@@ -157,6 +157,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
   installcask quicklook-csv
   installcask quicklook-json
   installcask robo-3t
+  installcask safari-technology-preview
   installcask skype
   installcask slack
   installcask sourcetree
