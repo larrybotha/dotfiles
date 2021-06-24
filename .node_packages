@@ -46,7 +46,6 @@ function conditional_install() {
 common_modules=(
   alex
   eslint_d
-  feathers-cli
   fixjson
   gulp-cli
   imageoptim-cli
@@ -72,7 +71,7 @@ common_modules=(
   svelte-language-server
   typescript-language-server
   vim-language-server
-  vscode-langservers-extracted
+  vscode-langservers-extracted # css, html, json
   yaml-language-server
 
   # vim-imports-sort deps
