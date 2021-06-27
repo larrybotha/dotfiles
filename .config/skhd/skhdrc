@@ -2,6 +2,9 @@
 # in a terminal and type a key. Pretty cool! Or just check the wiki.
 # $ skhd --observe
 
+## open a terminal with nnn
+hyper - f : alacritty --command ~/.config/nnn/custom/.wrap
+
 ###############################
 # YABAI
 ###############################
@@ -10,8 +13,6 @@ ctrl + alt + cmd - r : launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
 ## Quickly restart the skhd launch agent
 ctrl + alt + cmd - s : brew services restart skhd
 
-## toggle window fullscreen zoom
-hyper - f : yabai -m window --toggle zoom-fullscreen
 
 ## open terminal
 hyper - return : /Applications/Alacritty.app/Contents/MacOS/alacritty
