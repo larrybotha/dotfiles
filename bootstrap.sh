@@ -40,6 +40,7 @@ function linkScripts() {
     ".config/asynctasks"
     ".config/karabiner"
     ".config/kitty"
+    ".config/nnn"
     ".config/nvim"
     ".config/ptpython"
     ".config/skhd"

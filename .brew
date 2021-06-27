@@ -62,6 +62,7 @@ brew install httpie
 brew install hub
 brew install jq
 brew install lynx
+brew install nnn
 brew install nvm
 brew install php-version
 brew install phppgadmin

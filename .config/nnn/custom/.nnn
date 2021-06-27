@@ -1,0 +1,29 @@
+#!/usr/bin/env sh
+
+# theme: https://github.com/jarun/nnn/wiki/Themes
+BLK="0B" CHR="0B" DIR="04" EXE="06" REG="00" HARDLINK="06" SYMLINK="06" MISSING="00" ORPHAN="09" FIFO="06" SOCK="0B" OTHER="06"
+
+# exports
+export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
+export NNN_FIFO=/tmp/nnn.fifo
+export NNN_PLUG='p:preview-tui;n:nuke;i:imgview;f:fzcd;q:-personal/qlmanage;l:launch'
+
+# hidden files on top
+export LC_COLLATE="C"
+
+for file in $(dirname "$0")/.{,quitcd}; do
+  [ -r "$file" ] && source "$file"
+done
+
+function symlinkPersonalPlugins() {
+  local script_path=$(dirname $(realpath $0))
+  local source=$script_path/custom/plugins
+  local symlink=$HOME/.config/nnn/plugins/personal
+
+  if [ ! -e "$symlink" ]; then
+    echo "ln -s $source $symlink"
+    ln -s $source $symlink
+  fi
+}
+
+symlinkPersonalPlugins
