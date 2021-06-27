@@ -26,11 +26,11 @@ function doIt() {
     source ~/.bash_profile
   fi
 
-  linkScripts
+  symlinkConfigs
   copyFiles
 }
 
-function linkScripts() {
+function symlinkConfigs() {
   echo ""
   configs=(
     ".vimrc"
@@ -109,4 +109,4 @@ else
   fi
 fi
 
-unset doIt copyFiles linkScripts
+unset doIt copyFiles symlinkConfigs
