@@ -43,6 +43,7 @@
   Plug 'tpope/vim-surround'
   Plug 'tpope/vim-endwise'
 
+  Plug 'sheerun/vim-polyglot'
   Plug 'Raimondi/delimitMate'
   Plug 'airblade/vim-gitgutter'
   Plug 'christoomey/vim-tmux-navigator'
