@@ -37,6 +37,7 @@
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
 
+
   Plug 'tpope/vim-sensible'
   Plug 'tpope/vim-fugitive'
   Plug 'tpope/vim-surround'
@@ -47,10 +48,10 @@
   Plug 'christoomey/vim-tmux-navigator'
   Plug 'editorconfig/editorconfig-vim'
   Plug 'edkolev/tmuxline.vim'
+  Plug 'mcchrish/nnn.vim'
   Plug 'godlygeek/tabular'
   Plug 'preservim/nerdcommenter'
   Plug 'rhysd/git-messenger.vim'
-  Plug 'scrooloose/nerdtree'
   Plug 'terryma/vim-multiple-cursors'
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
@@ -297,7 +298,7 @@ source ~/.vim/local/plugins/ale.vim
 source ~/.vim/local/plugins/asynctasks.vim
 source ~/.vim/local/plugins/compe.vim
 source ~/.vim/local/plugins/endwise.vim
-source ~/.vim/local/plugins/nerdtree.vim
+source ~/.vim/local/plugins/nnn.vim
 source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/vim-pydocstring.vim
 source ~/.vim/local/plugins/vim-sort-imports.vim
