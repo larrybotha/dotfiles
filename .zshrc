@@ -12,3 +12,7 @@ antigen apply
 # enable direnv
 eval "$(direnv hook zsh)"
 
+# start zsh in tmux
+if [[ $TMUX == "" ]]; then
+  tmux
+fi
