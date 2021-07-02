@@ -46,18 +46,19 @@ function conditional_install() {
 common_modules=(
   alex
   eslint_d
+  fast-cli
   fixjson
   gulp-cli
   imageoptim-cli
   jsonlint
   localtunnel
   ndb
+  neovim
   ngrok
   nodemon
-  neovim
   prettier
-  prettier_d_slim
   prettier-plugin-svelte
+  prettier_d_slim
   @prettier/plugin-php
   server
   typescript
