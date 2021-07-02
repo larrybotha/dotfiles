@@ -406,8 +406,6 @@ font:
 #  program: /bin/bash
 #  args:
 #    - --login
-shell:
-  program: /usr/local/bin/tmux
 
 # Startup directory
 #
