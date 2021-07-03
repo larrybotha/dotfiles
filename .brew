@@ -85,6 +85,7 @@ brew install tldr
 brew install tmuxinator
 brew install tree
 brew install vim
+brew install vivid
 brew install watch
 brew install watchman
 brew install webkit2png

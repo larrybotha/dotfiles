@@ -45,6 +45,7 @@ function symlinkConfigs() {
     ".config/ptpython"
     ".config/skhd"
     ".config/tmuxinator"
+    ".config/vivid"
     ".config/yabai"
   )
 
