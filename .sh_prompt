@@ -17,7 +17,7 @@ if tput setaf 1 &>/dev/null; then
     ORANGE=$(tput setaf 179)
     GREEN=$(tput setaf 150)
     BLUE=$(tput setaf 110)
-    WHITE=$(tput setaf 0)
+    WHITE=$(tput setaf 248)
   else
     MAGENTA=$(tput setaf 5)
     ORANGE=$(tput setaf 4)
@@ -36,14 +36,6 @@ else
   BOLD=""
   RESET="\033[m"
 fi
-
-export MAGENTA
-export ORANGE
-export GREEN
-export BLUE
-export WHITE
-export BOLD
-export RESET
 
 # Fastest possible way to check if repo is dirty.
 function parse_git_dirty() {
