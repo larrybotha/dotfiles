@@ -42,17 +42,6 @@ M.custom_find_files = function(opts)
     opts = opts or {}
     -- add hidden files to find_files
     opts.hidden = true
-    opts.find_command = {
-        "rg",
-        "--files",
-        "--hidden",
-        "--no-heading",
-        "--with-filename",
-        "--line-number",
-        "--column",
-        "--smart-case",
-        "--color=never"
-    }
     opts.attach_mappings = function(_, map)
         map("i", "<cr>", custom_actions.fzf_multi_select)
         map("n", "<cr>", custom_actions.fzf_multi_select)
