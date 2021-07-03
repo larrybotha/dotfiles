@@ -64,6 +64,7 @@ brew install httpie
 brew install hub
 brew install jq
 brew install lynx
+brew install neovim
 brew install nnn
 brew install nvm
 brew install php-version
@@ -89,10 +90,6 @@ brew install watchman
 brew install webkit2png
 brew install yarn
 brew install zopfli
-
-#neovim
-brew install --head luajit
-brew install --head neovim
 
 # lua
 brew tap homebrew/versions
