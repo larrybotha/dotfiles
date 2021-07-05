@@ -12,7 +12,7 @@ let g:ale_fixers = {
   \ 'html': ['prettier'],
   \ 'javascript': ['prettier', 'eslint'],
   \ 'javascriptreact': ['prettier', 'eslint'],
-  \ 'json': ['prettier', 'fixjson'],
+  \ 'json': ['custom_prettier_vanilla', 'fixjson'],
   \ 'lua': ['luafmt'],
   \ 'markdown': ['prettier'],
   \ 'php': ['custom_prettier_php'],
