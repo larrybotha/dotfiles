@@ -1,7 +1,18 @@
 #!/usr/bin/env sh
 
 # theme: https://github.com/jarun/nnn/wiki/Themes
-BLK="0B" CHR="0B" DIR="04" EXE="06" REG="00" HARDLINK="06" SYMLINK="06" MISSING="00" ORPHAN="09" FIFO="06" SOCK="0B" OTHER="06"
+BLK="6e"
+CHR="b6"
+DIR="6e"
+EXE="b6"
+REG="00"
+HARDLINK="b6"
+SYMLINK="b6"
+MISSING="d9"
+ORPHAN="d9"
+FIFO="e8"
+SOCK="e8"
+OTHER="73"
 
 ## exports
 export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
