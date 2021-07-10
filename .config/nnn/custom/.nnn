@@ -1,18 +1,18 @@
 #!/usr/bin/env sh
 
-# theme: https://github.com/jarun/nnn/wiki/Themes
-BLK="6e"
+# See .config/vivid/themes/bubblegum.yml for hexadecimal values
+BLK="4a"
 CHR="b6"
 DIR="6e"
 EXE="b6"
 REG="00"
 HARDLINK="b6"
-SYMLINK="b6"
-MISSING="d9"
+SYMLINK="92"
+MISSING="f4"
 ORPHAN="d9"
-FIFO="e8"
-SOCK="e8"
-OTHER="73"
+FIFO="f4"
+SOCK="f4"
+OTHER="74"
 
 ## exports
 export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
