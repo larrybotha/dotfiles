@@ -12,6 +12,9 @@ antigen apply
 # enable direnv
 eval "$(direnv hook zsh)"
 
+# enable zoxide
+eval "$(zoxide init zsh)"
+
 # Start tmux when zsh starts
 #
 # This starts tmux in a way that ensures that when tmux is exited, it won't kill

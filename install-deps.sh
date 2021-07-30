@@ -29,15 +29,6 @@ if [ ! -d ~/code/antigen ]; then
   curl -L git.io/antigen >~/code/antigen/antigen.zsh
 fi
 
-# z
-# https://github.com/rupa/z
-# z binary is already referenced from .shrc
-pushd ~/code >/dev/null
-git clone https://github.com/rupa/z.git
-chmod +x ~/code/z/z.sh
-popd
-# also consider moving over your current .z file if possible. it's painful to rebuild :)
-
 # https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
 # Autocomplete motherflippin' git branches
 if [ ! -d ~/code/git-completion ]; then

@@ -14,11 +14,6 @@ fi
 # use vi mode
 set -o vi
 
-# init z   https://github.com/rupa/z
-if [ -f ~/code/z/z.sh ]; then
-  . ~/code/z/z.sh
-fi
-
 # init rbenv
 if type -p rbenv &>/dev/null; then
   eval "$(rbenv init -)"
