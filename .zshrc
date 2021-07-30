@@ -9,11 +9,19 @@ antigen apply
 # fzf must be sourced last before it's enable
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
-# enable direnv
-eval "$(direnv hook zsh)"
+if type direnv>/dev/null; then
+  # enable direnv
+  eval "$(direnv hook zsh)"
+else
+  echo "direnv not installed: $BASH_SOURCE"
+fi
 
-# enable zoxide
-eval "$(zoxide init zsh)"
+if type zoxide>/dev/null; then
+  # enable zoxide
+  eval "$(zoxide init zsh)"
+else
+  echo "zoxide not installed: $BASH_SOURCE"
+fi
 
 # Start tmux when zsh starts
 #
