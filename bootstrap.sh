@@ -14,6 +14,10 @@ function log {
   echo -e "$*"
 }
 
+function has_internet_access() {
+  ping -c 1 -q google.com >&/dev/null
+}
+
 function sync_files() {
   heading "syncing dotfiles"
 
@@ -153,7 +157,7 @@ function do_it() {
   prepare_completions
   symlink_configs
   copy_files
-  update_nnn_plugins
+  has_internet_access && update_nnn_plugins
   source_shell
 }
 
