@@ -17,7 +17,7 @@ OTHER="74"
 ## exports
 export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
 export NNN_FIFO=/tmp/nnn.fifo
-export NNN_PLUG='p:preview-tui;n:nuke;i:imgview;f:fzcd;l:-personal/qlmanage;'
+export NNN_PLUG='j:autojump;p:preview-tui;n:nuke;i:imgview;f:fzcd;l:-personal/qlmanage;'
 
 # fix preview-tui outputting incorrect characters.
 # See https://github.com/jarun/nnn/issues/1069
@@ -29,16 +29,3 @@ export LC_COLLATE="C"
 for file in $(dirname "$0")/.{,quitcd}; do
   [ -r "$file" ] && source "$file"
 done
-
-function symlinkPersonalPlugins() {
-  local script_path=$(dirname $(realpath $0))
-  local source=$script_path/custom/plugins
-  local symlink=$HOME/.config/nnn/plugins/personal
-
-  if [ ! -e "$symlink" ]; then
-    echo "ln -s $source $symlink"
-    ln -s $source $symlink
-  fi
-}
-
-symlinkPersonalPlugins

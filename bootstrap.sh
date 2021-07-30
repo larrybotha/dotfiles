@@ -100,6 +100,31 @@ function copyFiles() {
   done
 }
 
+function update_nnn_plugins() {
+  symlink_custom_nnn_plugins() {
+    local nnn_configs_path=${HOME}/.config/nnn
+    local source=${nnn_configs_path}/custom/plugins
+    local symlink=${nnn_configs_path}/plugins/personal
+
+    if [ ! -e "$symlink" ]; then
+      heading "symlinking custom nnn plugins"
+
+      ln -s $source $symlink
+      log 'done'
+    fi
+  }
+
+  heading "updating nnn plugins"
+
+  log 'removing existing nnn plugins'
+  rm -rf $HOME/.config/nnn/plugins
+
+  log 'updating nnn plugins'
+  curl -Ls https://raw.githubusercontent.com/jarun/nnn/master/plugins/getplugs | sh
+
+  symlink_custom_nnn_plugins
+}
+
 if [ "$1" == "--force" -o "$1" == "-f" ]; then
   doIt
 else
