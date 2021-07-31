@@ -135,3 +135,8 @@ fi
 if type -p "bat" >/dev/null; then
   alias cat="bat"
 fi
+
+# use tre for tree if installed
+if type -p "tre" >/dev/null; then
+  tre() { command tre "$@" -e && source "/tmp/tre_aliases_$USER" 2>/dev/null; }
+fi

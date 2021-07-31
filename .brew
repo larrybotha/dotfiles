@@ -83,7 +83,7 @@ brew install shfmt
 brew install the_silver_searcher
 brew install tldr
 brew install tmuxinator
-brew install tree
+brew install tre-command
 brew install vim
 brew install vivid
 brew install watch
