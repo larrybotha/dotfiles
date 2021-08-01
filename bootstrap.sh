@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-cd "$(dirname "${BASH_SOURCE}")"
+cd "$(dirname "${BASH_SOURCE[0]}")" || exit
 git pull origin master
 
 function heading() {
@@ -38,7 +38,7 @@ function prepare_completions() {
 
   # append npm script completion
   if type "npm" >/dev/null; then
-    npm completion >>~/.sh_completion
+    npm completion >>"$HOME/.sh_completion"
   fi
 
   log 'done'
@@ -50,7 +50,7 @@ function source_shell() {
   if [ "$SHELL" == "/bin/zsh" ]; then
     zsh ~/.zshrc
   else
-    source ~/.bash_profile
+    source "$HOME/.bash_profile"
   fi
 
   log 'done'
@@ -76,17 +76,20 @@ function symlink_configs() {
     ".config/yabai"
   )
 
-  for config in "${configs[@]}"; do
-    local user_path=$HOME/$config
-    local config_path=$PWD/$config
+  local script_dir
+  script_dir="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
 
-    if [ ! -e "$user_path" ]; then
+  for config in "${configs[@]}"; do
+    local source_path="$script_dir/$config"
+    local dest_path="$HOME/$config"
+
+    if [ ! -e "$dest_path" ]; then
       log "linking: ~/$config -> $config"
-      local folder=${user_path%/*}
-      mkdir -p $folder
-      ln -s $config_path $user_path
-    elif [ -L "$user_path" ]; then
-      log "linked: ~/$config -> ./$config"
+      local folder="${dest_path%/*}"
+      mkdir -p "$folder"
+      ln -s "$source_path" "$dest_path"
+    elif [ -L "$dest_path" ]; then
+      log "linked: ./$config -> ~/$config"
     else
       log "not linked: ~/$config -> ./$config\n\t=> consider removing ~/$config"
     fi
@@ -134,7 +137,7 @@ function update_nnn_plugins() {
     if [ ! -e "$symlink" ]; then
       heading "symlinking custom nnn plugins"
 
-      ln -s $source $symlink
+      ln -s "$source" "$symlink"
       log 'done'
     fi
   }
@@ -142,7 +145,7 @@ function update_nnn_plugins() {
   heading "updating nnn plugins"
 
   log 'removing existing nnn plugins'
-  rm -rf $HOME/.config/nnn/plugins
+  rm -rf "$HOME/.config/nnn/plugins"
 
   log 'updating nnn plugins'
   curl -Ls https://raw.githubusercontent.com/jarun/nnn/master/plugins/getplugs | sh
@@ -154,15 +157,15 @@ function do_it() {
   sync_files
   prepare_completions
   symlink_configs
-  copy_files
+  symlink_files
   has_internet_access && update_nnn_plugins
   source_shell
 }
 
-if [ "$1" == "--force" -o "$1" == "-f" ]; then
+if [ "$1" == "--force" ] || [ "$1" == "-f" ]; then
   do_it
 else
-  read -p "This may overwrite existing files in your home directory. Are you sure? (y/n) " -n 1
+  read -rp "This may overwrite existing files in your home directory. Are you sure? (y/n) " -n 1
   echo
   if [[ $REPLY =~ ^[Yy]$ ]]; then
     do_it
