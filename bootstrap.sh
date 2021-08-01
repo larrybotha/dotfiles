@@ -93,38 +93,36 @@ function symlink_configs() {
   done
 }
 
-# TODO: use symlinks for this to prevent having to source bootstrap.sh when
-# changes are made
-function copy_files() {
-  heading "copying files"
+function symlink_files() {
+  heading "symlinking files"
 
-  local configs=(
-    "
-      vimspector-global-config.json
-      $PWD/.vim/local/plugins/vimspector
-      $HOME/.vim/plugged/vimspector/configurations/macos/_all
-    "
-  )
-
-  for config in "${configs[@]}"; do
-    set -- $config
+  link_file() {
     local file_name=$1
-    local source_file=$2/$file_name
-    local dest_file=$3/$file_name
-
-    if [ ! -d "$2" ]; then
-      log "creating folder: $dest_path"
-      mkdir -p $dest_path
-    fi
+    local source_path=$2
+    local dest_path=$3
+    local source_file="$source_path/$file_name"
+    local dest_file="$dest_path/$file_name"
 
     if [ ! -e "$dest_file" ]; then
-      log "copying: $source_file \n\t-> $dest_file"
-      cp $source_file $dest_file
+      log "linking: $source_file -> $dest_file"
+      ln -s "$source_file" "$dest_file"
+    elif [ -L "$dest_file" ]; then
+      log "linked: $source_file\n\t-> $dest_file"
     else
-      log "replacing: $source_file \n\t-> $dest_file"
-      cp -f $source_file $dest_file
+      log "not linked: $source_file -> $dest_file\n\t=> consider removing $source_file"
     fi
-  done
+  }
+
+  local script_dir
+  script_dir="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+
+  local vimspector_config=(
+    "vimspector-global-config.json"
+    "$script_dir/.vim/local/plugins/vimspector"
+    "$HOME/.vim/plugged/vimspector/configurations/macos/_all"
+  )
+
+  link_file "${vimspector_config[@]}"
 }
 
 function update_nnn_plugins() {
@@ -172,7 +170,7 @@ else
 fi
 
 unset do_it \
-  copy_files \
+  symlink_files \
   symlink_configs \
   update_nnn_plugins \
   log heading
