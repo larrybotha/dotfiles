@@ -119,7 +119,7 @@ brew install koekeishiya/formulae/skhd
 brew install hammerspoon
 
 function installcask() {
-  if brew cask info "${@}" | grep "Not installed" >/dev/null; then
+  if brew info "${@}" | grep "Not installed" >/dev/null; then
     brew install --cask "${@}"
   else
     echo "${@} is already installed."
