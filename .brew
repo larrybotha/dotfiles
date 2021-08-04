@@ -81,8 +81,8 @@ brew install ripgrep
 brew install sbt
 brew install shellcheck
 brew install shfmt
+brew install tealdeer
 brew install the_silver_searcher
-brew install tldr
 brew install tmuxinator
 brew install tre-command
 brew install vim

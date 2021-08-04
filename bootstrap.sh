@@ -71,6 +71,7 @@ function symlink_configs() {
     ".config/nvim"
     ".config/ptpython"
     ".config/skhd"
+    ".config/tealdeer"
     ".config/tmuxinator"
     ".config/vivid"
     ".config/yabai"
