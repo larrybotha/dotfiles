@@ -132,7 +132,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
   installcask alfred
   installcask anki
   installcask betterzip
-  installcask bitbar
   installcask brave-browser
   installcask dash
   installcask dropbox
@@ -172,6 +171,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
   installcask visual-studio-code
   installcask vlc
   installcask webpquicklook
+  installcask xbar
   installcask xscope
 fi
 
