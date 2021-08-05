@@ -160,6 +160,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
   installcask qlvideo
   installcask quicklook-csv
   installcask quicklook-json
+  installcask rescuetime
   installcask robo-3t
   installcask safari-technology-preview
   installcask skype
