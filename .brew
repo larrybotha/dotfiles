@@ -133,6 +133,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
   installcask betterzip
   installcask brave-browser
   installcask dash
+  installcask dbvisualizer
   installcask docker
   installcask dropbox
   installcask figma
