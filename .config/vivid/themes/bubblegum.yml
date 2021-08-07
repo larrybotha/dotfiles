@@ -1,0 +1,140 @@
+---
+colors:
+                                  # xterm-256 | xterm-256 in hexadecimal
+  grey_dkst: '080808'             # 232       | e8
+  grey_dkr: '262626'              # 235       | eb
+  grey_dk: '3A3A3A'               # 237       | ed
+  grey: '808080'                  # 244       | f4
+  grey_lt: '9E9E9E'               # 247       | f7
+  grey_ltr: 'B2B2B2'              # 249       | f9
+  grey_ltst: 'D0D0D0'             # 252       | fc
+
+  blue_pastel_dkr: '00AFD7'       # 38        | 26
+  blue_pastel_dk: '5FAFD7'        # 74        | 4a
+  blue_pastel: '87AFD7'           # 110       | 6e
+  blue_pastel_lt: '87AFAF'        # 109       | 6d
+
+  turquoise_pastel_dk: '5FAF87'   # 72        | 48
+  turquoise_pastel: '5FD7AF'      # 79        | 4f
+  turquoise_pastel_lt: '87D7D7'   # 116       | 74
+
+  green_pastel_dk: '87AF5F'       # 107       | 6b
+  grass_green_pastel_lt: '87D787' # 114       | 72
+  green_pastel: 'AFD787'          # 150       | 96
+
+  pink_pastel: 'D7AFD7'           # 182       | b6
+  pink_pastel_dk: 'AF87D7'        # 140       | 8c
+
+  red_pink_pastel: 'D787AF'       # 175       | af
+
+  purple_pastel_dk: '8787AF'      # 103       | 67
+  purple_pastel: '8787D7'         # 104       | 68
+  purple_pastel_ltr: 'AFAFD7'     # 146       | 92
+  purple_pastel_lt: 'AFAFFF'      # 147       | 93
+
+  red_pastel: 'FF8787'            # 210       | d2
+  red_pastel_lt: 'D78787'         # 174       | ae
+  red_pastel_ltr: 'D7AFAF'        # 181       | b5
+
+  yellow_pastel_dk: 'D7D700'      # 184       | b8
+  yellow_pastel: 'D7D787'         # 186       | ba
+  yellow_pastel_lt: 'D7D7AF'      # 187       | bb
+
+  orange_pastel_dk: 'D7AF87'      # 180       | b4
+  orange_pastel: 'D7AF5F'         # 179       | b3
+  orange_pastel_lt: 'FFD787'      # 222       | de
+
+core:
+  regular_file: {}
+
+  directory:
+    foreground: blue_pastel
+
+  executable_file:
+    foreground: pink_pastel
+    font-style: bold
+
+  symlink:
+    foreground: purple_pastel_ltr
+
+  broken_symlink:
+    foreground: grey_dkst
+    background: red_pastel
+  missing_symlink_target:
+    foreground: grey_dkst
+    background: red_pastel
+
+  fifo:
+    foreground: grey_dkst
+    background: blue_pastel
+
+  socket:
+    foreground: grey_dkst
+    background: pink_pastel
+
+  character_device:
+    foreground: pink_pastel
+    background: grey_dk
+
+  block_device:
+    foreground: blue_pastel
+    background: grey_dk
+
+  normal_text:
+    {}
+
+  sticky:
+    {}
+
+  sticky_other_writable:
+    {}
+
+  other_writable:
+    {}
+
+text:
+  special:
+    foreground: grey_dkst
+    background: yellow_pastel
+
+  todo:
+    font-style: bold
+
+  licenses:
+    foreground: grey
+
+  configuration:
+    foreground: grey_lt
+
+  other:
+    foreground: turquoise_pastel_lt
+
+markup:
+  foreground: turquoise_pastel_lt
+
+programming:
+  source:
+    foreground: grey_ltst
+
+  tooling:
+    foreground: grey_ltst
+
+    continuous-integration:
+      foreground: yellow_pastel
+
+media:
+  foreground: grey_ltst
+
+office:
+  foreground: grey_ltst
+
+archives:
+  foreground: pink_pastel
+  font-style: underline
+
+executable:
+  foreground: pink_pastel
+  font-style: bold
+
+unimportant:
+  foreground: grey_dk

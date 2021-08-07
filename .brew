@@ -6,11 +6,16 @@ brew update
 # Upgrade any already-installed formulae
 brew upgrade
 
+# Install Mojave deps
+brew install openldap libiconv
+
 # Install GNU core utilities (those that come with OS X are outdated)
 brew install coreutils
 echo "Don’t forget to add $(brew --prefix coreutils)/libexec/gnubin to \$PATH."
+
 # Install GNU `find`, `locate`, `updatedb`, and `xargs`, g-prefixed
 brew install findutils
+
 # Install Bash 4
 brew install bash
 
@@ -25,8 +30,7 @@ brew install narwhal
 # Install more recent versions of some OS X tools
 brew tap homebrew/dupes
 brew install homebrew/dupes/grep
-# brew tap josegonzalez/homebrew-php
-brew install php56 --with-fpm --with-apache --with-mysql --with-pgsql
+brew install php@73
 
 brew tap homebrew/services
 
@@ -34,56 +38,73 @@ brew tap homebrew/services
 # eval "$(rbenv init -)" is already added in .bash_profile
 brew install rbenv ruby-build
 
+# Install MySQL so we can run mysql commands from the host
+brew install mysql
+
 # Install other useful binaries
 brew install ack
-brew install android-studio
 brew install ansible
-brew install autoenv
+brew install bat
 brew install codeception
 brew install composer
-brew install docker
-brew install docker-machine
-brew install ctags
+brew install ctop
+brew install direnv
+brew install dive
 brew install editorconfig
 brew install elasticsearch
 brew install flow
+brew install fzf
 brew install git
 brew install git-crypt
 brew install git-flow
 brew install go
-brew install hub
+brew install htop
 brew install httpie
-brew install ios-webkit-debug-proxy
-brew install jasmine
+brew install hub
+brew install jq
 brew install lynx
-brew install mysql
-brew install nginx
-brew install node
+brew install neovim
+brew install nnn
 brew install nvm
 brew install php-version
 brew install phppgadmin
-brew install phantomjs
 brew install pigz
+brew install pipenv
 brew install postgresql
+brew install pyenv
 brew install python
 brew install qt
 brew install redis
 brew install rename
-brew install rhino
+brew install ripgrep
 brew install sbt
-brew install sequel-pro
+brew install shellcheck
+brew install shfmt
+brew install tealdeer
 brew install the_silver_searcher
-brew install tree
+brew install tmuxinator
+brew install tre-command
+brew install vim
+brew install vivid
+brew install watch
 brew install watchman
 brew install webkit2png
-brew install vim
-brew install zopfli
 brew install yarn
+brew install zopfli
+brew install zoxide
 
+# lua
 brew tap homebrew/versions
 brew install lua52
 
-# tmux and depdencies
+# patched fonts
+brew tap homebrew/cask-fonts
+brew install --cask font-roboto-mono-nerd-font
+
+# lsp language server deps
+brew install ninja
+
+# tmux and dependencies
 brew install tmux
 brew install reattach-to-user-namespace
 
@@ -91,61 +112,70 @@ brew install reattach-to-user-namespace
 brew tap phinze/homebrew-cask
 brew install brew-cask
 
+# Install yabai deps
+brew install koekeishiya/formulae/yabai
+brew install koekeishiya/formulae/skhd
+brew install hammerspoon
+
 function installcask() {
-	if brew cask info "${@}" | grep "Not installed" > /dev/null; then
-		brew cask install "${@}"
-	else
-		echo "${@} is already installed."
-	fi
+  if brew info "${@}" | grep "Not installed" >/dev/null; then
+    brew install --cask "${@}"
+  else
+    echo "${*} is already installed."
+  fi
 }
 
-installcask alfred
-installcask anki
-installcask betterzipql
-installcask dash
-installcask dropbox
-installcask flux
-installcask filezilla
-installcask firefox
-installcask google-app-engine-launcher
-installcask google-chrome
-installcask google-cloud-sdk
-installcask haskell-platform
-installcask imagealpha
-installcask imageoptim
-installcask integrity
-installcask iterm2
-installcask libreoffice
-installcask miro-video-converter
-installcask moom
-installcask muzzle
-installcask opera-next
-installcask pckeyboardhack
-installcask plex-media-server
-installcask plex-home-theater
-installcask quicklook-csv
-installcask quicklook-json
-installcask qlcolorcode
-installcask qlmarkdown
-installcask qlstephen
-installcask qlvideo
-installcask recordit
-installcask robomongo
-installcask postman
-installcask slack
-installcask smoothmouse
-installcask sourcetree
-installcask sublime-text
-installcask the-unarchiver
-installcask thunderbird
-installcask transmission
-installcask vagrant
-installcask vagrant-manager
-installcask virtualbox
-installcask vlc
-installcask vox
-installcask witch
-installcask xscope
+if [ "$(uname -s)" == "Darwin" ]; then
+  installcask a-better-finder-rename
+  installcask alacritty
+  installcask alfred
+  installcask anki
+  installcask betterzip
+  installcask brave-browser
+  installcask dash
+  installcask dbvisualizer
+  installcask docker
+  installcask dropbox
+  installcask figma
+  installcask firefox
+  installcask firefox-developer-edition
+  installcask flux
+  installcask google-app-engine-launcher
+  installcask google-chrome
+  installcask google-cloud-sdk
+  installcask imagealpha
+  installcask imageoptim
+  installcask integrity
+  installcask iterm2
+  installcask kap
+  installcask karabiner-elements
+  installcask libreoffice
+  installcask moom
+  installcask mysqlworkbench
+  installcask postman
+  installcask proxyman
+  installcask qlImageSize
+  installcask qlcolorcode
+  installcask qlmarkdown
+  installcask qlstephen
+  installcask qlvideo
+  installcask quicklook-csv
+  installcask quicklook-json
+  installcask rescuetime
+  installcask robo-3t
+  installcask safari-technology-preview
+  installcask skype
+  installcask slack
+  installcask sourcetree
+  installcask the-unarchiver
+  installcask transmission
+  installcask virtualbox
+  installcask visual-studio-code
+  installcask vlc
+  installcask webpquicklook
+  installcask xbar
+  installcask xscope
+fi
 
 # Remove outdated versions from the cellar
 brew cleanup

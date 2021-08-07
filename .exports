@@ -1,5 +1,5 @@
-# Make sublime text the default editor
-# export EDITOR="subl -w"
+# make Vim the editor for tmux
+export EDITOR="vim"
 
 # Larger bash history (allow 32³ entries; default is 500)
 export HISTSIZE=32768
@@ -18,9 +18,33 @@ export LESS_TERMCAP_md="$ORANGE"
 # Don’t clear the screen after quitting a manual page
 export MANPAGER="less -X"
 
-# Always enable colored `grep` output
-export GREP_OPTIONS="--color=auto"
-
 # Link Homebrew casks in `/Applications` rather than `~/Applications`
 export HOMEBREW_CASK_OPTS="--appdir=/Applications"
+
+# fzf
+# use fd for searching files
+export FZF_DEFAULT_COMMAND='fd --hidden --type file'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+
+# Add Node and NVM to `$PATH`
+export NVM_DIR="$HOME/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && [ type complete &>/dev/null ] && \. "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+
+# set config dir for ptpython
+export PTPYTHON_CONFIG_HOME=$HOME/.config/ptpython
+
+# add pyenv executable to PATH
+export PYENV_ROOT="$HOME/.pyenv"
+export PATH="$PYENV_ROOT/bin:$PATH"
+if type -p "pyenv" >/dev/null; then
+  eval "$(pyenv init --path)"
+fi
+
+# colourise man pages
+if type -p "bat" >/dev/null; then
+  export MANPAGER="sh -c 'col -bx | bat -l man -p'"
+else
+  echo "$PWD/$0: bat not installed"
+fi
 

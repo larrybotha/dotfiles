@@ -1,0 +1,8 @@
+#!/usr/bin/env zsh
+
+# this file is used purely to open nnn externally
+
+# source nnn configs
+source $(dirname "$0")/.nnn
+# run nnn
+tmux -c "nnn -ed"

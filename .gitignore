@@ -1,5 +1,17 @@
+# vim plugins
+.vim/plugged
+.vim/autoload/plug.vim
+
 # Compiled Python files
 *.pyc
+
+# karabiner-elements
+.config/karabiner/*
+!.config/karabiner/karabiner.json
+
+# nnn
+.config/nnn/*
+!.config/nnn/custom
 
 # Folder view configuration files
 .DS_Store
@@ -12,3 +24,6 @@ Thumbs.db
 # Files that might appear on external disks
 .Spotlight-V100
 .Trashes
+
+# ignore php cs fixer generated files
+.php_cs.cache
