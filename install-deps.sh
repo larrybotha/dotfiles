@@ -1,5 +1,4 @@
-# up to you (me) if you want to run this as a file or copy paste at your leisure
-pushd -n "$(dirname 0)" >/dev/null
+#!/usr/bin/env zsh
 
 # homebrew!
 # you need the code CLI tools YOU FOOL.
@@ -27,6 +26,11 @@ fi
 if [ ! -d ~/code/antigen ]; then
   mkdir ~/code/antigen
   curl -L git.io/antigen >~/code/antigen/antigen.zsh
+fi
+
+# install poetry for python package management
+if [ ! -d ~/.poetry/bin ]; then
+  curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
 fi
 
 # https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
