@@ -32,4 +32,4 @@ python -m pip install --user ptpython
 python -m pip install --user django-extensions
 
 # reading epubs
-python -m pip install --user epr-reader
+python -m pip install --user epy-reader
