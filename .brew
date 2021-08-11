@@ -52,6 +52,7 @@ brew install direnv
 brew install dive
 brew install editorconfig
 brew install elasticsearch
+brew install fd
 brew install flow
 brew install fzf
 brew install git
