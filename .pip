@@ -23,9 +23,6 @@ python -m pip install --user black
 python -m pip install --user isort
 python -m pip install --user autoimport
 
-# generate requirements.txt
-python -m pip install --user pipreqs
-
 # better REPL
 python -m pip install --user ptpython
 
