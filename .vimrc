@@ -43,6 +43,8 @@
   Plug 'tpope/vim-surround'
   Plug 'tpope/vim-endwise'
   Plug 'Yggdroot/indentLine'
+
+
   Plug 'sheerun/vim-polyglot'
   Plug 'Raimondi/delimitMate'
   Plug 'airblade/vim-gitgutter'
@@ -329,7 +331,6 @@ source ~/.vim/local/plugins/vimux.vim
 
   " rust-lang/rust {
     let g:autofmt_autosave = 1
-
   " }
 
  " vim-go {
