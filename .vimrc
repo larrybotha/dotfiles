@@ -42,7 +42,6 @@
   Plug 'tpope/vim-fugitive'
   Plug 'tpope/vim-surround'
   Plug 'tpope/vim-endwise'
-  Plug 'Yggdroot/indentLine'
 
 
   Plug 'sheerun/vim-polyglot'
@@ -91,6 +90,7 @@
     Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
     Plug 'kyazdani42/nvim-web-devicons'
     Plug 'GustavoKatel/telescope-asynctasks.nvim'
+    Plug 'lukas-reineke/indent-blankline.nvim'
   end
 
   call plug#end()
@@ -301,7 +301,6 @@ source ~/.vim/local/plugins/ale.vim
 source ~/.vim/local/plugins/asynctasks.vim
 source ~/.vim/local/plugins/compe.vim
 source ~/.vim/local/plugins/endwise.vim
-source ~/.vim/local/plugins/indentline.vim
 source ~/.vim/local/plugins/nnn.vim
 source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/vim-pydocstring.vim
