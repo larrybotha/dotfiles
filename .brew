@@ -69,7 +69,6 @@ brew install neovim
 brew install nnn
 brew install nvm
 brew install php-version
-brew install phppgadmin
 brew install pigz
 brew install pipenv
 brew install postgresql
