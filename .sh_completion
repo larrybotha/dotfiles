@@ -18,14 +18,6 @@ if ! [ "$ZSH_VERSION" ]; then
   [ -f /etc/bash_completion ] && source /etc/bash_completion
 fi
 
-# poetry completion
-if [ "$ZSH_VERSION" ]; then
-  poetry completions zsh >~/.zfunc/_poetry
-  fpath+=~/.zfunc
-else
-  poetry completions bash >/etc/bash_completion.d/poetry.bash-completion
-fi
-
 # init git-completion https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
 if [ -f ~/code/git-completion/git-completion.bash ] && ! [ "$ZSH_VERSION" ]; then
   . ~/code/git-completion/git-completion.bash

@@ -28,11 +28,6 @@ if [ ! -d ~/code/antigen ]; then
   curl -L git.io/antigen >~/code/antigen/antigen.zsh
 fi
 
-# install poetry for python package management
-if [ ! -d ~/.poetry/bin ]; then
-  curl -sSL https://raw.githubusercontent.com/python-poetry/poetry/master/get-poetry.py | python -
-fi
-
 # https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
 # Autocomplete motherflippin' git branches
 if [ ! -d ~/code/git-completion ]; then
