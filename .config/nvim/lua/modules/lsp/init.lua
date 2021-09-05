@@ -76,6 +76,7 @@ local servers = {
     "jsonls",
     "pyright",
     "svelte",
+    "terraform-ls",
     "tsserver",
     "vimls",
     "yamlls"
