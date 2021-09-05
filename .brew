@@ -105,6 +105,7 @@ brew install --cask font-roboto-mono-nerd-font
 
 # lsp language server deps
 brew install ninja
+brew install hashicorp/tap/terraform-ls
 
 # tmux and dependencies
 brew install tmux
