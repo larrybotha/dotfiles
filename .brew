@@ -64,6 +64,7 @@ brew install htop
 brew install httpie
 brew install hub
 brew install jq
+brew install lulu
 brew install lynx
 brew install neovim
 brew install nnn
