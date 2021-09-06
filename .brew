@@ -83,6 +83,7 @@ brew install sbt
 brew install shellcheck
 brew install shfmt
 brew install tealdeer
+brew install terraform
 brew install the_silver_searcher
 brew install tmuxinator
 brew install tre-command
