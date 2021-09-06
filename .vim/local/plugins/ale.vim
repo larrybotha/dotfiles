@@ -23,6 +23,7 @@ let g:ale_fixers = {
   \ 'typescriptreact': ['prettier', 'eslint'],
   \ 'vue': ['prettier'],
   \ 'yaml': ['prettier'],
+  \ 'terraform': ['terraform'],
 \}
 
 let g:ale_linters_ignore = {'php': ['phpcs'], 'svelte': ['eslint']}
