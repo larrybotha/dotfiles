@@ -104,9 +104,14 @@ brew install lua52
 brew tap homebrew/cask-fonts
 brew install --cask font-roboto-mono-nerd-font
 
-# lsp language server deps
+# Hashicorp Packer
+brew tap hashicorp/tap
+brew install hashicorp/tap/package
+
+# linting and lsp language server deps
 brew install ninja
 brew install hashicorp/tap/terraform-ls
+brew install tflint
 
 # tmux and dependencies
 brew install tmux
