@@ -9,6 +9,7 @@ let g:ale_lua_luacheck_options = '--globals vim'
 
 let g:ale_fixers = {
   \ 'graphql': ['prettier'],
+  \ 'hcl': ['terraform'],
   \ 'html': ['prettier'],
   \ 'javascript': ['prettier', 'eslint'],
   \ 'javascriptreact': ['prettier', 'eslint'],
@@ -19,11 +20,11 @@ let g:ale_fixers = {
   \ 'python': [ 'isort', 'autoimport', 'black'],
   \ 'sh': ['shfmt'],
   \ 'svelte': ['prettier'],
+  \ 'terraform': ['terraform'],
   \ 'typescript': ['prettier', 'eslint'],
   \ 'typescriptreact': ['prettier', 'eslint'],
   \ 'vue': ['prettier'],
   \ 'yaml': ['prettier'],
-  \ 'terraform': ['terraform'],
 \}
 
 let g:ale_linters_ignore = {'php': ['phpcs'], 'svelte': ['eslint']}
