@@ -35,8 +35,7 @@ fi
 
 # Add google-cloud-sdk / gcloud completion
 if [ $(which gcloud) ]; then
-  __gcloud_grep=$(ls -la "$(dirname "$(which gcloud)")" | grep --fixed-strings " gcloud ")
-  __gcloud_bin=$(echo "${__gcloud_grep}" | awk '{print $11}')
+  __gcloud_bin=$(realpath "$(which gcloud)")
   __gcloud_dir=$(realpath "$(dirname "${__gcloud_bin}")"/..)
 
   if [ "${ZSH_VERSION}" ]; then
