@@ -32,3 +32,34 @@ if [ -e "$HOME/.ssh/config" ]; then
       scp sftp ssh
   fi
 fi
+
+# Add google-cloud-sdk / gcloud completion
+if [ $(which gcloud) ]; then
+  __gcloud_grep=$(ls -la "$(dirname "$(which gcloud)")" | grep --fixed-strings " gcloud ")
+  __gcloud_bin=$(echo "${__gcloud_grep}" | awk '{print $11}')
+  __gcloud_dir=$(realpath "$(dirname "${__gcloud_bin}")"/..)
+
+  if [ "${ZSH_VERSION}" ]; then
+    __gcloud_files=(
+      "${__gcloud_dir}/path.zsh.inc"
+      "${__gcloud_dir}/completion.zsh.inc"
+    )
+
+    for file in "${__gcloud_files[@]}"; do
+      if [ -f "${file}" ]; then
+        . "${file}"
+      fi
+    done
+  else
+    __gcloud_files=(
+      "${__gcloud_dir}/path.bash.inc"
+      "${__gcloud_dir}/completion.bash.inc"
+    )
+
+    for file in "${__gcloud_files[@]}"; do
+      if [ -f "${file}" ]; then
+        . "${file}"
+      fi
+    done
+  fi
+fi
