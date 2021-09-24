@@ -56,13 +56,20 @@ function usernamehost() {
 }
 
 if [ "$ZSH_VERSION" ]; then
-  local username="${BOLD}${MAGENTA}%n"
-  local username="${BOLD}${MAGENTA}%n"
-  local directory="${BLUE}%~"
-  local git_branch="${WHITE}\$([[ -n \$(git branch 2> /dev/null) ]] && echo \"on\") ${GREEN}\$(parse_git_branch)"
-  local newline=$'\n'
-  export PS1="${username} ${WHITE}in ${directory} ${git_branch} ${WHITE}${newline}$ %{${RESET}%}"
-  export PS2="${ORANGE}→ ${RESET}"
+  function _git_branch() {
+    echo "${WHITE}$([[ -n $(git branch 2>/dev/null) ]] && echo "on") ${GREEN}$(parse_git_branch)"
+  }
+
+  precmd() {
+    local _username="${BOLD}${MAGENTA}%n"
+    local _directory="${BLUE}%~"
+    local _newline=$'\n'
+    local _prompt="${WHITE}${_newline}$ %{${RESET}%}"
+
+    PS1="${_username} ${WHITE}in ${_directory} $(_git_branch) ${_prompt}"
+    PS2="${ORANGE}→ ${RESET}"
+  }
+
 else
   export PS1="\[${BOLD}${MAGENTA}\]\u \[$WHITE\]in \[$BLUE\]\w\[$WHITE\]\$([[ -n \$(git branch 2> /dev/null) ]] && echo \" on \")\[$GREEN\]\$(parse_git_branch)\[$WHITE\]\n\$ \[$RESET\]"
   export PS2="\[$ORANGE\]→ \[$RESET\]"
