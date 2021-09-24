@@ -22,12 +22,6 @@ if [ ! -d ~/code ]; then
   mkdir ~/code
 fi
 
-# install antigen for zsh package management
-if [ ! -d ~/code/antigen ]; then
-  mkdir ~/code/antigen
-  curl -L git.io/antigen >~/code/antigen/antigen.zsh
-fi
-
 # https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
 # Autocomplete motherflippin' git branches
 if [ ! -d ~/code/git-completion ]; then
