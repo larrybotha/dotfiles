@@ -17,6 +17,10 @@ else
   echo "zoxide not installed: $BASH_SOURCE"
 fi
 
+# case-insensitive tab completion
+setopt MENU_COMPLETE
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+
 # Start tmux when zsh starts
 #
 # This starts tmux in a way that ensures that when tmux is exited, it won't kill
