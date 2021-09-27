@@ -34,7 +34,7 @@ if [ -e "$HOME/.ssh/config" ]; then
 fi
 
 # Add google-cloud-sdk / gcloud completion
-if [ $(which gcloud) ]; then
+if type -p gcloud &>/dev/null; then
   __gcloud_bin=$(realpath "$(which gcloud)")
   __gcloud_dir=$(realpath "$(dirname "${__gcloud_bin}")"/..)
 
