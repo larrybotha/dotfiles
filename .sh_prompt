@@ -56,20 +56,24 @@ function usernamehost() {
 }
 
 if [ "$ZSH_VERSION" ]; then
-  function _git_branch() {
-    echo "${WHITE}$([[ -n $(git branch 2>/dev/null) ]] && echo "on") ${GREEN}$(parse_git_branch)"
-  }
+  autoload -Uz vcs_info
+  setopt prompt_subst
+  zstyle ':vcs_info:git:*' formats '%b'
 
-  precmd() {
+  _update_prompt() {
+    vcs_info
+
     local _username="${BOLD}${MAGENTA}%n"
     local _directory="${BLUE}%~"
+    local _branch="${WHITE}$([[ -n "${vcs_info_msg_0_}" ]] && echo "on") ${GREEN}$(parse_git_branch)"
     local _newline=$'\n'
     local _prompt="${WHITE}${_newline}$ %{${RESET}%}"
 
-    PS1="${_username} ${WHITE}in ${_directory} $(_git_branch) ${_prompt}"
+    PS1="${_username} ${WHITE}in ${_directory} ${_branch} ${_prompt}"
     PS2="${ORANGE}→ ${RESET}"
   }
 
+  precmd_functions+=(_update_prompt)
 else
   export PS1="\[${BOLD}${MAGENTA}\]\u \[$WHITE\]in \[$BLUE\]\w\[$WHITE\]\$([[ -n \$(git branch 2> /dev/null) ]] && echo \" on \")\[$GREEN\]\$(parse_git_branch)\[$WHITE\]\n\$ \[$RESET\]"
   export PS2="\[$ORANGE\]→ \[$RESET\]"
