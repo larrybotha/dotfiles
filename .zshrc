@@ -17,9 +17,14 @@ else
   echo "zoxide not installed: $BASH_SOURCE"
 fi
 
-# case-insensitive tab completion
+# tab complete on first tab, instead of from second tab
 setopt MENU_COMPLETE
-zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}'
+#  tab completion
+#  1 - case insensitive
+#  2 - match text anywhere in string
+#                                      [1]                   [2]
+zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+
 
 # Start tmux when zsh starts
 #
