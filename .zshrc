@@ -1,6 +1,7 @@
 source ~/.shrc
+source ~/.zsh_completion
 
-# fzf must be sourced last before it's enable
+# fzf must be sourced last before it's enabled
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
 if type direnv>/dev/null; then
@@ -17,13 +18,6 @@ else
   echo "zoxide not installed: $BASH_SOURCE"
 fi
 
-# tab complete on first tab, instead of from second tab
-setopt MENU_COMPLETE
-#  tab completion
-#  1 - case insensitive
-#  2 - match text anywhere in string
-#                                      [1]                   [2]
-zstyle ':completion:*' matcher-list '' 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
 
 
 # Start tmux when zsh starts
