@@ -19,8 +19,12 @@ if ! [ "$ZSH_VERSION" ]; then
 fi
 
 # init git-completion https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
-if [ -f ~/code/git-completion/git-completion.bash ] && ! [ "$ZSH_VERSION" ]; then
-  . ~/code/git-completion/git-completion.bash
+if ! [ "$ZSH_VERSION" ]; then
+  if [ -f ~/code/git-completion/git-completion.bash ] && ! [ "$ZSH_VERSION" ]; then
+    . ~/code/git-completion/git-completion.bash
+  fi
+else
+  autoload -Uz compinit && compinit
 fi
 
 # Add tab completion for SSH hostnames based on ~/.ssh/config, ignoring wildcards
