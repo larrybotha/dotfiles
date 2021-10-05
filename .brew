@@ -54,6 +54,7 @@ brew install editorconfig
 brew install elasticsearch
 brew install fd
 brew install flow
+brew install fluent-bit
 brew install fzf
 brew install git
 brew install git-crypt
