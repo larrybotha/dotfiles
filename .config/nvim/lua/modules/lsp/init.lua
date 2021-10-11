@@ -67,6 +67,7 @@ end
 nvim_lsp.custom_lua_lsp = custom_lua_lsp
 local servers = {
     "custom_lua_lsp",
+    "ansiblels",
     "bashls",
     "cssls",
     "dockerls",

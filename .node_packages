@@ -65,6 +65,7 @@ common_modules=(
   yo
 
   # language servers
+  ansible-language-server
   bash-language-server
   dockerfile-language-server-nodejs
   intelephense

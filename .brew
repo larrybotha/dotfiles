@@ -44,6 +44,7 @@ brew install mysql
 # Install other useful binaries
 brew install ack
 brew install ansible
+brew install ansible-lint
 brew install bat
 brew install codeception
 brew install composer
@@ -107,7 +108,7 @@ brew install --cask font-roboto-mono-nerd-font
 
 # Hashicorp Packer
 brew tap hashicorp/tap
-brew install hashicorp/tap/package
+brew install hashicorp/tap/packer
 
 # linting and lsp language server deps
 brew install ninja
