@@ -46,7 +46,6 @@
 
   Plug 'sheerun/vim-polyglot'
   Plug 'Raimondi/delimitMate'
-  Plug 'airblade/vim-gitgutter'
   Plug 'christoomey/vim-tmux-navigator'
   Plug 'editorconfig/editorconfig-vim'
   Plug 'edkolev/tmuxline.vim'
@@ -91,6 +90,7 @@
     Plug 'kyazdani42/nvim-web-devicons'
     Plug 'GustavoKatel/telescope-asynctasks.nvim'
     Plug 'lukas-reineke/indent-blankline.nvim'
+    Plug 'lewis6991/gitsigns.nvim'
   end
 
   call plug#end()
@@ -313,12 +313,6 @@ source ~/.vim/local/plugins/vim-test.vim
 
   " vim-svelte {
     let g:svelte_preprocessors = ['typescript', 'scss']
-  " }
-
-  " gitutter {
-    if exists(":GitGutterInfo")
-      let g:gitgutter_sign_column_always = 1
-    endif
   " }
 
 
