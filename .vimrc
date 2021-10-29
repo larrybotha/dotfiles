@@ -296,6 +296,8 @@
     map <leader>vbu :PlugUpdate<CR>
   " }
 
+source ~/.vim/local/neovim.vim
+
 source ~/.vim/local/plugins/airline.vim
 source ~/.vim/local/plugins/ale.vim
 source ~/.vim/local/plugins/asynctasks.vim
