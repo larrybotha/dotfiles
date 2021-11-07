@@ -41,8 +41,18 @@ else # OS X `ls`
 fi
 
 # LazyGit
-if type -p "lazygit" >/dev/null; then
+if type "lazygit" >/dev/null; then
   alias lzg=lazygit
+fi
+
+# LazyDocker
+if type "lazydocker" >/dev/null; then
+  alias lzd=lazydocker
+fi
+
+# LazyNPM
+if type "lazynpm" >/dev/null; then
+  alias lzn=lazynpm
 fi
 
 # List all files colorized in long format
