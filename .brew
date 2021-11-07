@@ -134,55 +134,62 @@ function installcask() {
 }
 
 if [ "$(uname -s)" == "Darwin" ]; then
-  installcask a-better-finder-rename
-  installcask alacritty
-  installcask alfred
-  installcask anki
-  installcask betterzip
-  installcask brave-browser
-  installcask dash
-  installcask dbvisualizer
-  installcask docker
-  installcask dropbox
-  installcask figma
-  installcask firefox
-  installcask firefox-developer-edition
-  installcask flux
-  installcask google-app-engine-launcher
-  installcask google-chrome
-  installcask google-cloud-sdk
-  installcask imagealpha
-  installcask imageoptim
-  installcask integrity
-  installcask iterm2
-  installcask kap
-  installcask karabiner-elements
-  installcask libreoffice
-  installcask moom
-  installcask mysqlworkbench
-  installcask postman
-  installcask proxyman
-  installcask qlImageSize
-  installcask qlcolorcode
-  installcask qlmarkdown
-  installcask qlstephen
-  installcask qlvideo
-  installcask quicklook-csv
-  installcask quicklook-json
-  installcask rescuetime
-  installcask robo-3t
-  installcask safari-technology-preview
-  installcask skype
-  installcask slack
-  installcask sourcetree
-  installcask the-unarchiver
-  installcask transmission
-  installcask virtualbox
-  installcask visual-studio-code
-  installcask vlc
-  installcask webpquicklook
-  installcask xbar
-  installcask xscope
+  casks=(
+    a-better-finder-rename
+    alacritty
+    alfred
+    anki
+    betterzip
+    brave-browser
+    dash
+    dbvisualizer
+    docker
+    dropbox
+    figma
+    firefox
+    firefox-developer-edition
+    flux
+    google-app-engine-launcher
+    google-chrome
+    google-cloud-sdk
+    imagealpha
+    imageoptim
+    integrity
+    iterm2
+    kap
+    karabiner-elements
+    keycastr
+    libreoffice
+    moom
+    mysqlworkbench
+    postman
+    proxyman
+    qlImageSize
+    qlcolorcode
+    qlmarkdown
+    qlstephen
+    qlvideo
+    quicklook-csv
+    quicklook-json
+    rescuetime
+    robo-3t
+    safari-technology-preview
+    skype
+    slack
+    sourcetree
+    the-unarchiver
+    transmission
+    virtualbox
+    visual-studio-code
+    vlc
+    webpquicklook
+    xbar
+    xscope
+  )
+
+  for cask in "${casks[@]}"; do
+    installcask "${cask}"
+  done
 fi
 
 # Remove outdated versions from the cellar
