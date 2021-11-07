@@ -27,11 +27,6 @@ brew install wget --enable-iri
 brew install ringojs
 brew install narwhal
 
-# Install more recent versions of some OS X tools
-brew tap homebrew/dupes
-brew install homebrew/dupes/grep
-brew install php@73
-
 brew tap homebrew/services
 
 # Install rbenv for Ruby version management
