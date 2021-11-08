@@ -10,7 +10,7 @@ let g:ale_lua_luacheck_options = '--globals vim'
 let g:ale_fixers = {
   \ 'graphql': ['prettier'],
   \ 'hcl': ['terraform'],
-  \ 'html': [''],
+  \ 'html': [],
   \ 'javascript': ['prettier', 'eslint'],
   \ 'javascriptreact': ['prettier', 'eslint'],
   \ 'json': ['custom_prettier_vanilla', 'fixjson'],
