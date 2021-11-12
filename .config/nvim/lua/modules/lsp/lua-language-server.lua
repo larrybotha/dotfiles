@@ -14,7 +14,8 @@ else
     print("Unsupported system for sumneko")
 end
 
----- install the language server at ~/code/lua-language-server
+-- install the language server at ~/code/lua-language-server
+-- see https://github.com/sumneko/lua-language-server/wiki/Build-and-Run
 local sumneko_root_path = os.getenv("HOME") .. "/code/lua-language-server"
 local sumneko_binary = sumneko_root_path .. "/bin/" .. system_name .. "/lua-language-server"
 
