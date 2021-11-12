@@ -26,6 +26,7 @@ fi
 
 # go lang
 # TODO: normalise this across OS's
+export PATH="$HOME/go/bin:$PATH"
 if [ "$(uname -s)" = "Linux" ]; then
   # install Go to /usr/local/go on Linux
   GOPATH=/usr/local/go
