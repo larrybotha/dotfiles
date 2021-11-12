@@ -69,6 +69,7 @@ common_modules=(
   bash-language-server
   dockerfile-language-server-nodejs
   intelephense
+  lua-language-server
   pyright
   svelte-language-server
   typescript-language-server
