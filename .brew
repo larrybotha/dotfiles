@@ -59,7 +59,6 @@ brew install gitlab-runner
 brew install go
 brew install gopls
 brew install htop
-brew install httpie
 brew install hub
 brew install jesseduffield/lazydocker/lazydocker
 brew install jesseduffield/lazynpm/lazynpm
@@ -97,6 +96,7 @@ brew install webkit2png
 brew install yarn
 brew install zopfli
 brew install zoxide
+brew install xh # httpie alternative
 
 # lua
 brew tap homebrew/versions
