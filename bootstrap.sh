@@ -113,7 +113,7 @@ function symlink_files() {
     elif [ -L "$dest_file" ]; then
       log "linked: $source_file\n\t-> $dest_file"
     else
-      log "not linked: $source_file -> $dest_file\n\t=> consider removing $source_file"
+      log "not linked: $source_file -> $dest_file\n\t=> consider removing $dest_file"
     fi
   }
 
@@ -122,11 +122,17 @@ function symlink_files() {
 
   local vimspector_config=(
     "vimspector-global-config.json"
-    "$script_dir/.vim/local/plugins/vimspector"
-    "$HOME/.vim/plugged/vimspector/configurations/macos/_all"
+    "${script_dir}/.vim/local/plugins/vimspector"
+    "${HOME}/.vim/plugged/vimspector/configurations/macos/_all"
+  )
+  local lazygit_config=(
+    "config.yml"
+    "${script_dir}/.config/lazygit"
+    "${HOME}/Library/Application Support/lazygit"
   )
 
   link_file "${vimspector_config[@]}"
+  link_file "${lazygit_config[@]}"
 }
 
 function update_nnn_plugins() {
