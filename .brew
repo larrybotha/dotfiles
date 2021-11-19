@@ -47,6 +47,7 @@ brew install direnv
 brew install dive
 brew install editorconfig
 brew install elasticsearch
+brew install exa
 brew install fd
 brew install flow
 brew install fluent-bit
