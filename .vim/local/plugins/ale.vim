@@ -4,7 +4,6 @@ let g:ale_use_global_executables = 1
 let g:ale_fix_on_save = 1
 
 let g:ale_javascript_eslint_executable = 'eslint_d'
-let g:ale_javascript_prettier_executable = 'prettier_d_slim'
 let g:ale_lua_luacheck_options = '--globals vim'
 
 let g:ale_fixers = {
@@ -44,6 +43,15 @@ function! GetPrettierFixer(...)
   \}
 endfunction
 
+" add prettier_d_slim fixer
+function! PrettierDSlimOutput(buffer) abort
+  let l:options = join(a:000, ' ')
+
+  return {
+        \ 'command': join(['prettier_d_slim', '--stdin-filepath %s', '--stdin', options])
+  \}
+endfunction
+
 " add custom html prettier formatter
 function! PrettierHtmlOutput(buffer) abort
   return GetPrettierFixer('--parser html')
@@ -60,6 +68,7 @@ function! PrettierVanillaOutput(buffer) abort
 endfunction
 
 " add custom fixers to Ale's registry
+execute ale#fix#registry#Add('custom_prettier_d_slim', 'PrettierDSlimOutput', [], 'format with prettier_d_slim')
 execute ale#fix#registry#Add('custom_prettier_html', 'PrettierHtmlOutput', [], 'format html with prettier')
 execute ale#fix#registry#Add('custom_prettier_php', 'PrettierPhpOutput', [], 'format php with prettier')
 execute ale#fix#registry#Add('custom_prettier_vanilla', 'PrettierVanillaOutput', [], 'format with standard prettier')
