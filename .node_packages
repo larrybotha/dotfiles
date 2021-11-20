@@ -58,7 +58,7 @@ common_modules=(
   nodemon
   prettier
   prettier-plugin-svelte
-  prettier_d_slim
+  @fsouza/prettierd
   @prettier/plugin-php
   server
   typescript

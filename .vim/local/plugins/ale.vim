@@ -4,26 +4,27 @@ let g:ale_use_global_executables = 1
 let g:ale_fix_on_save = 1
 
 let g:ale_javascript_eslint_executable = 'eslint_d'
+let g:ale_javascript_prettier_executable = 'prettier'
 let g:ale_lua_luacheck_options = '--globals vim'
 
 let g:ale_fixers = {
-  \ 'graphql': ['prettier'],
+  \ 'graphql': ['custom_prettierd'],
   \ 'hcl': ['terraform'],
   \ 'html': [],
-  \ 'javascript': ['prettier', 'eslint'],
-  \ 'javascriptreact': ['prettier', 'eslint'],
-  \ 'json': ['custom_prettier_vanilla', 'fixjson'],
+  \ 'javascript': ['custom_prettierd', 'eslint'],
+  \ 'javascriptreact': ['custom_prettierd', 'eslint'],
+  \ 'json': ['custom_prettierd', 'fixjson'],
   \ 'lua': ['luafmt'],
-  \ 'markdown': ['prettier'],
+  \ 'markdown': ['custom_prettierd'],
   \ 'php': ['custom_prettier_php'],
   \ 'python': [ 'isort', 'autoimport', 'black'],
   \ 'sh': ['shfmt'],
-  \ 'svelte': ['prettier'],
+  \ 'svelte': ['custom_prettierd'],
   \ 'terraform': ['terraform'],
-  \ 'typescript': ['prettier', 'eslint'],
-  \ 'typescriptreact': ['prettier', 'eslint'],
-  \ 'vue': ['prettier'],
-  \ 'yaml': ['prettier'],
+  \ 'typescript': ['custom_prettierd', 'eslint'],
+  \ 'typescriptreact': ['custom_prettierd', 'eslint'],
+  \ 'vue': ['custom_prettierd'],
+  \ 'yaml': ['custom_prettierd'],
 \}
 
 let g:ale_linters_ignore = {'php': ['phpcs'], 'svelte': ['eslint']}
@@ -32,6 +33,12 @@ let g:ale_linters_ignore = {'php': ['phpcs'], 'svelte': ['eslint']}
 let g:ale_pattern_options = {
   \ '\.html\.php$': {
     \ 'ale_fixers': ['custom_prettier_html', 'custom_prettier_php'],
+  \ },
+  \ '\.svelte$': {
+    \ 'ale_fixers': ['custom_prettierd'],
+  \ },
+  \ '\.yml\.example$': {
+    \ 'ale_fixers': ['prettier'],
   \ },
 \}
 
@@ -43,12 +50,12 @@ function! GetPrettierFixer(...)
   \}
 endfunction
 
-" add prettier_d_slim fixer
-function! PrettierDSlimOutput(buffer) abort
+" add prettierd fixer
+function! PrettierDOutput(buffer) abort
   let l:options = join(a:000, ' ')
 
   return {
-        \ 'command': join(['prettier_d_slim', '--stdin-filepath %s', '--stdin', options])
+        \ 'command': join(['prettierd', '%s', options])
   \}
 endfunction
 
@@ -68,7 +75,7 @@ function! PrettierVanillaOutput(buffer) abort
 endfunction
 
 " add custom fixers to Ale's registry
-execute ale#fix#registry#Add('custom_prettier_d_slim', 'PrettierDSlimOutput', [], 'format with prettier_d_slim')
+execute ale#fix#registry#Add('custom_prettierd', 'PrettierDOutput', [], 'format with prettierd')
 execute ale#fix#registry#Add('custom_prettier_html', 'PrettierHtmlOutput', [], 'format html with prettier')
 execute ale#fix#registry#Add('custom_prettier_php', 'PrettierPhpOutput', [], 'format php with prettier')
 execute ale#fix#registry#Add('custom_prettier_vanilla', 'PrettierVanillaOutput', [], 'format with standard prettier')
