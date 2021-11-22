@@ -67,6 +67,7 @@ brew install jq
 brew install lazygit
 brew install lulu
 brew install lynx
+brew install mosh
 brew install neovim
 brew install nnn
 brew install nvm
