@@ -71,6 +71,7 @@ brew install mosh
 brew install neovim
 brew install nnn
 brew install nvm
+brew install pgformatter
 brew install php-version
 brew install pigz
 brew install pipenv

@@ -19,6 +19,7 @@ let g:ale_fixers = {
   \ 'php': ['custom_prettier_php'],
   \ 'python': [ 'isort', 'autoimport', 'black'],
   \ 'sh': ['shfmt'],
+  \ 'sql': ['pgformatter'],
   \ 'svelte': ['custom_prettierd'],
   \ 'terraform': ['terraform'],
   \ 'typescript': ['custom_prettierd', 'eslint'],
