@@ -21,6 +21,7 @@ let g:ale_fixers = {
   \ 'sh': ['shfmt'],
   \ 'sql': ['pgformatter'],
   \ 'svelte': ['custom_prettierd'],
+  \ 'svg': ['custom_prettier_html'],
   \ 'terraform': ['terraform'],
   \ 'typescript': ['custom_prettierd', 'eslint'],
   \ 'typescriptreact': ['custom_prettierd', 'eslint'],
