@@ -43,7 +43,6 @@ brew install ansible-lint
 brew install bat
 brew install composer
 brew install ctop
-brew install direnv
 brew install dive
 brew install editorconfig
 brew install elasticsearch
