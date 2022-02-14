@@ -57,7 +57,6 @@
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
   Plug 'vim-airline/vim-airline-themes'
-  Plug 'brett-griffin/phpdocblocks.vim'
   Plug 'heavenshell/vim-pydocstring', { 'do': 'make install' }
   Plug 'heavenshell/vim-jsdoc', {
   \ 'for': ['javascript', 'javascript.jsx','typescript'],
