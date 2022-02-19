@@ -141,10 +141,12 @@ if [ "$(uname -s)" == "Darwin" ]; then
     alacritty
     alfred
     anki
+    beekeeper-studio
     betterzip
     brave-browser
     dash
     dbvisualizer
+    dbgate
     docker
     dropbox
     figma
