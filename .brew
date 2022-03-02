@@ -152,7 +152,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
     firefox
     homebrew/cask-versions/firefox-developer-edition
     flux
-    google-app-engine-launcher
     google-chrome
     google-cloud-sdk
     imagealpha
