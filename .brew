@@ -102,7 +102,7 @@ brew install xh # httpie alternative
 
 # lua
 brew tap homebrew/versions
-brew install lua52
+brew install lua
 
 # patched fonts
 brew tap homebrew/cask-fonts
