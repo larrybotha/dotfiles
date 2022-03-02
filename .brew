@@ -150,7 +150,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
     dropbox
     figma
     firefox
-    firefox-developer-edition
+    homebrew/cask-versions/firefox-developer-edition
     flux
     google-app-engine-launcher
     google-chrome
