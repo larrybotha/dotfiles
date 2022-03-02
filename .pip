@@ -9,7 +9,7 @@ python -m pip install --user virtualenv
 # - used by ALE
 python -m pip install --user yamllint
 
-# add python support to neovim
+# add python support for neovim
 python2 -m pip install --user --upgrade pynvim
 python3 -m pip install --user --upgrade pynvim
 
