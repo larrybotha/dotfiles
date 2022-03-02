@@ -128,7 +128,7 @@ brew install hammerspoon
 
 function installcask() {
   if brew info "${@}" | grep "Not installed" >/dev/null; then
-    brew install --cask "${@}"
+    brew install "${@}"
   else
     echo "${*} is already installed."
   fi
