@@ -11,7 +11,11 @@ else
   echo "installing nvm"
 
   curl https://raw.githubusercontent.com/creationix/nvm/v0.24.0/install.sh | bash
+fi
 
+if type -p node &>/dev/null; then
+  echo "node already installed"
+else
   echo "installing node"
 
   nvm install node

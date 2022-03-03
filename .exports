@@ -47,4 +47,3 @@ if type -p "bat" >/dev/null; then
 else
   echo "$PWD/$0: bat not installed"
 fi
-
