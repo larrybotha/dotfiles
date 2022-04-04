@@ -304,6 +304,7 @@ source ~/.vim/local/plugins/asynctasks.vim
 source ~/.vim/local/plugins/compe.vim
 source ~/.vim/local/plugins/endwise.vim
 source ~/.vim/local/plugins/lazygit.vim
+source ~/.vim/local/plugins/nerdcommenter.vim
 source ~/.vim/local/plugins/nnn.vim
 source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/vim-pydocstring.vim
