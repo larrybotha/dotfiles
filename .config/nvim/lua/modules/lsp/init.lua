@@ -65,23 +65,30 @@ end
 -- Use a loop to conveniently both setup defined servers
 -- and map buffer local keybindings when the language server attaches
 nvim_lsp.custom_lua_lsp = custom_lua_lsp
-local servers = {
-    "custom_lua_lsp",
-    "ansiblels",
-    "bashls",
-    "cssls",
-    "dockerls",
-    "gopls",
-    "html",
-    "intelephense",
-    "jsonls",
-    "pyright",
-    "svelte",
-    "terraformls",
-    "tsserver",
-    "vimls",
-    "yamlls"
+local server_configs = {
+    {name = "custom_lua_lsp", options = {}},
+    {name = "ansiblels", options = {}},
+    {name = "bashls", options = {}},
+    {name = "cssls", options = {}},
+    {name = "dockerls", options = {}},
+    {name = "gopls", options = {}},
+    {name = "html", options = {filetypes = {"html", "htmldjango"}}},
+    {name = "intelephense", options = {}},
+    {name = "jsonls", options = {}},
+    {name = "pyright", options = {}},
+    {name = "svelte", options = {}},
+    {name = "terraformls", options = {}},
+    {name = "tsserver", options = {}},
+    {name = "vimls", options = {}},
+    {name = "yamlls", options = {}}
 }
-for _, lsp in ipairs(servers) do
-    nvim_lsp[lsp].setup {on_attach = on_attach}
+for _, config in ipairs(server_configs) do
+    attach_options = {on_attach = on_attach}
+    options = config.options
+
+    for k, v in pairs(attach_options) do
+        options[k] = v
+    end
+
+    nvim_lsp[config.name].setup(options)
 end
