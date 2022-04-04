@@ -2,6 +2,7 @@
 --install the lua-language-server
 
 local M = {}
+
 -- install the language server at ~/code/lua-language-server
 -- see https://github.com/sumneko/lua-language-server/wiki/Build-and-Run
 local sumneko_root_path = os.getenv("HOME") .. "/code/lua-language-server"
