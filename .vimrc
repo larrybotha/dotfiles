@@ -251,7 +251,7 @@
   map <leader>bp :bp<CR>
 
   " quick access to this .vimrc
-  map <leader>vi :tabe ~/dotfiles/.vimrc<CR>
+  map <leader>vi :tabe ~/projects/dotfiles/.vimrc<CR>
   map <leader>vs :source $MYVIMRC<CR>
 
   " set all windows to equal width
