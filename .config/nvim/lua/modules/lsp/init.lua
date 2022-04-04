@@ -83,8 +83,8 @@ local server_configs = {
     {name = "yamlls", options = {}}
 }
 for _, config in ipairs(server_configs) do
-    attach_options = {on_attach = on_attach}
-    options = config.options
+    local attach_options = {on_attach = on_attach}
+    local options = config.options
 
     for k, v in pairs(attach_options) do
         options[k] = v
