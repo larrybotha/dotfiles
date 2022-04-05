@@ -10,7 +10,7 @@ let g:ale_lua_luacheck_options = '--globals vim'
 let g:ale_python_auto_pipenv = 1
 
 let g:ale_linters = {
-  \ 'python': ['pyright']
+  \ 'python': ['pyright', 'mypy', 'pylint', 'flake8']
 \}
 
 let g:ale_fixers = {
