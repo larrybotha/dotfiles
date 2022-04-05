@@ -7,8 +7,6 @@ let g:ale_javascript_eslint_executable = 'eslint_d'
 let g:ale_javascript_prettier_executable = 'prettier'
 let g:ale_lua_luacheck_options = '--globals vim'
 
-let g:ale_python_auto_pipenv = 1
-
 let g:ale_linters = {
   \ 'python': ['pyright', 'mypy', 'pylint', 'flake8']
 \}
