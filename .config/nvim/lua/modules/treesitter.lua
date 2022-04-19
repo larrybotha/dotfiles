@@ -2,6 +2,7 @@ require "nvim-treesitter.configs".setup {
     -- one of "all", or a list of languages
     ensure_installed = {
         "bash",
+        "comment",
         "css",
         "dockerfile",
         "go",
@@ -16,6 +17,7 @@ require "nvim-treesitter.configs".setup {
         "make",
         "python",
         "regex",
+        "rst",
         "rust",
         "scss",
         "svelte",
