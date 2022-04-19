@@ -1,6 +1,28 @@
 require "nvim-treesitter.configs".setup {
     -- one of "all", or a list of languages
-    ensure_installed = "all",
+    ensure_installed = {
+        "bash",
+        "css",
+        "dockerfile",
+        "go",
+        "gomod",
+        "hcl",
+        "html",
+        "http",
+        "javascript",
+        "jsdoc",
+        "json",
+        "lua",
+        "make",
+        "python",
+        "regex",
+        "rust",
+        "scss",
+        "svelte",
+        "toml",
+        "typescript",
+        "vim"
+    },
     -- List of parsers to ignore installing
     --ignore_install = { "javascript" },
     highlight = {
