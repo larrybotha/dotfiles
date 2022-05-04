@@ -40,10 +40,12 @@ brew install mysql
 brew install ack
 brew install ansible
 brew install ansible-lint
+brew install atuin
 brew install bat
 brew install composer
 brew install ctop
 brew install dive
+brew install dust
 brew install editorconfig
 brew install elasticsearch
 brew install exa
@@ -141,7 +143,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
     alacritty
     alfred
     anki
-    atuin
     beekeeper-studio
     betterzip
     brave-browser
