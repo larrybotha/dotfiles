@@ -26,6 +26,8 @@ fi
 
 # init atuin
 if type -p "atuin" >/dev/null; then
+  export ATUIN_SESSION=1
+
   if ! [ "$ZSH_VERSION" ]; then
     echo 'eval "$(atuin init zsh)"' >> ~/.zshrc
   else
