@@ -65,6 +65,7 @@ function symlink_configs() {
     ".tmux.conf"
     ".config/alacritty"
     ".config/asynctasks"
+    ".config/atuin"
     ".config/karabiner"
     ".config/kitty"
     ".config/nnn"
