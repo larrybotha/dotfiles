@@ -24,17 +24,6 @@ if type -p "pyenv" >/dev/null; then
   eval "$(pyenv init -)"
 fi
 
-# init atuin
-if type -p "atuin" >/dev/null; then
-  export ATUIN_SESSION=1
-
-  if [ "$ZSH_VERSION" ]; then
-    echo 'eval "$(atuin init zsh)"' >> ~/.zshrc
-  else
-    echo 'eval "$(atuin init bash)"' >> ~/.bashrc
-  fi
-fi
-
 if ! [ "$ZSH_VERSION" ]; then
   # use ctrl-p to open a file in vim
   bind -x '"\C-p": vim $(fzf);'
@@ -54,6 +43,17 @@ if ! [ "$ZSH_VERSION" ]; then
   for option in autocd globstar; do
     shopt -s "$option" 2>/dev/null
   done
+fi
+
+# init atuin
+if type -p "atuin" >/dev/null; then
+  export ATUIN_NOBIND=1
+
+  if [ "$ZSH_VERSION" ]; then
+    eval "$(atuin init zsh)"
+  else
+    eval "$(atuin init bash)"
+  fi
 fi
 
 source ~/.sh_completion
