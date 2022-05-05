@@ -4,6 +4,9 @@ source ~/.zsh_completion
 # fzf must be sourced last before it's enabled
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 
+# replace fzf's ctrl-R with atuin's search
+bindkey '^r' _atuin_search_widget
+
 if type zoxide>/dev/null; then
   # enable zoxide
   eval "$(zoxide init zsh)"
