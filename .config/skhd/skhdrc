@@ -15,7 +15,7 @@ ctrl + alt + cmd - s : brew services restart skhd
 
 
 ## open terminal
-hyper - return : /Applications/Alacritty.app/Contents/MacOS/alacritty
+hyper - return : $(realpath $(which alacritty))
 
 ## swap window
 hyper - y : yabai -m window --swap west
