@@ -44,8 +44,8 @@ hyper - 0x21 : yabai -m window --swap east # 0x21 is the "[" key
 #shift + cmd - w : yabai -m window --resize top:0:20
 #shift + cmd - d : yabai -m window --resize right:-20:0
 
-## rotate tree 90
-hyper - r : yabai -m space --rotate 90
+## rotate tree 90 clockwise
+hyper - r : yabai -m space --rotate 270
 
 ## flip the tree vertically
 hyper - 4 : yabai -m space --mirror y-axis
