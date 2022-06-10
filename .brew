@@ -42,7 +42,7 @@ brew install ansible
 brew install ansible-lint
 brew install atuin
 brew install bat
-brew install composer
+brew install checkov
 brew install ctop
 brew install dive
 brew install dust
