@@ -3,9 +3,7 @@ nnoremap <leader>fg <cmd>Telescope live_grep<cr>
 nnoremap <leader>fb <cmd>Telescope buffers<cr>
 nnoremap <leader>fh <cmd>Telescope help_tags<cr>
 nnoremap <leader>fa <cmd>Telescope builtin<cr>
-nnoremap <leader>fd <cmd>Telescope lsp_document_diagnostics<cr>
-" TODO: determine how to show filenames insstead of code in picker
-"nnoremap <leader>fr <cmd>Telescope lsp_references<cr>
+nnoremap <leader>fr :lua require('telescope.builtin').lsp_references({trim_text=true})<cr>
 nnoremap <leader>ft :lua require('telescope').extensions.asynctasks.all()<cr>
 
 
