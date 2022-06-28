@@ -1,7 +1,8 @@
+local M = {}
+
 local actions = require("telescope.actions")
 local action_state = require("telescope.actions.state")
 
-local M = {}
 local custom_actions = {}
 
 function custom_actions.fzf_multi_select(prompt_bufnr)
@@ -9,7 +10,8 @@ function custom_actions.fzf_multi_select(prompt_bufnr)
     local num_selections = table.getn(picker:get_multi_selection())
 
     if num_selections > 1 then
-        -- actions.file_edit throws - context of picker seems to change
+        -- actions.file_edit throws
+        -- see https://github.com/nvim-telescope/telescope.nvim/issues/416#issuecomment-841692272
         --actions.file_edit(prompt_bufnr)
         actions.send_selected_to_qflist(prompt_bufnr)
         actions.open_qflist()
@@ -22,7 +24,10 @@ require("telescope").setup {
     defaults = {
         mappings = {
             i = {
-                ["<esc>"] = actions.close
+                ["<cr>"] = custom_actions.fzf_multi_select
+            },
+            n = {
+                ["<cr>"] = custom_actions.fzf_multi_select
             }
         },
         vimgrep_arguments = {
@@ -53,12 +58,6 @@ M.custom_find_files = function(opts)
     opts = opts or {}
     -- add hidden files to find_files
     opts.hidden = true
-    opts.attach_mappings = function(_, map)
-        map("i", "<cr>", custom_actions.fzf_multi_select)
-        map("n", "<cr>", custom_actions.fzf_multi_select)
-
-        return true
-    end
 
     require "telescope.builtin".find_files(opts)
 end
