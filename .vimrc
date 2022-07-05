@@ -144,7 +144,7 @@
 
   set backspace=indent,eol,start                 " allow backspacing over everything in insert mode
   set linespace=0                                " No extra spaces between rows
-  set relativenumber                             " relative line numbers on
+  set number relativenumber                      " use hybrid line numbers
   set showmatch                                  " show matching brackets/parenthesis
   set incsearch                                  " find as you type search
   set hlsearch                                   " highlight search terms
@@ -164,14 +164,6 @@
   set cursorcolumn                               " highlight current column
 
   set colorcolumn=85                             " show column length hint for long lines
-
-  " switch relative line numbers to absolute when Vim is not in focus
-  autocmd FocusLost * :set number
-  autocmd FocusGained * :set relativenumber
-
-  " use absolute numbers when in Insert mode
-  autocmd InsertEnter * :set number
-  autocmd InsertLeave * :set relativenumber
 
   " show timeout on leader
   set showcmd
