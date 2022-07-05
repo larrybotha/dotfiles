@@ -277,6 +277,19 @@
         \  exe "normal g`\"" |
         \ endif
     augroup END
+
+    " Use hybrid line numbers when in any mode other than 'insert' mode,
+    " otherwise use 'number'
+    augroup numbertoggle
+      autocmd!
+
+      autocmd BufEnter,FocusGained,InsertLeave,WinEnter *
+        \ if &number && mode() != "i"
+        \ | set relativenumber | endif
+      autocmd BufLeave,FocusLost,InsertEnter,WinLeave *
+        \ if &number
+        \ | set norelativenumber | endif
+    augroup END
   endif " has("autocmd")
 
 " }
