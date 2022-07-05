@@ -317,6 +317,7 @@ source ~/.vim/local/plugins/vim-sort-imports.vim
 source ~/.vim/local/plugins/vimspector/index.vim
 source ~/.vim/local/plugins/vimux.vim
 source ~/.vim/local/plugins/vim-test.vim
+source ~/.vim/local/plugins/vim-tmux-navigator.vim
 
 
 
