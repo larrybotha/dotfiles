@@ -43,6 +43,9 @@ let g:ale_pattern_options = {
   \ '\.svelte$': {
     \ 'ale_fixers': ['custom_prettierd'],
   \ },
+  \ '\.svx$': {
+    \ 'ale_fixers': ['custom_prettierd'],
+  \ },
   \ '\.yml\.example$': {
     \ 'ale_fixers': ['prettier'],
   \ },
