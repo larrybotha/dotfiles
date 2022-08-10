@@ -86,6 +86,7 @@ brew install qt
 brew install redis
 brew install rename
 brew install ripgrep
+brew install rust-analyzer
 brew install sbt
 brew install shellcheck
 brew install shfmt
@@ -131,71 +132,71 @@ brew install koekeishiya/formulae/skhd
 brew install hammerspoon
 
 function installcask() {
-  if brew info "${@}" | grep "Not installed" >/dev/null; then
-    brew install "${@}"
-  else
-    echo "${*} is already installed."
-  fi
+	if brew info "${@}" | grep "Not installed" >/dev/null; then
+		brew install "${@}"
+	else
+		echo "${*} is already installed."
+	fi
 }
 
 if [ "$(uname -s)" == "Darwin" ]; then
-  casks=(
-    a-better-finder-rename
-    alacritty
-    alfred
-    anki
-    beekeeper-studio
-    betterzip
-    brave-browser
-    dash
-    dbvisualizer
-    dbgate
-    docker
-    dropbox
-    figma
-    firefox
-    homebrew/cask-versions/firefox-developer-edition
-    flux
-    google-chrome
-    google-cloud-sdk
-    imagealpha
-    imageoptim
-    integrity
-    iterm2
-    kap
-    karabiner-elements
-    keycastr
-    libreoffice
-    moom
-    mysqlworkbench
-    postman
-    proxyman
-    qlImageSize
-    qlcolorcode
-    qlmarkdown
-    qlstephen
-    qlvideo
-    quicklook-csv
-    quicklook-json
-    rescuetime
-    robo-3t
-    safari-technology-preview
-    skype
-    slack
-    sourcetree
-    the-unarchiver
-    transmission
-    virtualbox
-    visual-studio-code
-    vlc
-    webpquicklook
-    xbar
-    xscope
-  )
+	casks=(
+		a-better-finder-rename
+		alacritty
+		alfred
+		anki
+		beekeeper-studio
+		betterzip
+		brave-browser
+		dash
+		dbvisualizer
+		dbgate
+		docker
+		dropbox
+		figma
+		firefox
+		homebrew/cask-versions/firefox-developer-edition
+		flux
+		google-chrome
+		google-cloud-sdk
+		imagealpha
+		imageoptim
+		integrity
+		iterm2
+		kap
+		karabiner-elements
+		keycastr
+		libreoffice
+		moom
+		mysqlworkbench
+		postman
+		proxyman
+		qlImageSize
+		qlcolorcode
+		qlmarkdown
+		qlstephen
+		qlvideo
+		quicklook-csv
+		quicklook-json
+		rescuetime
+		robo-3t
+		safari-technology-preview
+		skype
+		slack
+		sourcetree
+		the-unarchiver
+		transmission
+		virtualbox
+		visual-studio-code
+		vlc
+		webpquicklook
+		xbar
+		xscope
+	)
 
-  for cask in "${casks[@]}"; do
-    installcask "${cask}"
-  done
+	for cask in "${casks[@]}"; do
+		installcask "${cask}"
+	done
 fi
 
 # Remove outdated versions from the cellar
