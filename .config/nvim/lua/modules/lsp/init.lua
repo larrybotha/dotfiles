@@ -1,4 +1,7 @@
 local nvim_lsp = require "lspconfig"
+local cmp_nvim_lsp = require("cmp_nvim_lsp")
+
+local M = {}
 
 local custom_lua_lsp = require "modules/lsp/lua-language-server"
 
@@ -52,10 +55,12 @@ local on_attach = function(client, bufnr)
               hi LspReferenceRead cterm=bold ctermbg=red guibg=LightYellow
               hi LspReferenceText cterm=bold ctermbg=red guibg=LightYellow
               hi LspReferenceWrite cterm=bold ctermbg=red guibg=LightYellow
+
               augroup lsp_document_highlight
                 autocmd! * <buffer>
                 autocmd CursorHold <buffer> lua vim.lsp.buf.document_highlight()
                 autocmd CursorMoved <buffer> lua vim.lsp.buf.clear_references()
+                autocmd CursorHold <buffer> lua vim.diagnostic.open_float(nil, { focusable = false })
               augroup END
             ]],
             false
@@ -84,7 +89,10 @@ local server_configs = {
     {name = "yamlls", options = {}}
 }
 for _, config in ipairs(server_configs) do
-    local attach_options = {on_attach = on_attach}
+    local attach_options = {
+        on_attach = on_attach,
+        capabilities = cmp_nvim_lsp.update_capabilities(vim.lsp.protocol.make_client_capabilities())
+    }
     local options = config.options
 
     for k, v in pairs(attach_options) do
@@ -93,3 +101,7 @@ for _, config in ipairs(server_configs) do
 
     nvim_lsp[config.name].setup(options)
 end
+
+M.on_attach = on_attach
+
+return M

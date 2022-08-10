@@ -44,7 +44,6 @@
   Plug 'tpope/vim-endwise'
 
 
-  Plug 'sheerun/vim-polyglot'
   Plug 'Raimondi/delimitMate'
   Plug 'christoomey/vim-tmux-navigator'
   Plug 'editorconfig/editorconfig-vim'
@@ -63,22 +62,33 @@
   \ 'do': 'make install'
   \}
   Plug 'janko-m/vim-test'
-  Plug 'mattn/emmet-vim'
   Plug 'prettier/vim-prettier'
-  Plug 'hrsh7th/nvim-compe'
-  Plug 'evanleck/vim-svelte', {'branch': 'main'}
-  Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
-  Plug 'rust-lang/rust.vim'
   Plug 'ruanyl/vim-sort-imports'
   Plug 'dkarter/bullets.vim'
   Plug 'puremourning/vimspector'
   Plug 'preservim/vimux'
 
-  "only load if we are in Neovim
+  " Language support
+  Plug 'sheerun/vim-polyglot'
+  Plug 'simrat39/rust-tools.nvim'
+  "Plug 'rust-lang/rust.vim'
+  Plug 'evanleck/vim-svelte', {'branch': 'main'}
+  Plug 'mattn/emmet-vim'
+  Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
+
+  " only load if we are in Neovim
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
   Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
+
+  " completion
+  Plug 'hrsh7th/cmp-nvim-lsp'
+  Plug 'hrsh7th/cmp-buffer'
+  Plug 'hrsh7th/cmp-path'
+  Plug 'hrsh7th/cmp-cmdline'
+  Plug 'hrsh7th/nvim-cmp'
+  Plug 'hrsh7th/vim-vsnip'
 
   " telescope and deps
   if has('nvim')
@@ -306,7 +316,7 @@ source ~/.vim/local/neovim.vim
 source ~/.vim/local/plugins/airline.vim
 source ~/.vim/local/plugins/ale.vim
 source ~/.vim/local/plugins/asynctasks.vim
-source ~/.vim/local/plugins/compe.vim
+source ~/.vim/local/plugins/cmp.vim
 source ~/.vim/local/plugins/endwise.vim
 source ~/.vim/local/plugins/lazygit.vim
 source ~/.vim/local/plugins/nerdcommenter.vim
