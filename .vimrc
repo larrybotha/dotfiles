@@ -63,7 +63,6 @@
   \}
   Plug 'janko-m/vim-test'
   Plug 'prettier/vim-prettier'
-  "Plug 'hrsh7th/nvim-compe'
   Plug 'ruanyl/vim-sort-imports'
   Plug 'dkarter/bullets.vim'
   Plug 'puremourning/vimspector'
@@ -317,7 +316,6 @@ source ~/.vim/local/neovim.vim
 source ~/.vim/local/plugins/airline.vim
 source ~/.vim/local/plugins/ale.vim
 source ~/.vim/local/plugins/asynctasks.vim
-"source ~/.vim/local/plugins/compe.vim
 source ~/.vim/local/plugins/cmp.vim
 source ~/.vim/local/plugins/endwise.vim
 source ~/.vim/local/plugins/lazygit.vim
