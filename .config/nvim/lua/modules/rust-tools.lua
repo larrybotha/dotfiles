@@ -1,3 +1,5 @@
+local nvim_lsp = require "./modules/lsp/init"
+
 local options = {
     tools = {
         autoSetHints = true,
@@ -13,8 +15,7 @@ local options = {
     -- these override the defaults set by rust-tools.nvim
     -- see https://github.com/neovim/nvim-lspconfig/blob/master/CONFIG.md#rust_analyzer
     server = {
-        -- on_attach is a callback called when the language server attachs to the buffer
-        --on_attach = on_attach,
+        on_attach = nvim_lsp.on_attach,
         settings = {
             -- to enable rust-analyzer settings visit:
             -- https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/user/generated_config.adoc

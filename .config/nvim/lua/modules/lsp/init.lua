@@ -1,6 +1,8 @@
 local nvim_lsp = require "lspconfig"
 local cmp_nvim_lsp = require("cmp_nvim_lsp")
 
+local M = {}
+
 local custom_lua_lsp = require "modules/lsp/lua-language-server"
 
 local on_attach = function(client, bufnr)
@@ -85,11 +87,10 @@ local server_configs = {
     {name = "tsserver", options = {}},
     {name = "vimls", options = {}},
     {name = "yamlls", options = {}}
-    --{name = "rust_analyzer", options = {}}
 }
 for _, config in ipairs(server_configs) do
     local attach_options = {
-        n_attach = on_attach,
+        on_attach = on_attach,
         capabilities = cmp_nvim_lsp.update_capabilities(vim.lsp.protocol.make_client_capabilities())
     }
     local options = config.options
@@ -100,3 +101,7 @@ for _, config in ipairs(server_configs) do
 
     nvim_lsp[config.name].setup(options)
 end
+
+M.on_attach = on_attach
+
+return M
