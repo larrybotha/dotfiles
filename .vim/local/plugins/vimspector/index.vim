@@ -33,5 +33,5 @@ nmap <Leader>di <Plug>VimspectorBalloonEval
 xmap <Leader>di <Plug>VimspectorBalloonEval
 
 " navigate up and down the call stack
-nnoremap <LocalLeader><F11> :call vimspector#UpFrame()<CR>
-nnoremap <LocalLeader><F12> :call vimspector#DownFrame()<CR>
+"nnoremap <LocalLeader><F11> :call vimspector#UpFrame()<CR>
+"nnoremap <LocalLeader><F12> :call vimspector#DownFrame()<CR>
