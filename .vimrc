@@ -100,7 +100,6 @@
     Plug 'GustavoKatel/telescope-asynctasks.nvim'
     Plug 'lukas-reineke/indent-blankline.nvim'
     Plug 'lewis6991/gitsigns.nvim'
-    Plug 'kdheepak/lazygit.nvim'
   end
 
   call plug#end()
@@ -318,7 +317,6 @@ source ~/.vim/local/plugins/ale.vim
 source ~/.vim/local/plugins/asynctasks.vim
 source ~/.vim/local/plugins/cmp.vim
 source ~/.vim/local/plugins/endwise.vim
-source ~/.vim/local/plugins/lazygit.vim
 source ~/.vim/local/plugins/floaterm.vim
 source ~/.vim/local/plugins/nerdcommenter.vim
 source ~/.vim/local/plugins/telescope.vim
