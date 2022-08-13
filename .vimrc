@@ -34,6 +34,7 @@
   Plug 'skywind3000/asyncrun.vim'
   Plug 'voldikss/vim-floaterm'
 
+
   Plug 'rking/ag.vim'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
@@ -56,7 +57,6 @@
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
   Plug 'vim-airline/vim-airline-themes'
-  Plug 'heavenshell/vim-pydocstring', { 'do': 'make install' }
   Plug 'heavenshell/vim-jsdoc', {
   \ 'for': ['javascript', 'javascript.jsx','typescript'],
   \ 'do': 'make install'
@@ -429,14 +429,6 @@ source ~/.vim/local/plugins/vim-tmux-navigator.vim
   " Emmet {
   let g:user_emmet_settings = {
   \ 'indentation': '  ',
-  \ 'php' : {
-  \   'extends' : 'html',
-  \   'filters' : 'html',
-  \   'dollar_expr': 0,
-  \ },
-  \ 'typescript' : {
-  \     'extends' : 'jsx',
-  \ },
   \ 'javascript.jsx' : {
   \     'extends' : 'jsx',
   \ },
