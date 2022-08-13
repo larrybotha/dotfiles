@@ -1,6 +1,6 @@
 " open quickfix window automatically
 let g:asyncrun_open = 6
-let g:asynctasks_term_pos = 'right'
+let g:asynctasks_term_pos = 'floaterm'
 
 " load from .config folder
 let g:asynctasks_extra_config = [
