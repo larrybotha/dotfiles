@@ -48,7 +48,6 @@
   Plug 'christoomey/vim-tmux-navigator'
   Plug 'editorconfig/editorconfig-vim'
   Plug 'edkolev/tmuxline.vim'
-  Plug 'mcchrish/nnn.vim'
   Plug 'godlygeek/tabular'
   Plug 'preservim/nerdcommenter'
   Plug 'rhysd/git-messenger.vim'
@@ -320,7 +319,6 @@ source ~/.vim/local/plugins/cmp.vim
 source ~/.vim/local/plugins/endwise.vim
 source ~/.vim/local/plugins/lazygit.vim
 source ~/.vim/local/plugins/nerdcommenter.vim
-source ~/.vim/local/plugins/nnn.vim
 source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/vim-pydocstring.vim
 source ~/.vim/local/plugins/vim-sort-imports.vim

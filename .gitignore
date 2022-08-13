@@ -9,10 +9,6 @@
 .config/karabiner/*
 !.config/karabiner/karabiner.json
 
-# nnn
-.config/nnn/*
-!.config/nnn/custom
-
 # Folder view configuration files
 .DS_Store
 Desktop.ini
