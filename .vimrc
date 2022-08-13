@@ -32,6 +32,7 @@
 
   Plug 'skywind3000/asynctasks.vim'
   Plug 'skywind3000/asyncrun.vim'
+  Plug 'voldikss/vim-floaterm'
 
   Plug 'rking/ag.vim'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
@@ -318,6 +319,7 @@ source ~/.vim/local/plugins/asynctasks.vim
 source ~/.vim/local/plugins/cmp.vim
 source ~/.vim/local/plugins/endwise.vim
 source ~/.vim/local/plugins/lazygit.vim
+source ~/.vim/local/plugins/floaterm.vim
 source ~/.vim/local/plugins/nerdcommenter.vim
 source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/vim-pydocstring.vim
