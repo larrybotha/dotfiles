@@ -6,6 +6,11 @@ for file in ~/.{path,sh_prompt,exports,aliases,functions,extra}; do
 done
 unset file
 
+# init nnn
+if type -p "nnn" >/dev/null; then
+  source ~/.config/nnn/custom/.nnn
+fi
+
 # use vi mode
 set -o vi
 

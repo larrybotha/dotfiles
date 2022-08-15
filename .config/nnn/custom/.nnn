@@ -1,0 +1,31 @@
+#!/usr/bin/env sh
+
+# See .config/vivid/themes/bubblegum.yml for hexadecimal values
+BLK="4a"
+CHR="b6"
+DIR="6e"
+EXE="b6"
+REG="00"
+HARDLINK="b6"
+SYMLINK="92"
+MISSING="f4"
+ORPHAN="d9"
+FIFO="f4"
+SOCK="f4"
+OTHER="74"
+
+## exports
+export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
+export NNN_FIFO=/tmp/nnn.fifo
+export NNN_PLUG='j:autojump;p:preview-tui;n:nuke;i:imgview;f:fzcd;l:-personal/qlmanage;'
+
+# fix preview-tui outputting incorrect characters.
+# See https://github.com/jarun/nnn/issues/1069
+export PAGER="less -R"
+
+## hidden files on top
+export LC_COLLATE="C"
+
+for file in $(dirname "$0")/.{,quitcd}; do
+  [ -r "$file" ] && source "$file"
+done
