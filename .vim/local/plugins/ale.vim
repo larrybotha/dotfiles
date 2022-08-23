@@ -48,8 +48,8 @@ let g:ale_pattern_options = {
   \ '\.svx$': {
     \ 'ale_fixers': ['custom_prettierd'],
   \ },
-  \ '\.yml\.example$': {
-    \ 'ale_fixers': ['prettier'],
+  \ '\.ya?ml\.example$': {
+    \ 'ale_fixers': ['customer_prettierd'],
   \ },
 \}
 
