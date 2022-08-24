@@ -150,16 +150,17 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		betterzip
 		brave-browser
 		dash
-		dbvisualizer
 		dbgate
+		dbvisualizer
 		docker
 		dropbox
 		figma
 		firefox
-		homebrew/cask-versions/firefox-developer-edition
+		flameshot
 		flux
 		google-chrome
 		google-cloud-sdk
+		homebrew/cask-versions/firefox-developer-edition
 		imagealpha
 		imageoptim
 		integrity
