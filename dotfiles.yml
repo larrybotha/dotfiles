@@ -1,0 +1,5 @@
+---
+- name: Bootstrap development environment
+  hosts: default
+  roles:
+    - neovim
