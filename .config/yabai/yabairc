@@ -46,20 +46,21 @@ yabai -m config window_gap 12
 
 # float system preferences
 yabai -m rule --add app="^Activity Monitor$" sticky=on layer=above manage=off
+yabai -m rule --add app="^Alfred Preferences$" sticky=on layer=above manage=off
+yabai -m rule --add app="^App Store$" sticky=on layer=above manage=off
+yabai -m rule --add app="^Dash$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Disk Utility$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Finder$" sticky=on layer=above manage=off
-yabai -m rule --add app="^System Information$" sticky=on layer=above manage=off
+yabai -m rule --add app="^Flameshot$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Font Book$" sticky=on layer=above manage=off
-yabai -m rule --add app="^System Preferences$" sticky=on layer=above manage=off
-yabai -m rule --add app="^Alfred Preferences$" sticky=on layer=above manage=off
+yabai -m rule --add app="^Hammerspoon$" sticky=on layer=above manage=off
+yabai -m rule --add app="^Kap$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Karabiner-Elements$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Karabiner-EventViewer$" sticky=on layer=above manage=off
+yabai -m rule --add app="^Netiquette$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Sourcetree$" sticky=on layer=above manage=off
-yabai -m rule --add app="^Hammerspoon$" sticky=on layer=above manage=off
-yabai -m rule --add app="^Dash$" sticky=on layer=above manage=off
+yabai -m rule --add app="^System Information$" sticky=on layer=above manage=off
+yabai -m rule --add app="^System Preferences$" sticky=on layer=above manage=off
 yabai -m rule --add app="^XDM$" sticky=on layer=above manage=off
-yabai -m rule --add app="^App Store$" sticky=on layer=above manage=off
-yabai -m rule --add app="^Kap$" sticky=on layer=above manage=off
-yabai -m rule --add app="^Flameshot$" sticky=on layer=above manage=off
 
 echo "yabai configuration loaded.."
