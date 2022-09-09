@@ -57,6 +57,7 @@ yabai -m rule --add app="^Hammerspoon$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Kap$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Karabiner-Elements$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Karabiner-EventViewer$" sticky=on layer=above manage=off
+yabai -m rule --add app="^LuLu$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Netiquette$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Sourcetree$" sticky=on layer=above manage=off
 yabai -m rule --add app="^System Information$" sticky=on layer=above manage=off
