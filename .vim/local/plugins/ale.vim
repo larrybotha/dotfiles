@@ -42,6 +42,9 @@ let g:ale_pattern_options = {
   \ '\.html\.php$': {
     \ 'ale_fixers': ['custom_prettier_html', 'custom_prettier_php'],
   \ },
+  \ '\.html\$': {
+    \ 'ale_fixers': ['custom_djlint'],
+  \ },
   \ '\.svelte$': {
     \ 'ale_fixers': ['custom_prettierd'],
   \ },
@@ -49,7 +52,7 @@ let g:ale_pattern_options = {
     \ 'ale_fixers': ['custom_prettierd'],
   \ },
   \ '\.ya?ml\.example$': {
-    \ 'ale_fixers': ['customer_prettierd'],
+    \ 'ale_fixers': ['custom_prettierd'],
   \ },
 \}
 
@@ -66,7 +69,7 @@ function! PrettierDOutput(buffer) abort
   let l:options = join(a:000, ' ')
 
   return {
-        \ 'command': join(['prettierd', '%s', options])
+    \ 'command': join(['prettierd', '%s', options])
   \}
 endfunction
 
@@ -85,8 +88,46 @@ function! PrettierVanillaOutput(buffer) abort
   return GetPrettierFixer('')
 endfunction
 
+" add djlint fixer
+call ale#Set('custom_python_djlint_executable', 'djlint')
+call ale#Set('custom_python_djlint_use_global', 0)
+function! DjlintOutput(buffer) abort
+
+  function! GetExecutable(buff, name) abort
+      if ale#Var(a:buff, 'python_auto_pipenv') && ale#python#PipenvPresent(a:buff)
+          return 'pipenv'
+      endif
+
+      if ale#Var(a:buff, 'python_auto_poetry') && ale#python#PoetryPresent(a:buff)
+          return 'poetry'
+      endif
+
+      return ale#python#FindExecutable(a:buff, 'custom_python_djlint', [a:name])
+  endfunction
+
+  let l:executable = GetExecutable(a:buffer, 'djlint')
+
+  if empty(l:executable)
+    echo "No executable found for djlint"
+
+    return 0
+  endif
+
+  let l:cmd = [ale#Escape(l:executable)]
+  let l:options = ['--reformat']
+
+  call extend(l:cmd, l:options)
+  call add(l:cmd, '-')
+
+  let l:result = {'command': join(l:cmd, ' ')}
+
+  return l:result
+endfunction
+
+
 " add custom fixers to Ale's registry
 execute ale#fix#registry#Add('custom_prettierd', 'PrettierDOutput', [], 'format with prettierd')
 execute ale#fix#registry#Add('custom_prettier_html', 'PrettierHtmlOutput', [], 'format html with prettier')
 execute ale#fix#registry#Add('custom_prettier_php', 'PrettierPhpOutput', [], 'format php with prettier')
 execute ale#fix#registry#Add('custom_prettier_vanilla', 'PrettierVanillaOutput', [], 'format with standard prettier')
+execute ale#fix#registry#Add('custom_djlint', 'DjlintOutput', [], 'format with standard prettier')
