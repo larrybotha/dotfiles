@@ -61,7 +61,7 @@ yabai -m rule --add app="^LuLu$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Netiquette$" sticky=on layer=above manage=off
 yabai -m rule --add app="^Sourcetree$" sticky=on layer=above manage=off
 yabai -m rule --add app="^System Information$" sticky=on layer=above manage=off
-yabai -m rule --add app="^System Preferences$" sticky=on layer=above manage=off
+yabai -m rule --add app="^System Settings$" sticky=on layer=above manage=off
 yabai -m rule --add app="^XDM$" sticky=on layer=above manage=off
 
 echo "yabai configuration loaded.."
