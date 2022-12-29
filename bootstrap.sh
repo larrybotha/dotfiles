@@ -134,6 +134,7 @@ function symlink_files() {
 
   link_file "${vimspector_config[@]}"
   link_file "${lazygit_config[@]}"
+		mkdir -p "$dest_path"
 }
 
 function update_nnn_plugins() {
