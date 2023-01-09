@@ -44,8 +44,6 @@ local options = {
             -- to enable rust-analyzer settings visit:
             -- https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/user/generated_config.adoc
             ["rust-analyzer"] = {
-                -- HACK: https://github.com/simrat39/rust-tools.nvim/issues/300
-                inlayHints = {locationLinks = false},
                 -- enable clippy on save
                 checkOnSave = {
                     command = "clippy"
