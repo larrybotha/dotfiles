@@ -50,6 +50,9 @@ core:
   directory:
     foreground: blue_pastel
 
+  door:
+    foreground: purple_pastel_ltr
+
   executable_file:
     foreground: pink_pastel
     font-style: bold
@@ -80,17 +83,23 @@ core:
     foreground: blue_pastel
     background: grey_dk
 
-  normal_text:
-    {}
+  normal_text: {}
 
-  sticky:
-    {}
+  file_with_capability: {}
 
-  sticky_other_writable:
-    {}
+  multi_hard_link: {}
 
-  other_writable:
-    {}
+  reset_to_normal: {}
+
+  setgid: {}
+
+  setuid: {}
+
+  sticky: {}
+
+  sticky_other_writable: {}
+
+  other_writable: {}
 
 text:
   special:
