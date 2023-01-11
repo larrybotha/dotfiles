@@ -22,7 +22,7 @@ let g:ale_fixers = {
   \ 'lua': ['luafmt'],
   \ 'markdown': ['custom_prettierd'],
   \ 'php': ['custom_prettier_php'],
-  \ 'python': [ 'isort', 'autoimport', 'black'],
+  \ 'python': [ 'isort', 'autoimport', 'autoflake', 'black'],
   \ 'rust': ['rustfmt'],
   \ 'sh': ['shfmt'],
   \ 'sql': ['pgformatter'],
