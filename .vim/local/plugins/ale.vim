@@ -8,7 +8,7 @@ let g:ale_javascript_prettier_executable = 'prettier'
 let g:ale_lua_luacheck_options = '--globals vim'
 
 let g:ale_linters = {
-  \ 'python': ['pyright', 'mypy', 'pylint', 'flake8'],
+  \ 'python': ['pyright', 'mypy', 'pylint'],
   \ 'rust': ['analyzer']
 \}
 
@@ -22,7 +22,7 @@ let g:ale_fixers = {
   \ 'lua': ['luafmt'],
   \ 'markdown': ['custom_prettierd'],
   \ 'php': ['custom_prettier_php'],
-  \ 'python': [ 'isort', 'autoimport', 'autoflake', 'black'],
+  \ 'python': [ 'isort', 'autoimport', 'black'],
   \ 'rust': ['rustfmt'],
   \ 'sh': ['shfmt'],
   \ 'sql': ['pgformatter'],

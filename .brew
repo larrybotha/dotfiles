@@ -122,7 +122,6 @@ brew install hashicorp/tap/packer
 brew install ninja
 brew install hashicorp/tap/terraform-ls
 brew install tflint
-brew install flake8
 
 # tmux and dependencies
 brew install tmux
