@@ -109,6 +109,7 @@ brew install xh # httpie alternative
 # lua
 brew tap homebrew/versions
 brew install lua
+brew install lua-language-server
 
 # patched fonts
 brew tap homebrew/cask-fonts
