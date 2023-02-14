@@ -13,6 +13,9 @@
 .config/nnn/*
 !.config/nnn/custom
 
+# lua
+.luarc.json
+
 # Folder view configuration files
 .DS_Store
 Desktop.ini
