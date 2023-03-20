@@ -110,6 +110,8 @@ brew install xh # httpie alternative
 brew tap homebrew/versions
 brew install lua
 brew install lua-language-server
+brew install stylua
+brew install selene
 
 # patched fonts
 brew tap homebrew/cask-fonts

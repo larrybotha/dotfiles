@@ -9,6 +9,7 @@ let g:ale_lua_luacheck_options = '--globals vim'
 
 let g:ale_linters = {
   \ 'python': ['pyright', 'mypy', 'pylint'],
+  \ 'lua': ['selene'],
   \ 'rust': ['analyzer']
 \}
 
@@ -19,7 +20,7 @@ let g:ale_fixers = {
   \ 'javascript': ['custom_prettierd', 'eslint'],
   \ 'javascriptreact': ['custom_prettierd', 'eslint'],
   \ 'json': ['custom_prettierd', 'fixjson'],
-  \ 'lua': ['luafmt'],
+  \ 'lua': ['stylua'],
   \ 'markdown': ['custom_prettierd'],
   \ 'php': ['custom_prettier_php'],
   \ 'python': [ 'isort', 'autoimport', 'black'],
