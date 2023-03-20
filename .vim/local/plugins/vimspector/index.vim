@@ -1,6 +1,6 @@
 " ./vimspector-global-config.json must be symlinked to:
 " ~/.vim/<plugins-folder>/vimspector/configurations/macos/_all/<filename>
-let g:vimspector_enable_mappings = 'HUMAN'
+"let g:vimspector_enable_mappings = 'HUMAN'
 
 
 "| Key          | Mapping                                       | Function
@@ -23,14 +23,14 @@ let g:vimspector_enable_mappings = 'HUMAN'
 " see https://www.youtube.com/watch?app=desktop&v=-AZUIL1rY3U for mapping with
 " vim-test
 
-nnoremap <leader>dw :call vimspector#AddWatch()<CR> <C-R><C-A>
-nnoremap <leader>dr :call vimspector#Reset()<CR>
-nnoremap <F5> :call vimspector#Continue()<CR>
-nnoremap <leader>de :VimspectorEval <C-R><C-w>
+"nnoremap <leader>dw :call vimspector#AddWatch()<CR> <C-R><C-A>
+"nnoremap <leader>dr :call vimspector#Reset()<CR>
+"nnoremap <F5> :call vimspector#Continue()<CR>
+"nnoremap <leader>de :VimspectorEval <C-R><C-w>
 
 " these won't work if non-recursive is applied (i.e. nnoremap)
-nmap <Leader>di <Plug>VimspectorBalloonEval
-xmap <Leader>di <Plug>VimspectorBalloonEval
+"nmap <Leader>di <Plug>VimspectorBalloonEval
+"xmap <Leader>di <Plug>VimspectorBalloonEval
 
 " navigate up and down the call stack
 "nnoremap <LocalLeader><F11> :call vimspector#UpFrame()<CR>

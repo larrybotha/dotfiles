@@ -65,7 +65,7 @@
   Plug 'prettier/vim-prettier'
   Plug 'ruanyl/vim-sort-imports'
   Plug 'dkarter/bullets.vim'
-  Plug 'puremourning/vimspector'
+  "Plug 'puremourning/vimspector'
   Plug 'preservim/vimux'
 
   " Language support
@@ -77,10 +77,14 @@
   Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
 
   " only load if we are in Neovim
+  Plug 'folke/neodev.nvim'
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
   Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
+  Plug 'mfussenegger/nvim-dap', Cond(has('nvim'))
+  Plug 'rcarriga/nvim-dap-ui', Cond(has('nvim'))
+
 
   " completion
   Plug 'hrsh7th/cmp-nvim-lsp'
@@ -323,7 +327,7 @@ source ~/.vim/local/plugins/nnn.vim
 source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/vim-pydocstring.vim
 source ~/.vim/local/plugins/vim-sort-imports.vim
-source ~/.vim/local/plugins/vimspector/index.vim
+"source ~/.vim/local/plugins/vimspector/index.vim
 source ~/.vim/local/plugins/vimux.vim
 source ~/.vim/local/plugins/vim-test.vim
 source ~/.vim/local/plugins/vim-tmux-navigator.vim
