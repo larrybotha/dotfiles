@@ -83,7 +83,6 @@ common_modules=(
   import-sort-style-renke
 
   # ale deps
-  lua-fmt
 )
 
 mac_modules=(
