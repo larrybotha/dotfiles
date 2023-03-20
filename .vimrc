@@ -28,23 +28,22 @@
 
   call plug#begin('~/.vim/plugged')
 
+  Plug 'wakatime/vim-wakatime'
+
   Plug 'dense-analysis/ale'
 
   Plug 'skywind3000/asynctasks.vim'
   Plug 'skywind3000/asyncrun.vim'
   Plug 'voldikss/vim-floaterm'
 
-
   Plug 'rking/ag.vim'
   Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
   Plug 'junegunn/fzf.vim'
-
 
   Plug 'tpope/vim-sensible'
   Plug 'tpope/vim-fugitive'
   Plug 'tpope/vim-surround'
   Plug 'tpope/vim-endwise'
-
 
   Plug 'Raimondi/delimitMate'
   Plug 'christoomey/vim-tmux-navigator'
