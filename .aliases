@@ -34,7 +34,10 @@ alias tmr='tmux rename-session -t'
 alias tmk='tmux kill-session -t'
 
 # evcxr
-alias evcxr='evcxr --edit-mode vi'
+if type "evcxr" >/dev/null; then
+  alias evcxr='evcxr --edit-mode vi'
+fi
+
 # howdoi
 if type "howdoi" >/dev/null; then
   alias hdi='function hdi(){ howdoi $* -c -n 5; }; hdi'
