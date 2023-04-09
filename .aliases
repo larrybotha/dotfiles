@@ -35,6 +35,13 @@ alias tmk='tmux kill-session -t'
 
 # evcxr
 alias evcxr='evcxr --edit-mode vi'
+# howdoi
+if type "howdoi" >/dev/null; then
+  alias hdi='function hdi(){ howdoi $* -c -n 5; }; hdi'
+  alias hless='function hdi(){ howdoi $* -c | less --raw-control-chars --quit-if-one-screen --no-init; }; hdi'
+
+  alias howdoi='howdoi -c -e duckduckgo'
+fi
 
 # Detect which `ls` flavor is in use
 if ls --color >/dev/null 2>&1; then # GNU `ls`

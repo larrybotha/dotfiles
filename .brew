@@ -62,6 +62,7 @@ brew install gitlab-runner
 brew install go
 brew install gopls
 brew install hadolint # linter for Dockerfiles
+brew install howdoi   # linter for Dockerfiles
 brew install htop
 brew install hub
 brew install jesseduffield/lazydocker/lazydocker
