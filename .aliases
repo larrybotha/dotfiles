@@ -42,8 +42,6 @@ fi
 if type "howdoi" >/dev/null; then
   alias hdi='function hdi(){ howdoi $* -c -n 5 -e duckduckgo; }; hdi'
   alias hless='function hdi(){ howdoi $* -c | less --raw-control-chars --quit-if-one-screen --no-init; }; hdi'
-
-  alias howdoi='howdoi --color --engine duckduckgo'
 fi
 
 # Detect which `ls` flavor is in use
