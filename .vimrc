@@ -57,11 +57,8 @@
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
   Plug 'vim-airline/vim-airline-themes'
-  Plug 'heavenshell/vim-jsdoc', {
-  \ 'for': ['javascript', 'javascript.jsx','typescript'],
-  \ 'do': 'make install'
-  \}
   Plug 'janko-m/vim-test'
+  Plug 'danymat/neogen'
   Plug 'prettier/vim-prettier'
   Plug 'ruanyl/vim-sort-imports'
   Plug 'dkarter/bullets.vim'
@@ -328,7 +325,6 @@ source ~/.vim/local/plugins/floaterm.vim
 source ~/.vim/local/plugins/nerdcommenter.vim
 source ~/.vim/local/plugins/nnn.vim
 source ~/.vim/local/plugins/telescope.vim
-source ~/.vim/local/plugins/vim-pydocstring.vim
 source ~/.vim/local/plugins/vim-sort-imports.vim
 source ~/.vim/local/plugins/codeium.vim
 "source ~/.vim/local/plugins/vimspector/index.vim
