@@ -104,6 +104,9 @@
     Plug 'GustavoKatel/telescope-asynctasks.nvim'
     Plug 'lukas-reineke/indent-blankline.nvim'
     Plug 'lewis6991/gitsigns.nvim'
+
+    " AI tools
+    Plug 'Exafunction/codeium.vim'
   end
 
   call plug#end()
@@ -327,6 +330,7 @@ source ~/.vim/local/plugins/nnn.vim
 source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/vim-pydocstring.vim
 source ~/.vim/local/plugins/vim-sort-imports.vim
+source ~/.vim/local/plugins/codeium.vim
 "source ~/.vim/local/plugins/vimspector/index.vim
 source ~/.vim/local/plugins/vimux.vim
 source ~/.vim/local/plugins/vim-test.vim
