@@ -31,7 +31,6 @@
   Plug 'wakatime/vim-wakatime'
 
   Plug 'dense-analysis/ale'
-
   Plug 'skywind3000/asynctasks.vim'
   Plug 'skywind3000/asyncrun.vim'
   Plug 'voldikss/vim-floaterm'
@@ -59,16 +58,15 @@
   Plug 'vim-airline/vim-airline-themes'
   Plug 'janko-m/vim-test'
   Plug 'danymat/neogen'
-  Plug 'prettier/vim-prettier'
   Plug 'ruanyl/vim-sort-imports'
   Plug 'dkarter/bullets.vim'
-  "Plug 'puremourning/vimspector'
   Plug 'preservim/vimux'
+  "Plug 'prettier/vim-prettier'
+  "Plug 'puremourning/vimspector'
 
   " Language support
   Plug 'sheerun/vim-polyglot'
   Plug 'simrat39/rust-tools.nvim'
-  "Plug 'rust-lang/rust.vim'
   Plug 'evanleck/vim-svelte', {'branch': 'main'}
   Plug 'mattn/emmet-vim'
   Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
@@ -79,9 +77,10 @@
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
   Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
+
+  " debugging
   Plug 'mfussenegger/nvim-dap', Cond(has('nvim'))
   Plug 'rcarriga/nvim-dap-ui', Cond(has('nvim'))
-
 
   " completion
   Plug 'hrsh7th/cmp-nvim-lsp'
@@ -308,16 +307,12 @@
 " }
 
 " Plugin Configs {
-  " Plug {
-    " Update / Install bundles
-    map <leader>vbi :PlugInstall<CR>
-    map <leader>vbu :PlugUpdate<CR>
-  " }
 
 source ~/.vim/local/neovim.vim
 
-source ~/.vim/local/plugins/airline.vim
 source ~/.vim/local/plugins/ale.vim
+source ~/.vim/local/plugins/vim-plug.vim
+source ~/.vim/local/plugins/airline.vim
 source ~/.vim/local/plugins/asynctasks.vim
 source ~/.vim/local/plugins/cmp.vim
 source ~/.vim/local/plugins/endwise.vim
@@ -327,125 +322,17 @@ source ~/.vim/local/plugins/nnn.vim
 source ~/.vim/local/plugins/telescope.vim
 source ~/.vim/local/plugins/vim-sort-imports.vim
 source ~/.vim/local/plugins/codeium.vim
-"source ~/.vim/local/plugins/vimspector/index.vim
+source ~/.vim/local/plugins/vim-svelte.vim
 source ~/.vim/local/plugins/vimux.vim
 source ~/.vim/local/plugins/vim-test.vim
+source ~/.vim/local/plugins/delimit-mate.vim
 source ~/.vim/local/plugins/vim-tmux-navigator.vim
+source ~/.vim/local/plugins/vim-go.vim
+source ~/.vim/local/plugins/vim-fugitive.vim
+source ~/.vim/local/plugins/fzf.vim
+source ~/.vim/local/plugins/tabular.vim
+source ~/.vim/local/plugins/emmet-vim.vim
+source ~/.vim/local/plugins/editorconfig-vim.vim
+"source ~/.vim/local/plugins/vimspector/index.vim
 
-
-
-  " vim-svelte {
-    let g:svelte_preprocessors = ['typescript', 'scss']
-  " }
-
-
-  " delimitMate {
-    " expand a new line after a brace to autoindent
-    let delimitMate_expand_cr = 1
-    " if parentheses are opened with a space, add a matching space after the cursor
-    let delimitMate_expand_space = 1
-  " }
-
-  " rust-lang/rust {
-    let g:autofmt_autosave = 1
-  " }
-
- " vim-go {
-    " format and rewrite imports on save
-    let g:go_fmt_command = 'goimports'
-    " show type info under cursor
-    let g:go_auto_type_info = 1
-  " }
-
-  " Fugitive {
-    " git push
-    nmap <leader>gp :exec ':Git push origin ' . fugitive#head()<CR>
-
-    " git status
-    map <silent> <leader>gs :Git<CR>
-
-    " git commit -am "
-    map <leader>gci :Git commit -am "
-
-    " git checkout
-    map <leader>gco :Git checkout<space>
-
-    " git diff
-    map <leader>gd :Gdiff<CR>
-  " }
-
-  " fzf {
-    " --column: Show column number
-    " --line-number: Show line number
-    " --no-heading: Do not show file headings in results
-    " --fixed-strings: Search term as a literal string
-    " --ignore-case: Case insensitive search
-    " --no-ignore: Do not respect .gitignore, etc...
-    " --hidden: Search hidden files and folders
-    " --follow: Follow symlinks
-    " --glob: Additional conditions for search (in this case ignore everything in the .git/ folder)
-    " --color: Search color options
-    let g:rg_command = 'rg --column --line-number --no-heading --fixed-strings
-      \ --ignore-case --hidden --follow --color "always"
-      \ -g "!{.git,node_modules,vendor,build,dist}/*" '
-
-    " use :F to search everything with ripgrep
-    command! -bang -nargs=* F call fzf#vim#grep(g:rg_command .shellescape(<q-args>).'| tr -d "\017"', 1, <bang>0)
-  " }
-
-  " Prettier {
-    "autocmd BufWritePre *.js,*.mjs,*.json,*.ts,*.tsx,*.vue,*.graphql,*.yaml,*.yml PrettierAsync
-  " }
-
-  " Tabular {
-    if exists(":Tabularize")
-      " align equal signs in normal and visual mode
-      nmap <Leader>a= :Tabularize /=<CR>
-      vmap <Leader>a= :Tabularize /=<CR>
-
-      " align colons in normal and visual mode
-      nmap <Leader>a: :Tabularize /:\zs<CR>
-      vmap <Leader>a: :Tabularize /:\zs<CR>
-    endif
-
-    " use Tabularize when in insert mode and a | is typed
-    " http://vimcasts.org/episodes/aligning-text-with-tabular-vim/
-    inoremap <silent> <Bar>   <Bar><Esc>:call <SID>align()<CR>a
-
-    function! s:align()
-      let p = '^\s*|\s.*\s|\s*$'
-      if exists(':Tabularize') && getline('.') =~# '^\s*|' && (getline(line('.')-1) =~# p || getline(line('.')+1) =~# p)
-        let column = strlen(substitute(getline('.')[0:col('.')],'[^|]','','g'))
-        let position = strlen(matchstr(getline('.')[0:col('.')],'.*|\s*\zs.*'))
-        Tabularize/|/l1
-        normal! 0
-        call search(repeat('[^|]*|',column).'\s\{-\}'.repeat('.',position),'ce',line('.'))
-      endif
-    endfunction
-  " }
-
-  " Typescript Vim {
-    " We force typescript as a file everywhere because Vim added typescriptreact
-    " filetype, breaking detection for a whole bunch of plugins
-    " https://github.com/vim/vim/issues/4830
-    autocmd BufNewFile,BufRead *.tsx set filetype=typescript.tsx
-  " }
-
-  " Emmet {
-  let g:user_emmet_settings = {
-  \ 'indentation': '  ',
-  \ 'javascript.jsx' : {
-  \     'extends' : 'jsx',
-  \ },
-  \}
-  " }
-
-  " Editorconfig {
-    let g:EditorConfig_exclude_patterns = ['fugitive://.\*']
-  " }
-
-  " Elm {
-    let g:elm_syntastic_show_warnings = 1
-    let g:elm_format_autosave = 1
-  " }
 " }

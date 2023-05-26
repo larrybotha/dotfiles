@@ -10,8 +10,12 @@ let g:ale_lua_luacheck_options = '--globals vim'
 let g:ale_linters = {
   \ 'python': ['pyright', 'mypy', 'pylint'],
   \ 'lua': ['selene'],
-  \ 'rust': ['analyzer']
+  \ 'rust': ['analyzer'],
+  \ 'svelte': ['eslint']
 \}
+
+" set a linter alias for svelte files
+autocmd FileType svelte let b:ale_linter_aliases = ['javascript']
 
 let g:ale_fixers = {
   \ 'graphql': ['custom_prettierd'],
