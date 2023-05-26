@@ -61,7 +61,6 @@
   Plug 'ruanyl/vim-sort-imports'
   Plug 'dkarter/bullets.vim'
   Plug 'preservim/vimux'
-  "Plug 'prettier/vim-prettier'
   "Plug 'puremourning/vimspector'
 
   " Language support
@@ -72,7 +71,7 @@
   Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
 
   " only load if we are in Neovim
-  Plug 'folke/neodev.nvim'
+  Plug 'folke/neodev.nvim', Cond(has('nvim'))
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
