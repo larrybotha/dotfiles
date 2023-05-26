@@ -52,7 +52,7 @@
   Plug 'godlygeek/tabular'
   Plug 'preservim/nerdcommenter'
   Plug 'rhysd/git-messenger.vim'
-  Plug 'terryma/vim-multiple-cursors'
+  Plug 'mg979/vim-visual-multi'
   Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
   Plug 'vim-airline/vim-airline-themes'
