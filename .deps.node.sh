@@ -1,5 +1,30 @@
 #!/usr/bin/env bash
 
+function ensure_has_nvm() {
+
+	# install Node Version Manager and node
+	if type -p nvm &>/dev/null; then
+		echo "nvm already installed"
+	else
+		echo "installing nvm"
+
+		curl https://raw.githubusercontent.com/creationix/nvm/v0.24.0/install.sh | bash
+	fi
+}
+
+function ensure_has_node() {
+	if type -p node &>/dev/null; then
+		echo "node already installed"
+	else
+		echo "installing node"
+
+		nvm install node
+	fi
+}
+
+ensure_has_nvm
+ensure_has_node
+
 update_existing=false
 
 if [ "$1" == --update-existing -o "$1" == '-u' ]; then
@@ -57,7 +82,9 @@ common_modules=(
 	nodemon
 	prettier
 	prettier-plugin-svelte
+	rome
 	server
+	stylelint
 	typescript
 	yo
 
