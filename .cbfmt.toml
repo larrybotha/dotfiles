@@ -1,7 +1,7 @@
 # Config for cbformat
 #
 # Formats fenced code blocks in markdown. This config needs to be in the
-# home folder, as cbmft doesn't use the XDG_HOME approach to finding configs;
+# home folder, as cbmft doesn't use the XDG_CONFIG_HOME approach to finding configs;
 # it only traverses up the current directory
 #
 # See https://github.com/lukas-reineke/cbfmt
