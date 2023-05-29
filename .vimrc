@@ -30,7 +30,6 @@
 
   Plug 'wakatime/vim-wakatime'
 
-  Plug 'dense-analysis/ale'
   Plug 'skywind3000/asynctasks.vim'
   Plug 'skywind3000/asyncrun.vim'
   Plug 'voldikss/vim-floaterm'
@@ -311,7 +310,6 @@
 
 source ~/.vim/local/neovim.vim
 
-source ~/.vim/local/plugins/ale.vim
 source ~/.vim/local/plugins/vim-plug.vim
 source ~/.vim/local/plugins/airline.vim
 source ~/.vim/local/plugins/asynctasks.vim
