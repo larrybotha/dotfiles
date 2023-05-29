@@ -72,6 +72,7 @@
 
   " only load if we are in Neovim
   Plug 'folke/neodev.nvim', Cond(has('nvim'))
+  Plug 'mhartington/formatter.nvim', Cond(has('nvim'))
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
