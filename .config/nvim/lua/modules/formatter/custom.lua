@@ -124,6 +124,22 @@ local M = {
 		}
 	end,
 
+	prettierd = function(parser)
+		local args = { util.escape_path(util.get_current_buffer_file_path()) }
+
+		if parser then
+			table.insert(args, "--parser=" .. parser)
+		end
+
+		return function()
+			return {
+				exe = "prettierd",
+				args = args,
+				stdin = true,
+			}
+		end
+	end,
+
 	shfmt = function()
 		return {
 			exe = "shfmt",
