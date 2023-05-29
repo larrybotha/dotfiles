@@ -67,6 +67,22 @@ local M = {
 		}
 	end,
 
+	gofmt = function()
+		return {
+			exe = "gofmt",
+			args = { get_file() },
+			to_stdin = true,
+		}
+	end,
+
+	goimports = function()
+		return {
+			exe = "goimports",
+			args = { "-srcdir", util.get_cwd() },
+			to_stdin = true,
+		}
+	end,
+
 	isort = function()
 		return {
 			exe = "isort",
@@ -76,6 +92,34 @@ local M = {
 				get_file(),
 				"-",
 			},
+			stdin = true,
+		}
+	end,
+
+	-- "To generate a TOC, add:
+	-- `<!-- toc -->`
+	-- before headers in your markdown file."
+	markdown_toc = function()
+		return {
+			exe = "markdown-toc",
+			args = {
+				"--bullets=-",
+				"-i",
+				get_file(),
+			},
+			stdin = true,
+		}
+	end,
+
+	packer = function()
+		-- only process .pkr.hcl files
+		if not util.get_current_buffer_file_name():match("%.pkr%.hcl$") == "special.lua" then
+			return nil
+		end
+
+		return {
+			exe = "packer",
+			args = { "fmt", get_file(), "-" },
 			stdin = true,
 		}
 	end,
@@ -92,13 +136,32 @@ local M = {
 		}
 	end,
 
+	shellharden = function()
+		return {
+			exe = "shellharden",
+			args = { "--transform", get_file() },
+			stdin = true,
+		}
+	end,
+
 	sqlfluff = function()
 		return {
-			command = "sqlfluff",
+			exe = "sqlfluff",
 			args = {
 				"fix",
 				"--disable-progress-bar",
 				get_file(),
+				"-",
+			},
+			stdin = true,
+		}
+	end,
+
+	taplo = function()
+		return {
+			exe = "taplo",
+			args = {
+				"format",
 				"-",
 			},
 			stdin = true,

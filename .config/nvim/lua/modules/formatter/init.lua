@@ -9,6 +9,7 @@ formatter.setup({
 	log_level = vim.log.levels.WARN,
 
 	filetype = {
+		go = { custom_formatters.goimports, custom_formatters.gofmt },
 		graphql = { formatters.prettierd },
 		hcl = { custom_formatters.terraform },
 		html = { formatters.prettierd },
@@ -20,15 +21,23 @@ formatter.setup({
 			custom_formatters.fixjson,
 		},
 		lua = { filetypes.lua.stylua },
-		markdown = { formatters.prettierd, custom_formatters.cbfmt },
+		markdown = {
+			formatters.prettierd,
+			custom_formatters.cbfmt,
+			custom_formatters.markdown_toc,
+		},
 		org = { custom_formatters.cbfmt },
+		packer = { custom_formatters.packer },
 		python = {
 			custom_formatters.isort,
 			custom_formatters.autoimport,
 			custom_formatters.black,
 		},
 		rust = { filetypes.rust.rustfmt },
-		sh = { custom_formatters.shfmt },
+		sh = {
+			custom_formatters.shfmt,
+			custom_formatters.shellharden,
+		},
 		sql = { custom_formatters.sqlfluff },
 		svelte = { formatters.prettierd },
 		svg = { formatters.prettierd },
@@ -36,6 +45,7 @@ formatter.setup({
 		typescript = { formatters.prettierd },
 		typescriptreact = { formatters.prettierd },
 		vue = { formatters.prettierd },
+		toml = { custom_formatters.taplo },
 		yaml = { formatters.prettierd },
 	},
 
