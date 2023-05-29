@@ -17,7 +17,7 @@ null_ls.setup({
 		null_ls.builtins.diagnostics.revive,
 		null_ls.builtins.diagnostics.ruff,
 		null_ls.builtins.diagnostics.selene,
-		null_ls.builtins.diagnostics.semgrep,
+		null_ls.builtins.diagnostics.semgrep.with({ extra_args = { "--config", "auto" } }),
 		null_ls.builtins.diagnostics.shellcheck,
 		null_ls.builtins.diagnostics.sqlfluff,
 		null_ls.builtins.diagnostics.stylelint,
