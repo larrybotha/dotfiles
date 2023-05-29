@@ -43,7 +43,10 @@ brew install ansible-lint
 brew install atuin
 brew install bat
 brew install checkov
+brew install checkmake
+brew install codespell
 brew install ctop
+brew install deno
 brew install dive
 brew install dust
 brew install editorconfig
@@ -71,13 +74,14 @@ brew install jq
 brew install lazygit
 brew install lulu
 brew install lynx
+brew install markdown-toc
+brew install markdownlint-cli2
 brew install mosh
 brew install neovim
 brew install nnn
 brew install nvm
-brew install pgformatter
-brew install php-version
 brew install pigz
+brew install fsouza/prettierd/prettierd
 brew install pipenv
 brew install postgresql
 brew install pyenv
@@ -91,21 +95,24 @@ brew install rust-analyzer
 brew install sbt
 brew install shellcheck
 brew install shfmt
+brew install sqlfluff
 brew install tealdeer
 brew install terraform
 brew install the_silver_searcher
 brew install tmuxinator
 brew install tre-command
 brew install vim
+brew install vint
 brew install vivid
+brew install vulture
 brew install watch
 brew install watchman
 brew install webkit2png
+brew install xh # httpie alternative
 brew install xplr
 brew install yarn
 brew install zopfli
 brew install zoxide
-brew install xh # httpie alternative
 
 # lua
 brew tap homebrew/versions
@@ -136,7 +143,7 @@ brew install koekeishiya/formulae/yabai
 brew install koekeishiya/formulae/skhd
 brew install hammerspoon
 
-function installcask() {
+function install_cask() {
 	if brew info "${@}" | grep "Not installed" >/dev/null; then
 		brew install "${@}"
 	else
@@ -201,7 +208,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
 	)
 
 	for cask in "${casks[@]}"; do
-		installcask "${cask}"
+		install_cask "$cask"
 	done
 fi
 

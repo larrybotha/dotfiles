@@ -4,35 +4,9 @@
 # you need the code CLI tools YOU FOOL.
 ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
 
-# install Node Version Manager and node
-if type -p nvm &>/dev/null; then
-	echo "nvm already installed"
-else
-	echo "installing nvm"
-
-	curl https://raw.githubusercontent.com/creationix/nvm/v0.24.0/install.sh | bash
-fi
-
-if type -p node &>/dev/null; then
-	echo "node already installed"
-else
-	echo "installing node"
-
-	nvm install node
-fi
-
-if type -p evcxr &>/dev/null; then
-	echo "evcxr already installed"
-elif
-	! type -p cargo &
-	/dev/null
-then
-	echo "unable to install evcxr - unable to find Rust's 'cargo' binary"
-else
-	echo "installing evcxr"
-
-	cargo install evcxr
-fi
+./.deps.cargo.sh
+./.deps.brew.sh
+./.deps.node.sh
 
 # make a code directory for dependencies
 if [ ! -d ~/code ]; then

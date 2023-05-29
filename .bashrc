@@ -7,3 +7,8 @@ if type zoxide >/dev/null; then
 else
   echo "zoxide not installed: $BASH_SOURCE"
 fi
+
+export NVM_DIR="/Users/larrybotha/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+
+[ -f ~/.fzf.bash ] && source ~/.fzf.bash

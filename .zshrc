@@ -26,5 +26,9 @@ fi
 # detaching / killing a session, commands in options tmuxinator's on_project_exit
 # won't be executed
 if type tmux>/dev/null; then
- [[ ! $TERM =~ screen ]] && [ -z $TMUX ] && tmux
+ [[ ! $TERM =~ screen ]] && [ -z ${TMUX+x} ] && tmux
+ #        [1]                   [2]          [3]
+ # 1 - ensure we're not running in a GNU Screen terminal multiplexer
+ # 2 - ensure the $TMUX env var is empty - i.e. no current tmux session
+ # 3 - start a tmux session
 fi

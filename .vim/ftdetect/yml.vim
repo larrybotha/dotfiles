@@ -1,1 +1,1 @@
-autocmd BufNewFile,BufRead *.yml,*.yml.example,*.yaml,*.yaml.example :set filetype=yaml
+autocmd BufNewFile,BufRead *.yml,*.yml.*,*.yaml,*.yaml.* :set filetype=yaml

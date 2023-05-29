@@ -1,0 +1,31 @@
+local null_ls = require("null-ls")
+
+null_ls.setup({
+	sources = {
+		null_ls.builtins.diagnostics.alex,
+		null_ls.builtins.diagnostics.ansiblelint,
+		null_ls.builtins.diagnostics.checkmake,
+		null_ls.builtins.diagnostics.codespell,
+		null_ls.builtins.diagnostics.deno_lint,
+		null_ls.builtins.diagnostics.djlint,
+		null_ls.builtins.diagnostics.dotenv_linter,
+		null_ls.builtins.diagnostics.eslint_d.with({ extra_filetypes = { "svelte" } }),
+		null_ls.builtins.diagnostics.hadolint,
+		null_ls.builtins.diagnostics.jsonlint,
+		null_ls.builtins.diagnostics.markdownlint_cli2,
+		null_ls.builtins.diagnostics.mypy,
+		null_ls.builtins.diagnostics.revive,
+		null_ls.builtins.diagnostics.ruff,
+		null_ls.builtins.diagnostics.selene,
+		null_ls.builtins.diagnostics.semgrep.with({ extra_args = { "--config", "auto" } }),
+		null_ls.builtins.diagnostics.shellcheck,
+		null_ls.builtins.diagnostics.sqlfluff,
+		null_ls.builtins.diagnostics.stylelint,
+		null_ls.builtins.diagnostics.terraform_validate,
+		null_ls.builtins.diagnostics.tfsec,
+		null_ls.builtins.diagnostics.tsc,
+		null_ls.builtins.diagnostics.vint,
+		null_ls.builtins.diagnostics.vulture,
+		null_ls.builtins.diagnostics.yamllint,
+	},
+})

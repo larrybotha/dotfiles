@@ -1,33 +1,40 @@
 #!/usr/bin/env bash
 
+function pip_install() {
+	local package="$1"
+
+	python -m pip install --user "$package"
+}
+
 # Once python is installed, via homebrew, we have pip and Distribute. Let's ensure
 # we can work in virtual environments, too
 # http://docs.python-guide.org/en/latest/starting/install/osx/
-python -m pip install --user virtualenv
+pip_install virtualenv
 
 # linting
 # - used by ALE
-python -m pip install --user yamllint
-python -m pip install --user pylint
+pip_install yamllint
+pip_install pylint
 
 # add python support for neovim
 python2 -m pip install --user --upgrade pynvim
 python3 -m pip install --user --upgrade pynvim
 
 # environments
-python -m pip install --user pipenv
+pip_install pipenv
 
 # auto formatting
-python -m pip install --user black
+pip_install black
 
-# autoformatting / autoimporting
-python -m pip install --user isort
-python -m pip install --user autoimport
+# autoformatting / autoimporting / linting
+pip_install autoimport
+pip_install codespell
+pip_install djlint
+pip_install isort
+pip_install ruff
 
 # better REPL
-python -m pip install --user ptpython
-
-python -m pip install --user django-extensions
+pip_install ptpython
 
 # reading epubs
-python -m pip install --user epy-reader
+pip_install epy-reader

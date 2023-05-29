@@ -23,36 +23,50 @@ vim.keymap.set("n", "<Leader>ds", function()
 	dap_ui_widgets.centered_float(dap_ui_widgets.scopes)
 end)
 
-local python_config = {
+local function get_python_binary()
+	local cwd = vim.fn.getcwd()
+	local virtual_env = os.getenv("VIRTUAL_ENV")
+
+	if virtual_env then
+		return virtual_env .. "/bin/python"
+	elseif vim.fn.executable(cwd .. "/venv/bin/python") == 1 then
+		return cwd .. "/venv/bin/python"
+	else
+		return os.getenv("HOME") .. "/.pyenv/shims/python"
+	end
+end
+
+local python_settings = {
 	adapter = {
 		type = "executable",
 		command = os.getenv("HOME") .. "/.pyenv/shims/python",
 		args = { "-m", "debugpy.adapter" },
 	},
-	configuration = {
-		type = "python",
-		request = "launch",
-		name = "Launch file",
-		program = "${file}",
-		pythonPath = function()
-			local cwd = vim.fn.getcwd()
-			local virtual_env = os.getenv("VIRTUAL_ENV")
-
-			if virtual_env then
-				return virtual_env
-			elseif vim.fn.executable(cwd .. "/venv/bin/python") == 1 then
-				return cwd .. "/venv/bin/python"
-			elseif vim.fn.executable(cwd .. "/.venv/bin/python") == 1 then
-				return cwd .. "/.venv/bin/python"
-			else
-				return os.getenv("HOME") .. "/.pyenv/shims/python"
-			end
-		end,
+	configs = {
+		{
+			type = "python",
+			request = "launch",
+			name = "Launch file",
+			program = "${file}",
+			pythonPath = get_python_binary,
+		},
+		{
+			-- https://github.com/microsoft/debugpy/wiki/Debug-configuration-settings
+			connect = {
+				host = "localhost",
+				port = 5678,
+			},
+			name = "Attach to Django",
+			request = "attach",
+			type = "python",
+			django = true,
+			python = get_python_binary(),
+		},
 	},
 }
 
-dap.adapters.python = python_config.adapter
-dap.configurations.python = { python_config.configuration }
+dap.adapters.python = python_settings.adapter
+dap.configurations.python = python_settings.configs
 
 -- dapui
 dap.listeners.after.event_initialized["dapui_config"] = dapui.open
