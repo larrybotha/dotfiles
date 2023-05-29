@@ -20,9 +20,12 @@ python -m pip install --user pipenv
 # auto formatting
 python -m pip install --user black
 
-# autoformatting / autoimporting
+# autoformatting / autoimporting / linting
 python -m pip install --user isort
 python -m pip install --user autoimport
+python -m pip install --user ruff
+python -m pip install --user codespell
+python -m pip install --user djlint
 
 # better REPL
 python -m pip install --user ptpython

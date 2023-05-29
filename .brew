@@ -75,7 +75,6 @@ brew install mosh
 brew install neovim
 brew install nnn
 brew install nvm
-brew install pgformatter
 brew install pigz
 brew install fsouza/prettierd/prettierd
 brew install pipenv
@@ -91,6 +90,7 @@ brew install rust-analyzer
 brew install sbt
 brew install shellcheck
 brew install shfmt
+brew install sqlfluff
 brew install tealdeer
 brew install terraform
 brew install the_silver_searcher
