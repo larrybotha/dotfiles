@@ -4,6 +4,14 @@
 # you need the code CLI tools YOU FOOL.
 ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
 
+if type -p cargo &>/dev/null; then
+	echo "Rust already installed"
+else
+	echo "installing Rust"
+
+	curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+fi
+
 # install Node Version Manager and node
 if type -p nvm &>/dev/null; then
 	echo "nvm already installed"
@@ -23,15 +31,18 @@ fi
 
 if type -p evcxr &>/dev/null; then
 	echo "evcxr already installed"
-elif
-	! type -p cargo &
-	/dev/null
-then
-	echo "unable to install evcxr - unable to find Rust's 'cargo' binary"
 else
 	echo "installing evcxr"
 
 	cargo install evcxr
+fi
+
+if type -p cbfmt &>/dev/null; then
+	echo "cbfmt already installed"
+else
+	echo "installing cbfmt"
+
+	cargo install cbfmt
 fi
 
 # make a code directory for dependencies
