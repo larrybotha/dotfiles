@@ -65,7 +65,6 @@ function symlink_to_home() {
 		".bash_profile"
 		".bashrc"
 		".cbfmt.toml"
-		".cbfmt.toml"
 		".config/alacritty"
 		".config/asynctasks"
 		".config/atuin"
