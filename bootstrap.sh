@@ -18,19 +18,20 @@ function has_internet_access() {
 	ping -c 1 -q google.com >&/dev/null
 }
 
-function sync_files() {
+function copy_files() {
 	heading "syncing dotfiles"
 
-	rsync --exclude ".git/" \
-		--exclude ".DS_Store" \
-		--exclude "bootstrap.sh" \
-		--exclude "README.md" \
-		--exclude "Makefile" \
-		--exclude ".vimrc" \
-		--exclude ".vim" \
-		--exclude ".config" \
-		--exclude ".tmux.conf" \
-		--exclude "LICENSE-MIT.txt" -av --no-perms . ~
+	files=(
+		".sh_completion" # allows for completion to be written after copying
+		".zshrc"         # doesn't seem to be `source`able when symlinked
+	)
+
+	source_dir="."
+	destination_dir="$HOME"
+
+	for file in "${files[@]}"; do
+		rsync -avz "${source_dir}/${file}" "${destination_dir}/"
+	done
 }
 
 function prepare_completions() {
@@ -56,13 +57,32 @@ function source_shell() {
 	log 'done'
 }
 
-function symlink_configs() {
+function symlink_to_home() {
 	heading "symlinking configs"
 
 	local configs=(
-		".vimrc"
-		".vim"
-		".tmux.conf"
+		".aliases"
+		".bash_profile"
+		".bashrc"
+		".cbfmt.toml"
+		".exports"
+		".functions"
+		".gitattributes"
+		".gitconfig"
+		".gitignore"
+		".hushlogin"
+		".ignore"
+		".inputrc"
+		".osx"
+		".path"
+		".screenrc"
+		".sh_prompt"
+		".shrc"
+		".zsh_completion"
+		".wgetrc"
+		"selene.toml"
+
+		".cbfmt.toml"
 		".config/alacritty"
 		".config/asynctasks"
 		".config/atuin"
@@ -76,6 +96,11 @@ function symlink_configs() {
 		".config/tmuxinator"
 		".config/vivid"
 		".config/yabai"
+		".tmux"
+		".tmux.conf"
+		".vim"
+		".vimrc"
+		"init"
 	)
 
 	local script_dir
@@ -164,9 +189,9 @@ function update_nnn_plugins() {
 }
 
 function do_it() {
-	sync_files
+	copy_files
+	symlink_to_home
 	prepare_completions
-	symlink_configs
 	symlink_files
 	has_internet_access && update_nnn_plugins
 	source_shell
