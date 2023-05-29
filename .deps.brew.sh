@@ -101,7 +101,6 @@ brew install terraform
 brew install the_silver_searcher
 brew install tmuxinator
 brew install tre-command
-brew install vale
 brew install vim
 brew install vint
 brew install vivid
@@ -209,7 +208,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
 	)
 
 	for cask in "${casks[@]}"; do
-		install_cask "${cask}"
+		install_cask "$cask"
 	done
 fi
 

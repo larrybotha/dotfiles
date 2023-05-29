@@ -24,7 +24,6 @@ null_ls.setup({
 		null_ls.builtins.diagnostics.terraform_validate,
 		null_ls.builtins.diagnostics.tfsec,
 		null_ls.builtins.diagnostics.tsc,
-		null_ls.builtins.diagnostics.vale,
 		null_ls.builtins.diagnostics.vint,
 		null_ls.builtins.diagnostics.vulture,
 		null_ls.builtins.diagnostics.yamllint,
