@@ -1,4 +1,6 @@
 # Adds support for 'vim' global in .lua files
 # See https://github.com/jose-elias-alvarez/null-ls.nvim for other
 # potentially useful configs
-std="vim"
+#
+# Requires the associated ./vim.toml to be present
+std = "vim"
