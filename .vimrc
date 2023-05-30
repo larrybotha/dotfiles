@@ -30,6 +30,8 @@
 
   Plug 'wakatime/vim-wakatime'
 
+  "Plug 'tanvirtin/monokai.nvim'
+  Plug 'kvrohit/mellow.nvim'
   Plug 'skywind3000/asynctasks.vim'
   Plug 'skywind3000/asyncrun.vim'
   Plug 'voldikss/vim-floaterm'
@@ -152,7 +154,7 @@
 
 " Vim UI {
   source ~/.vim/local/highlight.vim
-  colorscheme monokai                            " load a colourscheme
+  colorscheme mellow                             " load a colourscheme
   set termguicolors                              " use gui color attributes instead of cterm attributes
   set splitright                                 " open split panes to the right of the current pane
   set splitbelow                                 " open split panes underneath the current pane
