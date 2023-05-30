@@ -1,0 +1,27 @@
+require("mason").setup()
+require("mason-lspconfig").setup({
+	ensure_installed = {
+		"ansiblels",
+		"bashls",
+		"cssls",
+		"docker_compose_language_service",
+		"dockerls",
+		"emmet_ls",
+		"eslint",
+		"gopls",
+		"html",
+		"jsonls",
+		"lua_ls",
+		"marksman",
+		"rome",
+		"ruff_lsp",
+		"pyright",
+		"rust_analyzer",
+		"svelte",
+		"taplo",
+		"terraformls",
+		"tsserver",
+		"vimls",
+		"yamlls",
+	},
+})

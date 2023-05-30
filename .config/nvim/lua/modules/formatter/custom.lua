@@ -18,15 +18,10 @@ local M = {
 		}
 	end,
 
-	black = function()
+	blackd_client = function()
 		return {
-			exe = "black",
-			args = {
-				"--stdin-filename",
-				get_file(),
-				"--quiet",
-				"-",
-			},
+			exe = "blackd-client",
+			args = {},
 			stdin = true,
 		}
 	end,

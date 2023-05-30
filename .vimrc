@@ -75,6 +75,8 @@
   Plug 'jose-elias-alvarez/null-ls.nvim', Cond(has('nvim'))
   Plug 'mhartington/formatter.nvim', Cond(has('nvim'))
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
+  Plug 'williamboman/mason.nvim', Cond(has('nvim'))
+  Plug 'williamboman/mason-lspconfig.nvim', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
   Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))

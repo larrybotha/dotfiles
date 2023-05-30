@@ -32,7 +32,7 @@ formatter.setup({
 		python = {
 			custom_formatters.isort,
 			custom_formatters.autoimport,
-			custom_formatters.black,
+			custom_formatters.blackd_client,
 		},
 		rust = { filetypes.rust.rustfmt },
 		sh = {

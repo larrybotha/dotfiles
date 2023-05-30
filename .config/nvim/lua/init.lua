@@ -3,6 +3,7 @@ require("./modules/cmp")
 require("./modules/formatter")
 require("./modules/gitsigns")
 require("./modules/indent-blankline")
+require("./modules/mason") -- must be before lsp
 require("./modules/lsp")
 require("./modules/lspfuzzy")
 require("./modules/neogen")

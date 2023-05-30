@@ -19,8 +19,8 @@ brew install findutils
 # Install Bash 4
 brew install bash
 
-# Install wget with IRI support
-brew install wget --enable-iri
+# Install wget
+brew install wget
 
 # Install RingoJS and Narwhal
 # Note that the order in which these are installed is important; see http://git.io/brew-narwhal-ringo.
