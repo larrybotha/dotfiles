@@ -40,6 +40,18 @@ local M = {
 		}
 	end,
 
+	-- https://github.com/thlorenz/doctoc
+	-- Will only generate TOC in files containing:
+	-- <!-- START doctoc -->
+	-- <!-- END doctoc -->
+	doctoc = function()
+		return {
+			exe = "doctoc",
+			args = { "--update-only" },
+			stdin = false,
+		}
+	end,
+
 	fixjson = function()
 		return {
 			exe = "fixjson",
@@ -47,7 +59,7 @@ local M = {
 				get_file(),
 				"-",
 			},
-			to_stdin = true,
+			stdin = true,
 		}
 	end,
 
@@ -55,7 +67,7 @@ local M = {
 		return {
 			exe = "gofmt",
 			args = { get_file() },
-			to_stdin = true,
+			stdin = true,
 		}
 	end,
 
@@ -63,7 +75,7 @@ local M = {
 		return {
 			exe = "goimports",
 			args = { "-srcdir", util.get_cwd() },
-			to_stdin = true,
+			stdin = true,
 		}
 	end,
 
