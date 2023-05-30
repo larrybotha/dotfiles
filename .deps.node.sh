@@ -27,7 +27,7 @@ ensure_has_node
 
 update_existing=false
 
-if [ "$1" == --update-existing -o "$1" == '-u' ]; then
+if [ "$1" == --update-existing ] || [ "$1" == '-u' ]; then
 	update_existing=true
 fi
 
@@ -48,7 +48,7 @@ function install_module() {
 	fi
 
 	echo '-----------------------------------------------'
-	echo -e "  ${@}: $message..."
+	echo -e "  ${*}: $message..."
 	echo '-----------------------------------------------'
 
 	npm install -g "${@}"
@@ -59,7 +59,8 @@ function install_module() {
 function conditional_install() {
 	local module="$1"
 	local update_existing="$2"
-	local installed=$(is_installed "$module")
+	local installed
+	installed=$(is_installed "$module")
 
 	if test "$installed" == 'true' && test "$update_existing" != 'true'; then
 		echo "$module already installed - skipping"
