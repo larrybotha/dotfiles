@@ -7,7 +7,6 @@
 
 " Environment {
   " Basics {
-    set nocompatible " must come first
     set background=dark " assume a dark background
   "}
 "}
