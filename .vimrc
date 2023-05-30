@@ -98,7 +98,7 @@
     Plug 'nvim-lua/popup.nvim'
     Plug 'nvim-lua/plenary.nvim'"
     Plug 'nvim-telescope/telescope.nvim'
-    Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'make' }
+    Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build' }
     Plug 'kyazdani42/nvim-web-devicons'
     Plug 'GustavoKatel/telescope-asynctasks.nvim'
     Plug 'lukas-reineke/indent-blankline.nvim'
@@ -267,7 +267,7 @@
 
 " Auto Commands {
 
-  if has("autocmd")
+  if has('autocmd')
     " Also load indent files, to automatically do language-dependent indenting.
 
     " Put these in an autocmd group, so that we can delete them easily.
