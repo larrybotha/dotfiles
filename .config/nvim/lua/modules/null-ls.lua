@@ -1,6 +1,6 @@
 local null_ls = require("null-ls")
 
-null_ls.setup({
+local options = {
 	sources = {
 		null_ls.builtins.diagnostics.ansiblelint,
 		null_ls.builtins.diagnostics.checkmake,
@@ -29,9 +29,11 @@ null_ls.setup({
 		null_ls.builtins.diagnostics.revive,
 
 		-- python
+		null_ls.builtins.diagnostics.vulture,
+		null_ls.builtins.diagnostics.ruff,
 		null_ls.builtins.diagnostics.semgrep.with({ extra_args = { "--config", "auto" } }),
-		-- See https://github.com/jose-elias-alvarez/null-ls.nvim/issues/831#issuecomment-1488648192
-		-- for where this config came from
+		--See https://github.com/jose-elias-alvarez/null-ls.nvim/issues/831#issuecomment-1488648192
+		--for where this config came from
 		null_ls.builtins.diagnostics.mypy.with({
 			command = "dmypy",
 			args = function(params)
@@ -62,7 +64,7 @@ null_ls.setup({
 				return should_run
 			end,
 		}),
-		null_ls.builtins.diagnostics.ruff,
-		null_ls.builtins.diagnostics.vulture,
 	},
-})
+}
+
+null_ls.setup(options)
