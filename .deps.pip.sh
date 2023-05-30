@@ -11,11 +11,6 @@ function pip_install() {
 # http://docs.python-guide.org/en/latest/starting/install/osx/
 pip_install virtualenv
 
-# linting
-# - used by ALE
-pip_install yamllint
-pip_install pylint
-
 # add python support for neovim
 python2 -m pip install --user --upgrade pynvim
 python3 -m pip install --user --upgrade pynvim
@@ -23,15 +18,16 @@ python3 -m pip install --user --upgrade pynvim
 # environments
 pip_install pipenv
 
-# auto formatting
-pip_install black
-
-# autoformatting / autoimporting / linting
-pip_install autoimport
-pip_install codespell
-pip_install djlint
-pip_install isort
-pip_install ruff
+# diagnostics, linting, lsp, formatters
+pip_install autoimport  # formatter
+pip_install black       # formatter
+pip_install codespell   # diagnostics
+pip_install djlint      # formatter / diagnostics
+pip_install isort       # formatter
+pip_install pylint      # diagnostics
+pip_install ruff        # diagnostics
+pip_install ruff-lsp    # LSP
+pip_install yamllint    # diagnostics
 
 # better REPL
 pip_install ptpython

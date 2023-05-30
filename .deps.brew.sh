@@ -1,5 +1,13 @@
 #!/usr/bin/env bash
 
+function install_cask() {
+	if brew info "${@}" | grep "Not installed" >/dev/null; then
+		brew install "${@}"
+	else
+		echo "${*} is already installed."
+	fi
+}
+
 # Make sure we’re using the latest Homebrew
 brew update
 
@@ -74,14 +82,11 @@ brew install jq
 brew install lazygit
 brew install lulu
 brew install lynx
-brew install markdown-toc
-brew install markdownlint-cli2
 brew install mosh
 brew install neovim
 brew install nnn
 brew install nvm
 brew install pigz
-brew install fsouza/prettierd/prettierd
 brew install pipenv
 brew install postgresql
 brew install pyenv
@@ -91,20 +96,14 @@ brew install qt
 brew install redis
 brew install rename
 brew install ripgrep
-brew install rust-analyzer
 brew install sbt
-brew install shellcheck
-brew install shfmt
-brew install sqlfluff
 brew install tealdeer
 brew install terraform
 brew install the_silver_searcher
 brew install tmuxinator
 brew install tre-command
 brew install vim
-brew install vint
 brew install vivid
-brew install vulture
 brew install watch
 brew install watchman
 brew install webkit2png
@@ -118,8 +117,6 @@ brew install zoxide
 brew tap homebrew/versions
 brew install lua
 brew install lua-language-server
-brew install stylua
-brew install selene
 
 # patched fonts
 brew tap homebrew/cask-fonts
@@ -129,10 +126,20 @@ brew install --cask font-roboto-mono-nerd-font
 brew tap hashicorp/tap
 brew install hashicorp/tap/packer
 
-# linting and lsp language server deps
-brew install ninja
-brew install hashicorp/tap/terraform-ls
-brew install tflint
+# diagnostics, linting, lsp, formatters
+brew install hashicorp/tap/terraf        # diagnostics
+brew install tflint                      # diagnostics
+brew install fsouza/prettierd/prettierd  # formatter
+brew install markdown-toc                # formatter
+brew install markdownlint-cli2           # diagnostics
+brew install rust-analyzer               # diagnostics
+brew install selene                      # diagnostics
+brew install shellcheck                  # diagnostics
+brew install shfmt                       # formatter
+brew install sqlfluff                    # formatter
+brew install stylua                      # formatter
+brew install vint                        # diagnostics
+brew install vulture                     # diagnostics
 
 # tmux and dependencies
 brew install tmux
@@ -142,14 +149,6 @@ brew install reattach-to-user-namespace
 brew install koekeishiya/formulae/yabai
 brew install koekeishiya/formulae/skhd
 brew install hammerspoon
-
-function install_cask() {
-	if brew info "${@}" | grep "Not installed" >/dev/null; then
-		brew install "${@}"
-	else
-		echo "${*} is already installed."
-	fi
-}
 
 if [ "$(uname -s)" == "Darwin" ]; then
 	casks=(

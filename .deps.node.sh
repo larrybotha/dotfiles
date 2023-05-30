@@ -43,7 +43,7 @@ function install_module() {
 	installed=$(is_installed "${@}")
 	message="updating"
 
-	if test $installed != true; then
+	if test "$installed" != true; then
 		message="installing"
 	fi
 
@@ -59,34 +59,36 @@ function install_module() {
 function conditional_install() {
 	local module="$1"
 	local update_existing="$2"
-	local installed=$(is_installed $module)
+	local installed=$(is_installed "$module")
 
-	if test $installed == 'true' && test $update_existing != 'true'; then
+	if test "$installed" == 'true' && test "$update_existing" != 'true'; then
 		echo "$module already installed - skipping"
 	else
-		install_module $module
+		install_module "$module"
 	fi
 }
 
 common_modules=(
-	alex
-	eslint_d
 	fast-cli
-	fixjson
 	imageoptim-cli
-	jsonlint
 	localtunnel
 	ndb
 	neovim
 	ngrok
 	nodemon
-	prettier
-	prettier-plugin-svelte
-	rome
 	server
-	stylelint
 	typescript
 	yo
+
+	# diagnostics, linting, lsp, formatters
+	alex                    # diagnostics
+	eslint_d                # formatter / diagnostics
+	fixjson                 # formatter
+	jsonlint                # diagnostics
+	prettier                # formatter
+	prettier-plugin-svelte  # formatter
+	rome                    # diagnostics / formatter
+	stylelint               # diagnostics
 
 	# language servers
 	ansible-language-server
@@ -112,11 +114,11 @@ mac_modules=(
 )
 
 for module in "${common_modules[@]}"; do
-	conditional_install $module $update_existing
+	conditional_install "$module" "$update_existing"
 done
 
-if [ $(uname -s) = "Darwin" ]; then
+if [ "$(uname -s)" = "Darwin" ]; then
 	for module in "${mac_modules[@]}"; do
-		conditional_install $module $update_existing
+		conditional_install "$module" "$update_existing"
 	done
 fi

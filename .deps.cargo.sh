@@ -12,10 +12,12 @@ function ensure_has_rust() {
 
 ensure_has_rust
 
-cargo install cbfmt
-cargo install deno_lint
-cargo install dotenv-linter
-cargo install evcxr
-cargo install selene
-cargo install shellharden
-cargo install taplo-cli
+cargo install evcxr # repl
+
+# diagnostics, linting, lsp, formatters
+cargo install blackd-client  # formatter
+cargo install cbfmt          # formatter
+cargo install dotenv-linter  # diagnostics
+cargo install selene         # diagnostics
+cargo install shellharden    # formatter
+cargo install taplo-cli      # formatter + diagnostics
