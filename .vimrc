@@ -29,8 +29,10 @@
 
   Plug 'wakatime/vim-wakatime'
 
+  " Themes
   "Plug 'tanvirtin/monokai.nvim'
   Plug 'kvrohit/mellow.nvim'
+
   Plug 'skywind3000/asynctasks.vim'
   Plug 'skywind3000/asyncrun.vim'
   Plug 'voldikss/vim-floaterm'
@@ -96,7 +98,7 @@
   " telescope and deps
   if has('nvim')
     Plug 'nvim-lua/popup.nvim'
-    Plug 'nvim-lua/plenary.nvim'"
+    Plug 'nvim-lua/plenary.nvim'
     Plug 'nvim-telescope/telescope.nvim'
     Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build' }
     Plug 'kyazdani42/nvim-web-devicons'
@@ -216,10 +218,6 @@
   nmap k gk
   nmap j gj
 
-  " map common shift keys
-  cmap Qall qall
-  cmap Tabe tabe
-
   " yank from cursor to EOL the same as C and D do
   nnoremap Y y$
 
@@ -310,31 +308,28 @@
 " }
 
 " Plugin Configs {
+  source ~/.vim/local/neovim.vim
 
-source ~/.vim/local/neovim.vim
-
-source ~/.vim/local/plugins/vim-plug.vim
-source ~/.vim/local/plugins/airline.vim
-source ~/.vim/local/plugins/asynctasks.vim
-source ~/.vim/local/plugins/cmp.vim
-source ~/.vim/local/plugins/endwise.vim
-source ~/.vim/local/plugins/floaterm.vim
-source ~/.vim/local/plugins/nerdcommenter.vim
-source ~/.vim/local/plugins/nnn.vim
-source ~/.vim/local/plugins/telescope.vim
-source ~/.vim/local/plugins/vim-sort-imports.vim
-source ~/.vim/local/plugins/codeium.vim
-source ~/.vim/local/plugins/vim-svelte.vim
-source ~/.vim/local/plugins/vimux.vim
-source ~/.vim/local/plugins/vim-test.vim
-source ~/.vim/local/plugins/delimit-mate.vim
-source ~/.vim/local/plugins/vim-tmux-navigator.vim
-source ~/.vim/local/plugins/vim-go.vim
-source ~/.vim/local/plugins/vim-fugitive.vim
-source ~/.vim/local/plugins/fzf.vim
-source ~/.vim/local/plugins/tabular.vim
-source ~/.vim/local/plugins/emmet-vim.vim
-source ~/.vim/local/plugins/editorconfig-vim.vim
-"source ~/.vim/local/plugins/vimspector/index.vim
-
+  source ~/.vim/local/plugins/vim-plug.vim
+  source ~/.vim/local/plugins/airline.vim
+  source ~/.vim/local/plugins/asynctasks.vim
+  source ~/.vim/local/plugins/cmp.vim
+  source ~/.vim/local/plugins/codeium.vim
+  source ~/.vim/local/plugins/delimit-mate.vim
+  source ~/.vim/local/plugins/editorconfig-vim.vim
+  source ~/.vim/local/plugins/emmet-vim.vim
+  source ~/.vim/local/plugins/endwise.vim
+  source ~/.vim/local/plugins/floaterm.vim
+  source ~/.vim/local/plugins/fzf.vim
+  source ~/.vim/local/plugins/nerdcommenter.vim
+  source ~/.vim/local/plugins/nnn.vim
+  source ~/.vim/local/plugins/tabular.vim
+  source ~/.vim/local/plugins/telescope.vim
+  source ~/.vim/local/plugins/vim-fugitive.vim
+  source ~/.vim/local/plugins/vim-go.vim
+  source ~/.vim/local/plugins/vim-sort-imports.vim
+  source ~/.vim/local/plugins/vim-svelte.vim
+  source ~/.vim/local/plugins/vim-test.vim
+  source ~/.vim/local/plugins/vim-tmux-navigator.vim
+  source ~/.vim/local/plugins/vimux.vim
 " }
