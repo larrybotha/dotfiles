@@ -128,7 +128,6 @@ brew install hashicorp/tap/packer
 
 # diagnostics, linting, lsp, formatters
 brew install hashicorp/tap/terraf        # diagnostics
-brew install tflint                      # diagnostics
 brew install fsouza/prettierd/prettierd  # formatter
 brew install markdown-toc                # formatter
 brew install markdownlint-cli2           # diagnostics
