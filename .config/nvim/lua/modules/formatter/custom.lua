@@ -7,17 +7,6 @@ end
 -- For configs for various formatters, see:
 -- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/formatting
 local M = {
-	autoimport = function()
-		return {
-			exe = "autoimport",
-			args = {
-				get_file(),
-				"-",
-			},
-			stdin = true,
-		}
-	end,
-
 	blackd_client = function()
 		return {
 			exe = "blackd-client",
@@ -133,6 +122,25 @@ local M = {
 				stdin = true,
 			}
 		end
+	end,
+
+	ruff = function()
+		return {
+			exe = "ruff",
+			args = { "--fix", "-e", "-n", "--stdin-filename", get_file(), "-" },
+			stdin = true,
+		}
+	end,
+
+	pyflyby_auto_import = function()
+		return {
+			exe = "tidy-imports",
+			args = {
+				"-n", -- do not format imports
+				get_file(),
+			},
+			stdin = true,
+		}
 	end,
 
 	shfmt = function()
