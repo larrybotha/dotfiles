@@ -92,21 +92,6 @@ local M = {
 		}
 	end,
 
-	-- "To generate a TOC, add:
-	-- `<!-- toc -->`
-	-- before headers in your markdown file."
-	markdown_toc = function()
-		return {
-			exe = "markdown-toc",
-			args = {
-				"--bullets=-",
-				"-i",
-				get_file(),
-			},
-			stdin = true,
-		}
-	end,
-
 	packer = function()
 		-- only process .pkr.hcl files
 		if not util.get_current_buffer_file_name():match("%.pkr%.hcl$") == "special.lua" then
@@ -139,7 +124,14 @@ local M = {
 	ruff = function()
 		return {
 			exe = "ruff",
-			args = { "--fix", "-e", "-n", "--stdin-filename", get_file(), "-" },
+			args = {
+				"--fix",
+				"--exit-zero",
+				"--no-cache",
+				"--stdin-filename",
+				get_file(),
+				"-",
+			},
 			stdin = true,
 		}
 	end,

@@ -33,7 +33,6 @@ local options = {
 		"fixjson",
 		"goimports",
 		"isort",
-		"markdown-toc",
 		"prettierd",
 		"rustfmt",
 		"shellharden",

@@ -24,8 +24,6 @@ formatter.setup({
 		markdown = {
 			custom_formatters.cbfmt,
 			custom_formatters.doctoc,
-			-- TODO: determine how to get markdown_toc to update the file without confirmation
-			--custom_formatters.markdown_toc,
 			custom_formatters.prettierd(),
 		},
 		org = { custom_formatters.cbfmt },
