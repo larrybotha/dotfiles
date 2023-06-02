@@ -145,7 +145,13 @@
   " https://vi.stackexchange.com/questions/14315/how-can-i-tell-if-im-in-the-command-window
   autocmd FocusGained,BufEnter,CursorHold,CursorHoldI *
     \ if mode() == 'n' && getcmdwintype() == '' | checktime | endif
+  " Notification after file change
+  " https://vi.stackexchange.com/questions/13091/autocmd-event-for-autoread
+  autocmd FileChangedShellPost *
+    \ echohl WarningMsg | echo "File changed on disk. Buffer reloaded." | echohl None
+
   set autoread
+
 
   if has('mouse_sgr')
     set ttymouse=sgr
