@@ -27,87 +27,87 @@
 
   call plug#begin('~/.vim/plugged')
 
-  Plug 'wakatime/vim-wakatime'
+  "Plug 'wakatime/vim-wakatime'
 
   " Themes
   "Plug 'tanvirtin/monokai.nvim'
-  Plug 'kvrohit/mellow.nvim'
+  "Plug 'kvrohit/mellow.nvim'
 
-  Plug 'skywind3000/asynctasks.vim'
-  Plug 'skywind3000/asyncrun.vim'
-  Plug 'voldikss/vim-floaterm'
+  "Plug 'skywind3000/asynctasks.vim'
+  "Plug 'skywind3000/asyncrun.vim'
+  "Plug 'voldikss/vim-floaterm'
 
-  Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
-  Plug 'junegunn/fzf.vim'
+  "Plug 'junegunn/fzf', { 'dir': '~/.fzf', 'do': './install --all' }
+  "Plug 'junegunn/fzf.vim'
 
-  Plug 'tpope/vim-sensible'
-  Plug 'tpope/vim-fugitive'
-  Plug 'tpope/vim-surround'
-  Plug 'tpope/vim-endwise'
+  "Plug 'tpope/vim-sensible'
+  "Plug 'tpope/vim-fugitive'
+  "Plug 'tpope/vim-surround'
+  "Plug 'tpope/vim-endwise'
 
-  Plug 'Raimondi/delimitMate'
-  Plug 'christoomey/vim-tmux-navigator'
-  Plug 'editorconfig/editorconfig-vim'
-  Plug 'edkolev/tmuxline.vim'
-  Plug 'mcchrish/nnn.vim'
-  Plug 'godlygeek/tabular'
-  Plug 'preservim/nerdcommenter'
-  Plug 'rhysd/git-messenger.vim'
-  Plug 'mg979/vim-visual-multi'
-  Plug 'tmux-plugins/vim-tmux-focus-events'
-  Plug 'vim-airline/vim-airline'
-  Plug 'vim-airline/vim-airline-themes'
-  Plug 'janko-m/vim-test'
-  Plug 'danymat/neogen'
-  Plug 'ruanyl/vim-sort-imports'
-  Plug 'dkarter/bullets.vim'
-  Plug 'preservim/vimux'
-  "Plug 'puremourning/vimspector'
+  "Plug 'Raimondi/delimitMate'
+  "Plug 'christoomey/vim-tmux-navigator'
+  "Plug 'editorconfig/editorconfig-vim'
+  "Plug 'edkolev/tmuxline.vim'
+  "Plug 'mcchrish/nnn.vim'
+  "Plug 'godlygeek/tabular'
+  "Plug 'preservim/nerdcommenter'
+  "Plug 'rhysd/git-messenger.vim'
+  "Plug 'mg979/vim-visual-multi'
+  "Plug 'tmux-plugins/vim-tmux-focus-events'
+  "Plug 'vim-airline/vim-airline'
+  "Plug 'vim-airline/vim-airline-themes'
+  "Plug 'janko-m/vim-test'
+  "Plug 'danymat/neogen'
+  "Plug 'ruanyl/vim-sort-imports'
+  "Plug 'dkarter/bullets.vim'
+  "Plug 'preservim/vimux'
+  ""Plug 'puremourning/vimspector'
 
   " Language support
-  Plug 'sheerun/vim-polyglot'
-  Plug 'simrat39/rust-tools.nvim'
-  Plug 'evanleck/vim-svelte', {'branch': 'main'}
-  Plug 'mattn/emmet-vim'
-  Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
+  "Plug 'sheerun/vim-polyglot'
+  "Plug 'simrat39/rust-tools.nvim'
+  "Plug 'evanleck/vim-svelte', {'branch': 'main'}
+  "Plug 'mattn/emmet-vim'
+  "Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
 
   " only load if we are in Neovim
-  Plug 'folke/neodev.nvim', Cond(has('nvim'))
-  Plug 'folke/trouble.nvim', Cond(has('nvim'))
-  Plug 'jose-elias-alvarez/null-ls.nvim', Cond(has('nvim'))
-  Plug 'mhartington/formatter.nvim', Cond(has('nvim'))
-  Plug 'jodosha/vim-godebug', Cond(has('nvim'))
-  Plug 'williamboman/mason.nvim', Cond(has('nvim'))
-  Plug 'williamboman/mason-lspconfig.nvim', Cond(has('nvim'))
-  Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
-  Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
-  Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
+  "Plug 'folke/neodev.nvim', Cond(has('nvim'))
+  "Plug 'folke/trouble.nvim', Cond(has('nvim'))
+  "Plug 'jose-elias-alvarez/null-ls.nvim', Cond(has('nvim'))
+  "Plug 'mhartington/formatter.nvim', Cond(has('nvim'))
+  "Plug 'jodosha/vim-godebug', Cond(has('nvim'))
+  "Plug 'williamboman/mason.nvim', Cond(has('nvim'))
+  "Plug 'williamboman/mason-lspconfig.nvim', Cond(has('nvim'))
+  "Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
+  "Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
+  "Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
 
   " debugging
-  Plug 'mfussenegger/nvim-dap', Cond(has('nvim'))
-  Plug 'rcarriga/nvim-dap-ui', Cond(has('nvim'))
+  "Plug 'mfussenegger/nvim-dap', Cond(has('nvim'))
+  "Plug 'rcarriga/nvim-dap-ui', Cond(has('nvim'))
 
   " completion
-  Plug 'hrsh7th/cmp-nvim-lsp'
-  Plug 'hrsh7th/cmp-buffer'
-  Plug 'hrsh7th/cmp-path'
-  Plug 'hrsh7th/cmp-cmdline'
-  Plug 'hrsh7th/nvim-cmp'
-  Plug 'hrsh7th/vim-vsnip'
+  "Plug 'hrsh7th/cmp-nvim-lsp'
+  "Plug 'hrsh7th/cmp-buffer'
+  "Plug 'hrsh7th/cmp-path'
+  "Plug 'hrsh7th/cmp-cmdline'
+  "Plug 'hrsh7th/nvim-cmp'
+  "Plug 'hrsh7th/vim-vsnip'
 
   " telescope and deps
   if has('nvim')
-    Plug 'nvim-lua/popup.nvim'
-    Plug 'nvim-lua/plenary.nvim'
-    Plug 'nvim-telescope/telescope.nvim'
-    Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build' }
-    Plug 'kyazdani42/nvim-web-devicons'
-    Plug 'GustavoKatel/telescope-asynctasks.nvim'
-    Plug 'lukas-reineke/indent-blankline.nvim'
-    Plug 'lewis6991/gitsigns.nvim'
+    "Plug 'nvim-lua/popup.nvim'
+    "Plug 'nvim-lua/plenary.nvim'
+    "Plug 'nvim-telescope/telescope.nvim'
+    "Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build' }
+    "Plug 'kyazdani42/nvim-web-devicons'
+    "Plug 'GustavoKatel/telescope-asynctasks.nvim'
+    "Plug 'lukas-reineke/indent-blankline.nvim'
+    "Plug 'lewis6991/gitsigns.nvim'
 
     " AI tools
-    Plug 'Exafunction/codeium.vim'
+    "Plug 'Exafunction/codeium.vim'
   end
 
   call plug#end()
@@ -154,7 +154,7 @@
 
 " Vim UI {
   source ~/.vim/local/highlight.vim
-  colorscheme mellow                             " load a colourscheme
+  "colorscheme mellow                             " load a colourscheme
   set termguicolors                              " use gui color attributes instead of cterm attributes
   set splitright                                 " open split panes to the right of the current pane
   set splitbelow                                 " open split panes underneath the current pane
@@ -308,28 +308,28 @@
 " }
 
 " Plugin Configs {
-  source ~/.vim/local/neovim.vim
+ "source ~/.vim/local/neovim.vim
 
-  source ~/.vim/local/plugins/vim-plug.vim
-  source ~/.vim/local/plugins/airline.vim
-  source ~/.vim/local/plugins/asynctasks.vim
-  source ~/.vim/local/plugins/cmp.vim
-  source ~/.vim/local/plugins/codeium.vim
-  source ~/.vim/local/plugins/delimit-mate.vim
-  source ~/.vim/local/plugins/editorconfig-vim.vim
-  source ~/.vim/local/plugins/emmet-vim.vim
-  source ~/.vim/local/plugins/endwise.vim
-  source ~/.vim/local/plugins/floaterm.vim
-  source ~/.vim/local/plugins/fzf.vim
-  source ~/.vim/local/plugins/nerdcommenter.vim
-  source ~/.vim/local/plugins/nnn.vim
-  source ~/.vim/local/plugins/tabular.vim
-  source ~/.vim/local/plugins/telescope.vim
-  source ~/.vim/local/plugins/vim-fugitive.vim
-  source ~/.vim/local/plugins/vim-go.vim
-  source ~/.vim/local/plugins/vim-sort-imports.vim
-  source ~/.vim/local/plugins/vim-svelte.vim
-  source ~/.vim/local/plugins/vim-test.vim
-  source ~/.vim/local/plugins/vim-tmux-navigator.vim
-  source ~/.vim/local/plugins/vimux.vim
+ "source ~/.vim/local/plugins/vim-plug.vim
+ "source ~/.vim/local/plugins/airline.vim
+ "source ~/.vim/local/plugins/asynctasks.vim
+ "source ~/.vim/local/plugins/cmp.vim
+ "source ~/.vim/local/plugins/codeium.vim
+ "source ~/.vim/local/plugins/delimit-mate.vim
+ "source ~/.vim/local/plugins/editorconfig-vim.vim
+ "source ~/.vim/local/plugins/emmet-vim.vim
+ "source ~/.vim/local/plugins/endwise.vim
+ "source ~/.vim/local/plugins/floaterm.vim
+ "source ~/.vim/local/plugins/fzf.vim
+ "source ~/.vim/local/plugins/nerdcommenter.vim
+ "source ~/.vim/local/plugins/nnn.vim
+ "source ~/.vim/local/plugins/tabular.vim
+ "source ~/.vim/local/plugins/telescope.vim
+ "source ~/.vim/local/plugins/vim-fugitive.vim
+ "source ~/.vim/local/plugins/vim-go.vim
+ "source ~/.vim/local/plugins/vim-sort-imports.vim
+ "source ~/.vim/local/plugins/vim-svelte.vim
+ "source ~/.vim/local/plugins/vim-test.vim
+ "source ~/.vim/local/plugins/vim-tmux-navigator.vim
+ "source ~/.vim/local/plugins/vimux.vim
 " }
