@@ -41,6 +41,7 @@ local options = {
 		"taplo",
 	},
 	max_concurrent_installers = 10,
+	PATH = "append", -- prefer local packages if they exist
 }
 
 mason.setup(options)

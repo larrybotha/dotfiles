@@ -1,4 +1,4 @@
-local nvim_lsp = require("./modules/lsp/init")
+local nvim_lsp = require("plugins/lsp/init")
 
 local options = {
 	tools = {

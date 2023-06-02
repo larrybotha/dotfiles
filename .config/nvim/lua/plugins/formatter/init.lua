@@ -2,7 +2,7 @@ local formatter = require("formatter")
 local filetypes = require("formatter.filetypes")
 local formatters = require("formatter.defaults")
 
-local custom_formatters = require("modules/formatter/custom")
+local custom_formatters = require("plugins/formatter/custom")
 
 formatter.setup({
 	logging = true,

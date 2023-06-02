@@ -1,16 +1,1 @@
-require("./modules/neodev") -- must be run before lsp
-require("./modules/cmp")
-require("./modules/formatter")
-require("./modules/gitsigns")
-require("./modules/indent-blankline")
-require("./modules/mason") -- must be before lsp
-require("./modules/lsp")
-require("./modules/lspfuzzy")
-require("./modules/neogen")
-require("./modules/null-ls")
-require("./modules/nvim-dap")
-require("./modules/nvim-web-devicons")
-require("./modules/rust-tools")
-require("./modules/telescope")
-require("./modules/treesitter")
-require("./modules/trouble")
+require("plugins")

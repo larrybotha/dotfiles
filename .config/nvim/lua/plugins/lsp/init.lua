@@ -3,7 +3,7 @@ local cmp_nvim_lsp = require("cmp_nvim_lsp")
 
 local M = {}
 
-local custom_lua_lsp = require("modules/lsp/lua-language-server")
+local custom_lua_lsp = require("plugins/lsp/lua-language-server")
 
 local on_attach = function(client, bufnr)
 	local function buf_set_keymap(...)
