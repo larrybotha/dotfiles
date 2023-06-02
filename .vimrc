@@ -54,7 +54,6 @@
   Plug 'preservim/nerdcommenter'
   Plug 'rhysd/git-messenger.vim'
   Plug 'mg979/vim-visual-multi'
-  Plug 'tmux-plugins/vim-tmux-focus-events'
   Plug 'vim-airline/vim-airline'
   Plug 'vim-airline/vim-airline-themes'
   Plug 'janko-m/vim-test'
@@ -62,7 +61,6 @@
   Plug 'ruanyl/vim-sort-imports'
   Plug 'dkarter/bullets.vim'
   Plug 'preservim/vimux'
-  "Plug 'puremourning/vimspector'
 
   " Language support
   Plug 'sheerun/vim-polyglot'
@@ -138,20 +136,18 @@
 
   set fillchars=diff:·
 
-  " check for external file changes, and suppress notices from appearing in command line
-  " requires tmux-focus-events plugin for tmux support
-  au FocusGained,BufEnter * :checktime " when buffer is changed
-  " when cursor stops moving
-  " https://vi.stackexchange.com/questions/14315/how-can-i-tell-if-im-in-the-command-window
-  autocmd FocusGained,BufEnter,CursorHold,CursorHoldI *
-    \ if mode() == 'n' && getcmdwintype() == '' | checktime | endif
-  " Notification after file change
-  " https://vi.stackexchange.com/questions/13091/autocmd-event-for-autoread
-  autocmd FileChangedShellPost *
-    \ echohl WarningMsg | echo "File changed on disk. Buffer reloaded." | echohl None
+  " run checktime to reload file if changed
+  augroup au_checktime
+    au!
+    autocmd FocusGained,BufEnter * silent! checktime
+
+    " when cursor stops moving
+    " https://vi.stackexchange.com/questions/14315/how-can-i-tell-if-im-in-the-command-window
+    autocmd CursorHold,CursorHoldI *
+      \ if mode() == 'n' && getcmdwintype() == '' | checktime | endif
+  augroup END
 
   set autoread
-
 
   if has('mouse_sgr')
     set ttymouse=sgr
