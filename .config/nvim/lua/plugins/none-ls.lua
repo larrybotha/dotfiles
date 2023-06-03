@@ -1,25 +1,18 @@
-local null_ls = require("null-ls")
+local null_ls = require("null-ls") -- uses null-ls for legacy support
 
 local options = {
 	sources = {
 		null_ls.builtins.diagnostics.ansiblelint,
 		null_ls.builtins.diagnostics.checkmake,
-		null_ls.builtins.diagnostics.deno_lint,
 		null_ls.builtins.diagnostics.djlint,
 		null_ls.builtins.diagnostics.dotenv_linter,
-		null_ls.builtins.diagnostics.eslint_d.with({ extra_filetypes = { "svelte" } }),
 		null_ls.builtins.diagnostics.hadolint,
-		null_ls.builtins.diagnostics.jsonlint,
 		null_ls.builtins.diagnostics.markdownlint_cli2,
-		null_ls.builtins.diagnostics.selene,
-		null_ls.builtins.diagnostics.shellcheck,
 		null_ls.builtins.diagnostics.sqlfluff,
 		null_ls.builtins.diagnostics.stylelint,
 		null_ls.builtins.diagnostics.terraform_validate,
 		null_ls.builtins.diagnostics.tfsec,
-		null_ls.builtins.diagnostics.tsc,
 		null_ls.builtins.diagnostics.vint,
-		null_ls.builtins.diagnostics.yamllint,
 
 		-- english
 		null_ls.builtins.diagnostics.alex,
@@ -29,8 +22,6 @@ local options = {
 		null_ls.builtins.diagnostics.revive,
 
 		-- python
-		null_ls.builtins.diagnostics.vulture,
-		null_ls.builtins.diagnostics.ruff,
 		null_ls.builtins.diagnostics.semgrep.with({ extra_args = { "--config", "auto" } }),
 		--See https://github.com/jose-elias-alvarez/null-ls.nvim/issues/831#issuecomment-1488648192
 		--for where this config came from

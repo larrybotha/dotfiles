@@ -1,18 +1,42 @@
-#!/usr/bin/env sh
+#!/usr/bin/env bash
 
-# See .config/vivid/themes/bubblegum.yml for hexadecimal values
-BLK="4a"
-CHR="b6"
-DIR="6e"
-EXE="b6"
-REG="00"
-HARDLINK="b6"
-SYMLINK="92"
-MISSING="f4"
-ORPHAN="d9"
-FIFO="f4"
-SOCK="f4"
-OTHER="74"
+# See https://github.com/jarun/nnn/wiki/Usage#configuration for colours
+# 00 - black
+# 01 - red
+# 02 - green
+# 03 - yellow
+# 04 - blue
+# 05 - magenta
+# 06 - cyan
+# 07 - white
+
+# nnn defaults
+#BLK=c1       # green / yellow
+#CHR=e2       # yellow
+#DIR=27       # blue
+#EXE=2e       # green
+#REG=00       # black
+#HARDLINK=60  # lilac
+#SYMLINK=33   # cyan
+#MISSING=f7   # grey
+#ORPHAN=c6    # pink
+#FIFO=d6      # orange
+#SOCK=ab      # violet
+#OTHER=c4     # red
+
+# Use terminal colours
+BLK=02
+CHR=03
+DIR=04
+EXE=02
+REG=00
+HARDLINK=05
+SYMLINK=06
+MISSING=f7
+ORPHAN=05
+FIFO=01
+SOCK=05
+OTHER=01
 
 ## exports
 export NNN_FCOLORS="$BLK$CHR$DIR$EXE$REG$HARDLINK$SYMLINK$MISSING$ORPHAN$FIFO$SOCK$OTHER"
@@ -26,6 +50,7 @@ export PAGER="less -R"
 ## hidden files on top
 export LC_COLLATE="C"
 
-for file in $(dirname "$0")/.{,quitcd}; do
+for file in "$(dirname "$0")"/.{,quitcd}; do
+  # shellcheck source=./.quitcd
   [ -r "$file" ] && source "$file"
 done

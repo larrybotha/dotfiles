@@ -14,8 +14,6 @@ else
   echo "zoxide not installed: $BASH_SOURCE"
 fi
 
-
-
 # Start tmux when zsh starts
 #
 # This starts tmux in a way that ensures that when tmux is exited, it won't kill
@@ -25,10 +23,14 @@ fi
 # after a tmux session is killed. If the terminal emulator is not kept alive after
 # detaching / killing a session, commands in options tmuxinator's on_project_exit
 # won't be executed
-if type tmux>/dev/null; then
+if type tmux >/dev/null; then
  [[ ! $TERM =~ screen ]] && [ -z ${TMUX+x} ] && tmux
  #        [1]                   [2]          [3]
  # 1 - ensure we're not running in a GNU Screen terminal multiplexer
  # 2 - ensure the $TMUX env var is empty - i.e. no current tmux session
  # 3 - start a tmux session
+fi
+
+if type starship >/dev/null; then
+  eval "$(starship init zsh)"
 fi

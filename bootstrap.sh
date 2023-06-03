@@ -23,13 +23,13 @@ function copy_files() {
 
 	files=(
 		".sh_completion" # allows for completion to be written after copying
-		".zshrc"         # doesn't seem to be `source`able when symlinked
 	)
 
 	source_dir="."
 	destination_dir="$HOME"
 
 	for file in "${files[@]}"; do
+		rm -f "${destination_dir}/${file}"
 		rsync -avz "${source_dir}/${file}" "${destination_dir}/"
 	done
 }
@@ -40,6 +40,22 @@ function prepare_completions() {
 	# append npm script completion
 	if type "npm" >/dev/null; then
 		npm completion >>"$HOME/.sh_completion"
+	fi
+
+	if type "starship" >/dev/null; then
+		if [ "$SHELL" == "/bin/zsh" ]; then
+			starship completions zsh >>"$HOME/.sh_completion"
+		else
+			starship completions bash >>"$HOME/.sh_completion"
+		fi
+	fi
+
+	if type "hoard" >/dev/null; then
+		if [ "$SHELL" == "/bin/zsh" ]; then
+			hoard shell-config --shell zsh >>"$HOME/.sh_completion"
+		else
+			hoard shell-config --shell bash >>"$HOME/.sh_completion"
+		fi
 	fi
 
 	log 'done'
@@ -65,20 +81,7 @@ function symlink_to_home() {
 		".bash_profile"
 		".bashrc"
 		".cbfmt.toml"
-		".config/alacritty"
-		".config/asynctasks"
-		".config/atuin"
-		".config/karabiner"
-		".config/kitty"
-		".config/nnn"
-		".config/nvim"
-		".config/ptpython"
-		".config/selene"
-		".config/skhd"
-		".config/tealdeer"
-		".config/tmuxinator"
-		".config/vivid"
-		".config/yabai"
+		".config"
 		".exports"
 		".functions"
 		".gitattributes"
@@ -94,10 +97,12 @@ function symlink_to_home() {
 		".shrc"
 		".tmux"
 		".tmux.conf"
+		".tmux-powerlinerc"
 		".vim"
 		".vimrc"
 		".wgetrc"
 		".zsh_completion"
+		".zshrc"
 		"init"
 	)
 

@@ -69,6 +69,7 @@ function conditional_install() {
 	fi
 }
 
+# TODO: use GNU parallel to speed up installation of these deps
 common_modules=(
 	fast-cli
 	imageoptim-cli
@@ -87,16 +88,16 @@ common_modules=(
 	eslint_d                # formatter / diagnostics
 	fixjson                 # formatter
 	jsonlint                # diagnostics
+	nginxbeautifier					# formatter
 	prettier                # formatter
 	prettier-plugin-svelte  # formatter
-	rome                    # diagnostics / formatter
 	stylelint               # diagnostics
 
 	# language servers
 	ansible-language-server
 	bash-language-server
 	dockerfile-language-server-nodejs
-	pyright
+	eslint-language-server
 	svelte-language-server
 	typescript-language-server
 	vim-language-server

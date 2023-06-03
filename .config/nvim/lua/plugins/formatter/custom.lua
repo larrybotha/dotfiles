@@ -7,14 +7,6 @@ end
 -- For configs for various formatters, see:
 -- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/formatting
 local M = {
-	blackd_client = function()
-		return {
-			exe = "blackd-client",
-			args = {},
-			stdin = true,
-		}
-	end,
-
 	cbfmt = function()
 		return {
 			exe = "cbfmt",
@@ -32,6 +24,7 @@ local M = {
 			exe = "djlint",
 			args = {
 				"--reformat",
+				"--quiet",
 				get_file(),
 				"--",
 				"-",
@@ -79,16 +72,12 @@ local M = {
 		}
 	end,
 
-	isort = function()
+	-- https://github.com/vasilevich/nginxbeautifier
+	nginxbeautifier = function()
 		return {
-			exe = "isort",
-			args = {
-				"--stdout",
-				"--filename",
-				get_file(),
-				"-",
-			},
-			stdin = true,
+			exe = "nginxbeautifier",
+			args = {},
+			stdin = false,
 		}
 	end,
 
@@ -106,13 +95,13 @@ local M = {
 	end,
 
 	prettierd = function(parser)
-		local args = { util.escape_path(util.get_current_buffer_file_path()) }
-
-		if parser then
-			table.insert(args, "--parser=" .. parser)
-		end
-
 		return function()
+			local args = { util.escape_path(util.get_current_buffer_file_path()) }
+
+			if parser then
+				table.insert(args, "--parser=" .. parser)
+			end
+
 			return {
 				exe = "prettierd",
 				args = args,
@@ -121,29 +110,43 @@ local M = {
 		end
 	end,
 
-	ruff = function()
-		return {
-			exe = "ruff",
-			args = {
-				"--fix",
-				"--exit-zero",
-				"--no-cache",
-				"--stdin-filename",
-				get_file(),
-				"-",
-			},
-			stdin = true,
-		}
-	end,
+	ruff = {
+		format = function()
+			return {
+				exe = "ruff",
+				args = {
+					"format",
+					"--no-cache",
+					"--stdin-filename",
+					get_file(),
+					"-",
+				},
+				stdin = true,
+			}
+		end,
 
-	pyflyby_auto_import = function()
+		lint = function()
+			return {
+				exe = "ruff",
+				args = {
+					"check",
+					"--fix",
+					"--select I", -- sort imports
+					"--exit-zero",
+					"--no-cache",
+					"--stdin-filename",
+					get_file(),
+					"-",
+				},
+				stdin = true,
+			}
+		end,
+	},
+
+	python_autoimport = function()
 		return {
-			exe = "tidy-imports",
-			args = {
-				"-n", -- do not format imports
-				get_file(),
-			},
-			stdin = true,
+			exe = "autoimport",
+			args = {},
 		}
 	end,
 
@@ -167,16 +170,12 @@ local M = {
 		}
 	end,
 
-	sqlfluff = function()
+	-- sql formatter
+	sleek = function()
 		return {
-			exe = "sqlfluff",
-			args = {
-				"fix",
-				"--disable-progress-bar",
-				get_file(),
-				"-",
-			},
-			stdin = true,
+			exe = "sleek",
+			args = {},
+			stdin = false,
 		}
 	end,
 

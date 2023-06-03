@@ -72,34 +72,49 @@ end
 -- and map buffer local keybindings when the language server attaches
 nvim_lsp.custom_lua_lsp = custom_lua_lsp
 local server_configs = {
-	{ name = "ansiblels", options = {} },
-	{ name = "bashls", options = {} },
-	{ name = "cssls", options = {} },
-	{ name = "custom_lua_lsp", options = {} },
-	{ name = "docker_compose_language_service", options = {} },
-	{ name = "dockerls", options = {} },
-	{ name = "emmet_ls", options = {} },
-	{ name = "eslint", options = {} },
-	{ name = "gopls", options = {} },
+	{ name = "ansiblels" },
+	{ name = "bashls" }, -- detects and uses shellcheck automatically
+	{ name = "cssls" },
+	{ name = "custom_lua_lsp" },
+	{ name = "docker_compose_language_service" },
+	{ name = "dockerls" },
+	{ name = "emmet_ls" },
+	{ name = "eslint", options = { command = "eslint_d" } },
+	{ name = "gopls" },
 	{ name = "html", options = { filetypes = { "html", "htmldjango" } } },
-	{ name = "intelephense", options = {} },
-	{ name = "jsonls", options = {} },
-	{ name = "marksman", options = {} },
-	{ name = "pyright", options = {} },
-	{ name = "ruff_lsp", options = {} },
-	{ name = "svelte", options = {} },
-	{ name = "taplo", options = {} },
-	{ name = "terraformls", options = {} },
-	{ name = "tsserver", options = {} },
-	{ name = "vimls", options = {} },
-	{ name = "yamlls", options = {} },
+	{ name = "htmx", options = { filetypes = { "html", "htmldjango" } } },
+	{ name = "intelephense" },
+	{ name = "jsonls" },
+	{ name = "marksman" },
+	{ name = "svelte" },
+	{ name = "taplo" },
+	{ name = "terraformls" },
+	{ name = "tsserver" },
+	{ name = "vimls" },
+	{ name = "yamlls" },
+	{ name = "zls" },
+
+	-- Python
+	{ name = "ruff_lsp" }, -- diagnostics
+	{
+		-- TODO: LB - replace with jedi_language_server once renaming works reliably
+		name = "pyright",
+		options = {
+			settings = {
+				python = {
+					-- don't use Pyright for static code analysis
+					analysis = { diagnosticMode = "off", typeCheckingMode = "off" },
+				},
+			},
+		},
+	},
 }
 for _, config in ipairs(server_configs) do
 	local attach_options = {
 		on_attach = on_attach,
 		capabilities = cmp_nvim_lsp.default_capabilities(vim.lsp.protocol.make_client_capabilities()),
 	}
-	local options = config.options
+	local options = config.options or {}
 
 	for k, v in pairs(attach_options) do
 		options[k] = v

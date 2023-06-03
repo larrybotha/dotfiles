@@ -8,14 +8,20 @@
   d = !"git diff-index --quiet HEAD -- || clear; git diff --patch-with-stat"
   # `git di $number` shows the diff between the state `$number` revisions ago and the current state
   di = !"d() { git diff --patch-with-stat HEAD~$1; }; git diff-index --quiet HEAD -- || clear; d"
-  # Commit all changes
-  c = commit -am
   # Commit
   ci = commit
   # Checkout a branch
   co = checkout
   # Checkout a branch
-  br = branch
+  sw = switch
+  # Get better info for a blame:
+  #   - -w: ignore whitespace
+  #   - -C: and if the file was moved
+  #   - -C: or, if the file was created
+  #   - -C: or, if there were any commits at all
+  #
+  # See https://youtu.be/aolI_Rz0ZqY?si=OipSkcO4PnIpwgQg&t=693
+  bblame = blame -w -C -C -C
   # Show verbose output about tags, branches or remotes
   tags = tag -l --sort=taggerdate
   branches = branch -a
@@ -31,28 +37,9 @@
   # Detect whitespace errors when applying a patch
   whitespace = warn
 
-[core]
-  # Use vim for merges
-  editor = vim
-  # Use custom `.gitignore` and `.gitattributes`
-  excludesfile = ~/.gitignore
-  attributesfile = ~/.gitattributes
-  # Treat spaces before tabs, lines that are indented with 8 or more spaces,
-  # and all kinds of trailing whitespace as an error
-  whitespace = space-before-tab,indent-with-non-tab,trailing-space
-  # respect changes to filename case
-  ignorecase = false
-
-[diff]
-  # output logs for submodules that have changed
-  submodule = log
-
-[push]
-  default = simple
-
-[status]
-  # show submodule changes on status
-  submoduleSummary = true
+[branch]
+  # sort branches by commiterdate descending
+	sort = -committerdate
 
 [color]
   # Use colors in Git commands that are capable of colored output when outputting to the terminal
@@ -70,15 +57,72 @@
   added = blue
   changed = green
   untracked = cyan
-[merge]
-  # Include summaries of merged commits in newly created merge commit messages
-  log = true
-[pull]
-  # Stop Git from emitting a warning when pulling branches
-  rebase = false
+
+[column]
+  # render branches from `git branch` in columns
+	ui = auto
+
+[core]
+  # Use Neovim for merges
+  editor = nvim
+  # Use custom `.gitignore` and `.gitattributes`
+  excludesfile = ~/.gitignore
+  attributesfile = ~/.gitattributes
+  # Treat spaces before tabs, lines that are indented with 8 or more spaces,
+  # and all kinds of trailing whitespace as an error
+  whitespace = space-before-tab,indent-with-non-tab,trailing-space
+  # respect changes to filename case
+  ignorecase = false
+
+[diff]
+  # use difftastic by default
+  external = difft
+  # use difft for diffing
+  tool = difftastic
+  # output logs for submodules that have changed
+  submodule = log
+
+[difftool]
+  prompt = false
+
+[difftool "difftastic"]
+  cmd = difft "$LOCAL" "$REMOTE"
+
+[include]
+  # Add user-specific details to ~/.gitconfig-local - useful for adding global
+  # user.name and user.email configs
+  #
+  # If the file doesn't exist, this include is ignored
+  path = ~/.gitconfig-local
 
 [init]
   templatedir = ~/.git_template
+
+[merge]
+  # Include summaries of merged commits in newly created merge commit messages
+  log = true
+
+[pager]
+  difftool = true
+
+[pull]
+  # Stop Git from emitting a warning when pulling branches
+  rebase = false
+[push]
+  default = simple
+
+[rebase]
+  autosquash = true
+  autostash = true
+
+[rerere]
+  # record merge conflict resolutions, and autamatically apply if possible
+  # See https://youtu.be/aolI_Rz0ZqY?si=oDZ4Ww79zqFaSYxx&t=901
+	enabled = true
+
+[status]
+  # show submodule changes on status
+  submoduleSummary = true
 
 # URL shorthands
 [url "git@github.com:"]
@@ -93,35 +137,11 @@
   pushInsteadOf = "git://gist.github.com/"
 [url "git://gist.github.com/"]
   insteadOf = "gist:"
-
-[include]
-  # Add user-specific details to ~/.gitconfig-local - useful for adding global
-  # user.name and user.email configs
-  #
-  # If the file doesn't exist, this include is ignored
-  path = ~/.gitconfig-local
-
-[pager]
-    diff = delta
-    log = delta
-    reflog = delta
-    show = delta
-
-[interactive]
-    diffFilter = delta --color-only --features=interactive
-
-[delta]
-    features = decorations
-    side-by-side = true
-
-[delta "interactive"]
-    keep-plus-minus-markers = false
-
-[delta "decorations"]
-    commit-decoration-style = blue ol
-    commit-style = raw
-    file-style = omit
-    hunk-header-decoration-style = blue box
-    hunk-header-file-style = red
-    hunk-header-line-number-style = "#067a00"
-    hunk-header-style = file line-number syntax
+[maintenance]
+	repo = /Users/larrybotha/projects/practice-manager-orthodontics
+	repo = /Users/larrybotha/projects/obsidian-vaults/everything
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true

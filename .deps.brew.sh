@@ -30,11 +30,6 @@ brew install bash
 # Install wget
 brew install wget
 
-# Install RingoJS and Narwhal
-# Note that the order in which these are installed is important; see http://git.io/brew-narwhal-ringo.
-brew install ringojs
-brew install narwhal
-
 brew tap homebrew/services
 
 # Install rbenv for Ruby version management
@@ -45,44 +40,39 @@ brew install rbenv ruby-build
 brew install mysql
 
 # Install other useful binaries
-brew install ack
 brew install ansible
 brew install ansible-lint
+brew install ariga/tap/atlas # Terraform-like orchestration for db schemas
 brew install atuin
 brew install bat
-brew install checkov
 brew install checkmake
+brew install checkov
 brew install codespell
 brew install ctop
 brew install deno
+brew install difftastic
 brew install dive
 brew install dust
 brew install editorconfig
 brew install elasticsearch
-brew install exa
-brew install fcp
 brew install fd
-brew install flow
 brew install fluent-bit
 brew install fzf
 brew install git
-brew install git-crypt
-brew install git-delta
 brew install git-flow
 brew install gitlab-runner
 brew install go
 brew install gopls
-brew install hadolint # linter for Dockerfiles
-brew install howdoi   # linter for Dockerfiles
+brew install howdoi
 brew install htop
-brew install hub
 brew install jesseduffield/lazydocker/lazydocker
 brew install jesseduffield/lazynpm/lazynpm
+brew install jid
 brew install jq
 brew install lazygit
 brew install lulu
 brew install lynx
-brew install mosh
+brew install mpv
 brew install neovim
 brew install nnn
 brew install nvm
@@ -94,19 +84,17 @@ brew install pyenv-virtualenv
 brew install python
 brew install qt
 brew install redis
-brew install rename
 brew install ripgrep
-brew install sbt
+brew install starship
 brew install tealdeer
 brew install terraform
-brew install the_silver_searcher
 brew install tmuxinator
 brew install tre-command
+brew install tursodatabase/tap/turso
 brew install vim
-brew install vivid
-brew install watch
-brew install watchman
+brew install watchexec
 brew install webkit2png
+brew install withgraphite/tap/graphite
 brew install xh # httpie alternative
 brew install xplr
 brew install yarn
@@ -118,6 +106,10 @@ brew tap homebrew/versions
 brew install lua
 brew install lua-language-server
 
+# zig
+brew install zig
+brew install zls
+
 # patched fonts
 brew tap homebrew/cask-fonts
 brew install --cask font-roboto-mono-nerd-font
@@ -127,8 +119,9 @@ brew tap hashicorp/tap
 brew install hashicorp/tap/packer
 
 # diagnostics, linting, lsp, formatters
-brew install hashicorp/tap/terraf        # diagnostics
 brew install fsouza/prettierd/prettierd  # formatter
+brew install hadolint										 # diagnostics
+brew install hashicorp/tap/terraf        # diagnostics
 brew install markdownlint-cli2           # diagnostics
 brew install rust-analyzer               # diagnostics
 brew install selene                      # diagnostics
@@ -137,11 +130,11 @@ brew install shfmt                       # formatter
 brew install sqlfluff                    # formatter
 brew install stylua                      # formatter
 brew install vint                        # diagnostics
-brew install vulture                     # diagnostics
+brew tap codeclimate/formulae						 # diagnostics
+brew install codeclimate						     # diagnostics
 
 # tmux and dependencies
 brew install tmux
-brew install reattach-to-user-namespace
 
 # Install yabai deps
 brew install koekeishiya/formulae/yabai
@@ -154,6 +147,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		alacritty
 		alfred
 		anki
+		arc
 		beekeeper-studio
 		betterzip
 		brave-browser
@@ -161,7 +155,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		dbgate
 		dbvisualizer
 		docker
-		dropbox
 		figma
 		firefox
 		flameshot
@@ -177,8 +170,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		karabiner-elements
 		keycastr
 		libreoffice
-		moom
-		mysqlworkbench
 		postman
 		proxyman
 		qlImageSize
@@ -189,11 +180,8 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		quicklook-csv
 		quicklook-json
 		rescuetime
-		robo-3t
 		safari-technology-preview
 		skype
-		slack
-		sourcetree
 		the-unarchiver
 		transmission
 		virtualbox

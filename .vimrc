@@ -16,7 +16,11 @@
   if empty(glob('~/.vim/autoload/plug.vim'))
     silent !curl -fLo ~/.vim/autoload/plug.vim --create-dirs
       \ https://raw.githubusercontent.com/junegunn/vim-plug/master/plug.vim
-    autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+
+    augroup au_source
+      au!
+      autocmd VimEnter * PlugInstall --sync | source $MYVIMRC
+    augroup END
   endif
 
   " conditionally get options
@@ -30,8 +34,7 @@
   "Plug 'wakatime/vim-wakatime'
 
   " Themes
-  "Plug 'tanvirtin/monokai.nvim'
-  "Plug 'kvrohit/mellow.nvim'
+  Plug 'mellow-theme/mellow.nvim'
 
   "Plug 'skywind3000/asynctasks.vim'
   "Plug 'skywind3000/asyncrun.vim'
@@ -45,24 +48,20 @@
   "Plug 'tpope/vim-surround'
   "Plug 'tpope/vim-endwise'
 
-  "Plug 'Raimondi/delimitMate'
-  "Plug 'christoomey/vim-tmux-navigator'
-  "Plug 'editorconfig/editorconfig-vim'
-  "Plug 'edkolev/tmuxline.vim'
-  "Plug 'mcchrish/nnn.vim'
-  "Plug 'godlygeek/tabular'
-  "Plug 'preservim/nerdcommenter'
-  "Plug 'rhysd/git-messenger.vim'
-  "Plug 'mg979/vim-visual-multi'
-  "Plug 'tmux-plugins/vim-tmux-focus-events'
-  "Plug 'vim-airline/vim-airline'
-  "Plug 'vim-airline/vim-airline-themes'
-  "Plug 'janko-m/vim-test'
-  "Plug 'danymat/neogen'
-  "Plug 'ruanyl/vim-sort-imports'
-  "Plug 'dkarter/bullets.vim'
-  "Plug 'preservim/vimux'
-  ""Plug 'puremourning/vimspector'
+  Plug 'Raimondi/delimitMate'
+  Plug 'christoomey/vim-tmux-navigator'
+  Plug 'editorconfig/editorconfig-vim'
+  Plug 'mcchrish/nnn.vim'
+  Plug 'godlygeek/tabular'
+  Plug 'preservim/nerdcommenter'
+  Plug 'rhysd/git-messenger.vim'
+  Plug 'mg979/vim-visual-multi'
+  Plug 'nvim-lualine/lualine.nvim'
+  Plug 'janko-m/vim-test'
+  Plug 'danymat/neogen'
+  Plug 'ruanyl/vim-sort-imports'
+  Plug 'dkarter/bullets.vim'
+  Plug 'preservim/vimux'
 
   " Language support
   "Plug 'sheerun/vim-polyglot'
@@ -72,39 +71,45 @@
   "Plug 'fatih/vim-go', {'do': ':GoInstallBinaries'}
 
   " only load if we are in Neovim
-  "Plug 'folke/neodev.nvim', Cond(has('nvim'))
-  "Plug 'folke/trouble.nvim', Cond(has('nvim'))
-  "Plug 'jose-elias-alvarez/null-ls.nvim', Cond(has('nvim'))
-  "Plug 'mhartington/formatter.nvim', Cond(has('nvim'))
-  "Plug 'jodosha/vim-godebug', Cond(has('nvim'))
-  "Plug 'williamboman/mason.nvim', Cond(has('nvim'))
-  "Plug 'williamboman/mason-lspconfig.nvim', Cond(has('nvim'))
-  "Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
-  "Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
-  "Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
+  Plug 'folke/neodev.nvim', Cond(has('nvim'))
+  Plug 'folke/trouble.nvim', Cond(has('nvim'))
+  Plug 'nvimtools/none-ls.nvim', Cond(has('nvim'))
+  Plug 'mhartington/formatter.nvim', Cond(has('nvim'))
+  Plug 'jodosha/vim-godebug', Cond(has('nvim'))
+  Plug 'williamboman/mason.nvim', Cond(has('nvim'))
+  Plug 'williamboman/mason-lspconfig.nvim', Cond(has('nvim'))
+  Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
+  Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
+  Plug 'nvim-treesitter/nvim-treesitter-context'
+
+  Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
 
   " debugging
-  "Plug 'mfussenegger/nvim-dap', Cond(has('nvim'))
-  "Plug 'rcarriga/nvim-dap-ui', Cond(has('nvim'))
+  Plug 'mfussenegger/nvim-dap', Cond(has('nvim'))
+  Plug 'rcarriga/nvim-dap-ui', Cond(has('nvim'))
+  Plug 'nvim-neotest/nvim-nio', Cond(has('nvim')) " nvim-dap-ui dependency
 
   " completion
-  "Plug 'hrsh7th/cmp-nvim-lsp'
-  "Plug 'hrsh7th/cmp-buffer'
-  "Plug 'hrsh7th/cmp-path'
-  "Plug 'hrsh7th/cmp-cmdline'
-  "Plug 'hrsh7th/nvim-cmp'
-  "Plug 'hrsh7th/vim-vsnip'
+  Plug 'hrsh7th/cmp-nvim-lsp'
+  Plug 'hrsh7th/cmp-buffer'
+  Plug 'hrsh7th/cmp-path'
+  Plug 'hrsh7th/cmp-cmdline'
+  Plug 'hrsh7th/cmp-nvim-lsp-signature-help'
+  Plug 'hrsh7th/nvim-cmp'
+  Plug 'hrsh7th/vim-vsnip'
 
   " telescope and deps
   if has('nvim')
-    "Plug 'nvim-lua/popup.nvim'
-    "Plug 'nvim-lua/plenary.nvim'
-    "Plug 'nvim-telescope/telescope.nvim'
-    "Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build' }
-    "Plug 'kyazdani42/nvim-web-devicons'
-    "Plug 'GustavoKatel/telescope-asynctasks.nvim'
-    "Plug 'lukas-reineke/indent-blankline.nvim'
-    "Plug 'lewis6991/gitsigns.nvim'
+    Plug 'nvim-lua/popup.nvim'
+    Plug 'nvim-lua/plenary.nvim'
+    Plug 'nvim-telescope/telescope.nvim'
+    Plug 'nvim-telescope/telescope-fzf-native.nvim', { 'do': 'cmake -S. -Bbuild -DCMAKE_BUILD_TYPE=Release && cmake --build build --config Release && cmake --install build --prefix build' }
+    Plug 'kyazdani42/nvim-web-devicons'
+    Plug 'GustavoKatel/telescope-asynctasks.nvim'
+    Plug 'lukas-reineke/indent-blankline.nvim'
+    Plug 'lewis6991/gitsigns.nvim'
+    Plug 'epwalsh/obsidian.nvim'
+    Plug 'ThePrimeagen/harpoon', {'branch': 'harpoon2'}
 
     " AI tools
     "Plug 'Exafunction/codeium.vim'
@@ -138,13 +143,31 @@
 
   set fillchars=diff:·
 
-  " check for external file changes, and suppress notices from appearing in command line
-  " requires tmux-focus-events plugin for tmux support
-  au FocusGained,BufEnter * :checktime " when buffer is changed
-  " when cursor stops moving
-  " https://vi.stackexchange.com/questions/14315/how-can-i-tell-if-im-in-the-command-window
-  autocmd FocusGained,BufEnter,CursorHold,CursorHoldI *
-    \ if mode() == 'n' && getcmdwintype() == '' | checktime | endif
+  " use ripgrep for :grep and populating quickfix list
+  if executable('rg')
+    set grepprg=rg\ --vimgrep\ --hidden\ --smart-case
+    " `%f` represents the file name where the match was found
+    " `%l` represents the line number where the match was found
+    " `%c` represents the column number where the match was found
+    " `%m` represents the matched text itself
+    set grepformat^=%f:%l:%c:%m
+
+    augroup au_open_quick_fix
+      autocmd QuickFixCmdPost grep copen
+    augroup END
+  endif
+
+  " run checktime to reload file if changed
+  augroup au_checktime
+    au!
+    autocmd FocusGained,BufEnter * silent! checktime
+
+    " when cursor stops moving
+    " https://vi.stackexchange.com/questions/14315/how-can-i-tell-if-im-in-the-command-window
+    autocmd CursorHold,CursorHoldI *
+      \ if mode() == 'n' && getcmdwintype() == '' | checktime | endif
+  augroup END
+
   set autoread
 
   if has('mouse_sgr')
@@ -154,51 +177,33 @@
 
 " Vim UI {
   source ~/.vim/local/highlight.vim
-  "colorscheme mellow                             " load a colourscheme
-  set termguicolors                              " use gui color attributes instead of cterm attributes
-  set splitright                                 " open split panes to the right of the current pane
-  set splitbelow                                 " open split panes underneath the current pane
+  colorscheme mellow             " load a colourscheme
+  set termguicolors              " use gui color attributes instead of cterm attributes
+  set splitright                 " open split panes to the right of the current pane
+  set splitbelow                 " open split panes underneath the current pane
 
-  set backspace=indent,eol,start                 " allow backspacing over everything in insert mode
-  set linespace=0                                " No extra spaces between rows
-  set number relativenumber                      " use hybrid line numbers
-  set showmatch                                  " show matching brackets/parenthesis
-  set incsearch                                  " find as you type search
-  set hlsearch                                   " highlight search terms
-  set winminheight=0                             " windows can be 0 line high
-  set ignorecase                                 " case insensitive search
-  set smartcase                                  " case sensitive when uc present
-  set wildmenu                                   " show list instead of just completing
-  set wildmode=list:longest,full                 " command <Tab> completion, list matches, then longest common part, then all.
-  set nowrap                                     " don't wrap lines
-  set scrolljump=5                               " lines to scroll when cursor leaves screen
-  set scrolloff=5                                " minimum lines to keep above and below cursor
-  noh                                            " clear the initial highlight after sourcing
-  set foldenable                                 " auto fold code
-  set nospell                                    " disable spellcheck
-  set shortmess=atI                              " prevent 'Press ENTER' prompt
-  set cursorline                                 " highlight current line
-  set cursorcolumn                               " highlight current column
-
-  set colorcolumn=85                             " show column length hint for long lines
-
-  " show timeout on leader
-  set showcmd
-
-  " moving panes
-  noremap <leader>mh :wincmd H<CR>
-  noremap <leader>mj :wincmd J<CR>
-  noremap <leader>mk :wincmd K<CR>
-  noremap <leader>ml :wincmd L<CR>
-
-  " change cursor to caret when in insert mode in tmux
-  if exists('$TMUX')
-    let &t_SI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=1\x7\<Esc>\\"
-    let &t_EI = "\<Esc>Ptmux;\<Esc>\<Esc>]50;CursorShape=0\x7\<Esc>\\"
-  else
-    let &t_SI = "\<Esc>]50;CursorShape=1\x7"
-    let &t_EI = "\<Esc>]50;CursorShape=0\x7"
-  endif
+  set backspace=indent,eol,start " allow backspacing over everything in insert mode
+  set linespace=0                " No extra spaces between rows
+  set number relativenumber      " use hybrid line numbers
+  set showmatch                  " show matching brackets/parenthesis
+  set incsearch                  " find as you type search
+  set hlsearch                   " highlight search terms
+  set winminheight=0             " windows can be 0 line high
+  set ignorecase                 " case insensitive search
+  set smartcase                  " case sensitive when uc present
+  set wildmenu                   " show list instead of just completing
+  set wildmode=list:longest,full " command <Tab> completion, list matches, then longest common part, then all.
+  set nowrap                     " don't wrap lines
+  set scrolljump=5               " lines to scroll when cursor leaves screen
+  set scrolloff=5                " minimum lines to keep above and below cursor
+  nohlsearch                     " clear the initial highlight after sourcing
+  set foldenable                 " auto fold code
+  set nospell                    " disable spellcheck
+  set shortmess=atI              " prevent 'Press ENTER' prompt
+  set cursorline                 " highlight current line
+  set cursorcolumn               " highlight current column
+  set colorcolumn=85             " show column length hint for long lines
+  set showcmd                    " show timeout on leader
 " }
 
 " Formatting {
@@ -207,7 +212,11 @@
   set tabstop=2                                           " indent every 2 columns
   set softtabstop=2                                       " let backspace delete indent
   set expandtab
-  autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 " set above values when opening new files
+
+  augroup au_set_space
+    au!
+    autocmd BufNewFile,BufReadPost * set ai ts=2 sw=2 sts=2 " set above values when opening new files
+  augroup END
 " }
 
 " Key Mappings {
@@ -236,6 +245,14 @@
   " clear highlighted searches
   nnoremap <silent> <leader>/ :nohlsearch<CR>
 
+  " navigate using [ and ]
+  noremap [b :bprevious<CR>
+  noremap ]b :bnext<CR>
+  noremap [q :cprevious<CR>
+  noremap ]q :cnext<CR>
+  noremap [l :lprevious<CR>
+  noremap ]l :lnext<CR>
+
   " visual shifting without exiting visual mode
   vnoremap < <gv
   vnoremap > >gv
@@ -256,7 +273,7 @@
   map <leader>bp :bp<CR>
 
   " quick access to this .vimrc
-  map <leader>vi :tabe ~/projects/dotfiles/.vimrc<CR>
+  map <leader>vi :tabedit ~/projects/dotfiles/.vimrc<CR>
   map <leader>vs :source $MYVIMRC<CR>
 
   " set all windows to equal width
@@ -267,9 +284,7 @@
 
   if has('autocmd')
     " Also load indent files, to automatically do language-dependent indenting.
-
-    " Put these in an autocmd group, so that we can delete them easily.
-    augroup vimrcEx
+    augroup au_vimrcEx
       autocmd!
 
       " For all text files set 'textwidth' to 80 characters.
@@ -293,7 +308,7 @@
 
     " Use hybrid line numbers when in any mode other than 'insert' mode,
     " otherwise use 'number'
-    augroup numbertoggle
+    augroup au_numbertoggle
       autocmd!
 
       autocmd BufEnter,FocusGained,InsertLeave,WinEnter *
@@ -310,26 +325,25 @@
 " Plugin Configs {
  "source ~/.vim/local/neovim.vim
 
- "source ~/.vim/local/plugins/vim-plug.vim
- "source ~/.vim/local/plugins/airline.vim
- "source ~/.vim/local/plugins/asynctasks.vim
- "source ~/.vim/local/plugins/cmp.vim
- "source ~/.vim/local/plugins/codeium.vim
- "source ~/.vim/local/plugins/delimit-mate.vim
- "source ~/.vim/local/plugins/editorconfig-vim.vim
- "source ~/.vim/local/plugins/emmet-vim.vim
- "source ~/.vim/local/plugins/endwise.vim
- "source ~/.vim/local/plugins/floaterm.vim
- "source ~/.vim/local/plugins/fzf.vim
- "source ~/.vim/local/plugins/nerdcommenter.vim
- "source ~/.vim/local/plugins/nnn.vim
- "source ~/.vim/local/plugins/tabular.vim
- "source ~/.vim/local/plugins/telescope.vim
- "source ~/.vim/local/plugins/vim-fugitive.vim
- "source ~/.vim/local/plugins/vim-go.vim
- "source ~/.vim/local/plugins/vim-sort-imports.vim
- "source ~/.vim/local/plugins/vim-svelte.vim
- "source ~/.vim/local/plugins/vim-test.vim
- "source ~/.vim/local/plugins/vim-tmux-navigator.vim
- "source ~/.vim/local/plugins/vimux.vim
+  source ~/.vim/local/plugins/vim-plug.vim
+  source ~/.vim/local/plugins/asynctasks.vim
+  source ~/.vim/local/plugins/cmp.vim
+  source ~/.vim/local/plugins/codeium.vim
+  source ~/.vim/local/plugins/delimit-mate.vim
+  source ~/.vim/local/plugins/editorconfig-vim.vim
+  source ~/.vim/local/plugins/emmet-vim.vim
+  source ~/.vim/local/plugins/endwise.vim
+  source ~/.vim/local/plugins/floaterm.vim
+  source ~/.vim/local/plugins/fzf.vim
+  source ~/.vim/local/plugins/nerdcommenter.vim
+  source ~/.vim/local/plugins/nnn.vim
+  source ~/.vim/local/plugins/tabular.vim
+  source ~/.vim/local/plugins/telescope.vim
+  source ~/.vim/local/plugins/vim-fugitive.vim
+  source ~/.vim/local/plugins/vim-go.vim
+  source ~/.vim/local/plugins/vim-sort-imports.vim
+  source ~/.vim/local/plugins/vim-svelte.vim
+  source ~/.vim/local/plugins/vim-test.vim
+  source ~/.vim/local/plugins/vim-tmux-navigator.vim
+  source ~/.vim/local/plugins/vimux.vim
 " }

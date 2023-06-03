@@ -26,20 +26,24 @@ formatter.setup({
 			custom_formatters.doctoc,
 			custom_formatters.prettierd(),
 		},
+		nginx = { custom_formatters.nginxbeautifier },
 		org = { custom_formatters.cbfmt },
 		packer = { custom_formatters.packer },
 		python = {
-			custom_formatters.pyflyby_auto_import,
-			custom_formatters.ruff,
-			custom_formatters.isort,
-			custom_formatters.blackd_client,
+			custom_formatters.python_autoimport,
+			-- TODO: use unified command for linting and formatting when available:
+			-- https://github.com/astral-sh/ruff/issues/8232
+			custom_formatters.ruff.lint,
+			-- NOTE: must come after linting to remove unused imports
+			-- see https://docs.astral.sh/ruff/formatter/#sorting-imports
+			custom_formatters.ruff.format,
 		},
 		rust = { filetypes.rust.rustfmt },
 		sh = {
 			custom_formatters.shfmt,
 			custom_formatters.shellharden,
 		},
-		sql = { custom_formatters.sqlfluff },
+		sql = { custom_formatters.sleek },
 		svelte = { custom_formatters.prettierd("svelte"), formatters.eslint_d },
 		svg = { custom_formatters.prettierd("html") },
 		terraform = { custom_formatters.terraform },
@@ -48,6 +52,7 @@ formatter.setup({
 		vue = { custom_formatters.prettierd(), formatters.eslint_d },
 		toml = { custom_formatters.taplo },
 		yaml = { custom_formatters.prettierd("yaml") },
+		zig = { formatters.zig },
 	},
 
 	["svx"] = { custom_formatters.prettierd() },
@@ -59,5 +64,8 @@ local au_group = vim.api.nvim_create_augroup("FormatAutogroup", { clear = true }
 vim.api.nvim_create_autocmd("BufWritePost", {
 	pattern = "*",
 	group = au_group,
-	command = "FormatWrite",
+	-- silence errors raised by formatters that fail on syntax errors
+	-- see https://github.com/mhartington/formatter.nvim/issues/100
+	command = "silent FormatWrite",
+	desc = "Format buffer on save",
 })

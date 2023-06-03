@@ -1,5 +1,5 @@
-# make Vim the editor for tmux
-export EDITOR="vim"
+# make Neovim the editor for applications such as tmux, nnn, etc.
+export EDITOR="nvim"
 
 # Larger bash history (allow 32³ entries; default is 500)
 export HISTSIZE=32768
@@ -8,9 +8,9 @@ export HISTCONTROL=ignoredups
 # Make some commands not show up in history
 export HISTIGNORE="ls:cd:cd -:pwd:exit:date:* --help"
 
-# Prefer US English and use UTF-8
-export LANG="en_US"
-export LC_ALL="en_US.UTF-8"
+# Prefer British English and use UTF-8
+export LANG="en_GB"
+export LC_ALL="en_GB.UTF-8"
 
 # Highlight section titles in manual pages
 export LESS_TERMCAP_md="$ORANGE"
@@ -23,7 +23,7 @@ export HOMEBREW_CASK_OPTS="--appdir=/Applications"
 
 # fzf
 # use fd for searching files
-export FZF_DEFAULT_COMMAND='fd --hidden --type file'
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 
 # Add Node and NVM to `$PATH`
@@ -37,9 +37,6 @@ export PTPYTHON_CONFIG_HOME=$HOME/.config/ptpython
 # add pyenv executable to PATH
 export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
-if type -p "pyenv" >/dev/null; then
-  eval "$(pyenv init --path)"
-fi
 
 # colourise man pages
 if type -p "bat" >/dev/null; then

@@ -1,0 +1,30 @@
+###
+# Config ignores
+###
+
+# karabiner-elements
+karabiner/*
+!karabiner/karabiner.json
+
+# raycast
+raycast/extensions
+
+# epy epub reader
+epy
+
+# nnn
+nnn/*
+!nnn/custom
+
+# gcloud
+gcloud
+
+# graphite
+graphite
+
+# packer
+packer/*
+
+# updates
+update-notifier-alex.json
+simple-update-notifier/nodemon.json

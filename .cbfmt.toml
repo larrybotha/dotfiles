@@ -9,7 +9,7 @@
 go = ["gofmt"]
 javascript = ["prettierd -"]
 lua = ["stylua -s -"]
-python = ["black --fast -"]
+python = ["ruff format -"]
 rust = ["rustfmt"]
 shell = ["shfmt -"]
 svelte = ["prettierd --parser=svelte -"]

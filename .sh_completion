@@ -23,8 +23,15 @@ if ! [ "$ZSH_VERSION" ]; then
   if [ -f ~/code/git-completion/git-completion.bash ] && ! [ "$ZSH_VERSION" ]; then
     . ~/code/git-completion/git-completion.bash
   fi
-else
-  autoload -Uz compinit && compinit
+fi
+
+# See https://docs.brew.sh/Shell-Completion#configuring-completions-in-zsh
+if type brew &>/dev/null
+then
+  FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
+
+  autoload -Uz compinit
+  compinit
 fi
 
 # Add tab completion for SSH hostnames based on ~/.ssh/config, ignoring wildcards
