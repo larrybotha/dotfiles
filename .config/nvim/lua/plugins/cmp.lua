@@ -28,6 +28,7 @@ cmp.setup({
 		{ name = "vsnip" },
 		{ name = "path" },
 		{ name = "buffer" },
+		{ name = "nvim_lsp_signature_help" },
 	},
 })
 
