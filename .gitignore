@@ -2,6 +2,9 @@
 .vim/plugged
 .vim/autoload/plug.vim
 
+# null-ls files
+.null-ls*
+
 # Compiled Python files
 *.pyc
 
