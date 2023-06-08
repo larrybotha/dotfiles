@@ -86,6 +86,8 @@ local server_configs = {
 	{ name = "jsonls", options = {} },
 	{ name = "marksman", options = {} },
 	{ name = "pyright", options = {} },
+	-- TODO: LB - disable ruff diagnostics, already done in null-ls, resulting in
+	-- duplicated diagnostics
 	{ name = "ruff_lsp", options = {} },
 	{ name = "svelte", options = {} },
 	{ name = "taplo", options = {} },
