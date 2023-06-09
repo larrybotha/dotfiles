@@ -7,15 +7,14 @@ function! s:unset_is_vim()
   silent execute '!tmux set-option -p -u @custom_is_vim'
 endfunction
 
-
-if has("autocmd")
-  autocmd!
+augroup au_vim_tmux_navigator
+  au!
   autocmd VimEnter * call s:set_is_vim()
   autocmd VimLeave * call s:unset_is_vim()
 
   " handle suspending and resuming vim
-  if exists("##VimSuspend")
+  if exists('##VimSuspend')
     autocmd VimSuspend * call s:unset_is_vim()
     autocmd VimResume * call s:set_is_vim()
   endif
-endif
+augrou END
