@@ -26,6 +26,7 @@ formatter.setup({
 			custom_formatters.doctoc,
 			custom_formatters.prettierd(),
 		},
+		nginx = { custom_formatters.nginxbeautifier },
 		org = { custom_formatters.cbfmt },
 		packer = { custom_formatters.packer },
 		python = {

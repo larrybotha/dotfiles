@@ -87,6 +87,7 @@ common_modules=(
 	eslint_d                # formatter / diagnostics
 	fixjson                 # formatter
 	jsonlint                # diagnostics
+	nginxbeautifier					# formatter
 	prettier                # formatter
 	prettier-plugin-svelte  # formatter
 	rome                    # diagnostics / formatter

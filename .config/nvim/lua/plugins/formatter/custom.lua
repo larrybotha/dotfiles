@@ -92,6 +92,15 @@ local M = {
 		}
 	end,
 
+	-- https://github.com/vasilevich/nginxbeautifier
+	nginxbeautifier = function()
+		return {
+			exe = "nginxbeautifier",
+			args = {},
+			stdin = false,
+		}
+	end,
+
 	packer = function()
 		-- only process .pkr.hcl files
 		if not util.get_current_buffer_file_name():match("%.pkr%.hcl$") == "special.lua" then
