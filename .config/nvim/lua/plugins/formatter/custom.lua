@@ -32,6 +32,7 @@ local M = {
 			exe = "djlint",
 			args = {
 				"--reformat",
+				"--quiet",
 				get_file(),
 				"--",
 				"-",
