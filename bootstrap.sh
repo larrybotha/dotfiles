@@ -90,6 +90,7 @@ function symlink_to_home() {
 		".osx"
 		".path"
 		".screenrc"
+		".sh_prompt"
 		".shrc"
 		".tmux"
 		".tmux.conf"

@@ -1,0 +1,80 @@
+# @gf3’s Sexy Bash Prompt, inspired by “Extravagant Zsh Prompt”
+# Shamelessly copied from https://github.com/gf3/dotfiles
+# Screenshot: http://i.imgur.com/s0Blh.png
+
+if [[ $COLORTERM = gnome-* && $TERM = xterm ]] && infocmp gnome-256color >/dev/null 2>&1; then
+  export TERM=gnome-256color
+elif infocmp xterm-256color >/dev/null 2>&1; then
+  export TERM=xterm-256color
+fi
+
+# colour list - http://misc.flogisoft.com/bash/tip_colors_and_formatting#colors1
+# and http://upload.wikimedia.org/wikipedia/en/1/15/Xterm_256color_chart.svg
+if tput setaf 1 &>/dev/null; then
+  tput sgr0
+  if [[ $(tput colors) -ge 256 ]] 2>/dev/null; then
+    MAGENTA=$(tput setaf 182)
+    ORANGE=$(tput setaf 179)
+    GREEN=$(tput setaf 150)
+    BLUE=$(tput setaf 110)
+    WHITE=$(tput setaf 248)
+  else
+    MAGENTA=$(tput setaf 5)
+    ORANGE=$(tput setaf 4)
+    GREEN=$(tput setaf 2)
+    BLUE=$(tput setaf 1)
+    WHITE=$(tput setaf 7)
+  fi
+  BOLD=$(tput bold)
+  RESET=$(tput sgr0)
+else
+  MAGENTA="\033[1;31m"
+  ORANGE="\033[1;33m"
+  GREEN="\033[1;32m"
+  BLUE="\033[1;34m"
+  WHITE="\033[1;37m"
+  BOLD=""
+  RESET="\033[m"
+fi
+
+# Fastest possible way to check if repo is dirty.
+function parse_git_dirty() {
+  git diff --quiet --ignore-submodules HEAD 2>/dev/null
+  [ $? -eq 1 ] && echo '*'
+}
+
+function parse_git_branch() {
+  git branch --no-color 2>/dev/null |
+    sed -e '/^[^*]/d' -e "s/* \(.*\)/\1$(parse_git_dirty)/"
+}
+
+# Only show username/host if not default
+function usernamehost() {
+  if [ $USER != $default_username ]; then
+    echo "${MAGENTA}$USER ${WHITE}at ${ORANGE}$HOSTNAME $WHITEin "
+  fi
+}
+
+if [ "$ZSH_VERSION" ]; then
+  autoload -Uz vcs_info
+  setopt prompt_subst
+  zstyle ':vcs_info:git:*' formats '%b'
+
+  _update_prompt() {
+    vcs_info
+
+    local _username="${BOLD}${MAGENTA}%n"
+    local _directory="${BLUE}%~"
+    local _branch="${WHITE}$([[ -n "${vcs_info_msg_0_}" ]] && echo "on") ${GREEN}$(parse_git_branch)"
+    local _newline=$'\n'
+    local _prompt="${WHITE}${_newline}$ %{${RESET}%}"
+
+    PS1="${_username} ${WHITE}in ${_directory} ${_branch} ${_prompt}"
+    PS2="${ORANGE}→ ${RESET}"
+  }
+
+  precmd_functions+=(_update_prompt)
+else
+  export PS1="\[${BOLD}${MAGENTA}\]\u \[$WHITE\]in \[$BLUE\]\w\[$WHITE\]\$([[ -n \$(git branch 2> /dev/null) ]] && echo \" on \")\[$GREEN\]\$(parse_git_branch)\[$WHITE\]\n\$ \[$RESET\]"
+  export PS2="\[$ORANGE\]→ \[$RESET\]"
+fi
