@@ -97,6 +97,7 @@ brew install redis
 brew install rename
 brew install ripgrep
 brew install sbt
+brew install starship
 brew install tealdeer
 brew install terraform
 brew install the_silver_searcher

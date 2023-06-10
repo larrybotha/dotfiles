@@ -12,3 +12,8 @@ export NVM_DIR="/Users/larrybotha/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 
 [ -f ~/.fzf.bash ] && source ~/.fzf.bash
+
+if type starship >/dev/null; then
+  eval "$(starship init bash)"
+fi
+
