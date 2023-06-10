@@ -52,14 +52,12 @@
   Plug 'Raimondi/delimitMate'
   Plug 'christoomey/vim-tmux-navigator'
   Plug 'editorconfig/editorconfig-vim'
-  Plug 'edkolev/tmuxline.vim'
   Plug 'mcchrish/nnn.vim'
   Plug 'godlygeek/tabular'
   Plug 'preservim/nerdcommenter'
   Plug 'rhysd/git-messenger.vim'
   Plug 'mg979/vim-visual-multi'
-  Plug 'vim-airline/vim-airline'
-  Plug 'vim-airline/vim-airline-themes'
+  Plug 'nvim-lualine/lualine.nvim'
   Plug 'janko-m/vim-test'
   Plug 'danymat/neogen'
   Plug 'ruanyl/vim-sort-imports'
@@ -304,7 +302,7 @@
   source ~/.vim/local/neovim.vim
 
   source ~/.vim/local/plugins/vim-plug.vim
-  source ~/.vim/local/plugins/airline.vim
+  "source ~/.vim/local/plugins/airline.vim
   source ~/.vim/local/plugins/asynctasks.vim
   source ~/.vim/local/plugins/cmp.vim
   source ~/.vim/local/plugins/codeium.vim
