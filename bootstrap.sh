@@ -42,6 +42,14 @@ function prepare_completions() {
 		npm completion >>"$HOME/.sh_completion"
 	fi
 
+	if type "starship" >/dev/null; then
+		if [ "$SHELL" == "/bin/zsh" ]; then
+			starship completions zsh >>"$HOME/.sh_completion"
+		else
+			starship completions bash >>"$HOME/.sh_completion"
+		fi
+	fi
+
 	log 'done'
 }
 
@@ -79,6 +87,7 @@ function symlink_to_home() {
 		".config/tmuxinator"
 		".config/vivid"
 		".config/yabai"
+		".config/starship.toml"
 		".exports"
 		".functions"
 		".gitattributes"
