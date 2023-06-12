@@ -2,6 +2,9 @@
 .vim/plugged
 .vim/autoload/plug.vim
 
+# tmux plugins
+.tmux/plugins
+
 # null-ls files
 .null-ls*
 
