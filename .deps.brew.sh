@@ -30,11 +30,6 @@ brew install bash
 # Install wget
 brew install wget
 
-# Install RingoJS and Narwhal
-# Note that the order in which these are installed is important; see http://git.io/brew-narwhal-ringo.
-brew install ringojs
-brew install narwhal
-
 brew tap homebrew/services
 
 # Install rbenv for Ruby version management
