@@ -33,8 +33,7 @@ formatter.setup({
 			custom_formatters.pyflyby_auto_import,
 			custom_formatters.ruff,
 			custom_formatters.isort,
-			--custom_formatters.blackd_client,
-			custom_formatters.black,
+			custom_formatters.blackd_client,
 		},
 		rust = { filetypes.rust.rustfmt },
 		sh = {
