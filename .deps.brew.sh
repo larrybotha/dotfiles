@@ -99,7 +99,6 @@ brew install the_silver_searcher
 brew install tmuxinator
 brew install tre-command
 brew install vim
-brew install vivid
 brew install watch
 brew install watchman
 brew install webkit2png
