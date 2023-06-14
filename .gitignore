@@ -11,14 +11,6 @@
 # Compiled Python files
 *.pyc
 
-# karabiner-elements
-.config/karabiner/*
-!.config/karabiner/karabiner.json
-
-# nnn
-.config/nnn/*
-!.config/nnn/custom
-
 # lua
 .luarc.json
 

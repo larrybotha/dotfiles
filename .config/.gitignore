@@ -1,0 +1,14 @@
+###
+# Config ignores
+###
+
+# karabiner-elements
+karabiner/*
+!karabiner/karabiner.json
+
+# nnn
+nnn/*
+!nnn/custom
+
+# gcloud
+gcloud
