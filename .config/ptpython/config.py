@@ -100,8 +100,7 @@ def configure(repl):
     repl.enable_input_validation = True
 
     # Use this colorscheme for the code.
-    repl.use_code_colorscheme("monokai")
-    # repl.use_code_colorscheme("pastie")
+    repl.use_code_colorscheme("nord")
 
     # Set color depth (keep in mind that not all terminals support true color).
 
