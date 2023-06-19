@@ -13,5 +13,6 @@ nnn/*
 # gcloud
 gcloud
 
-# alex
+# updates
 update-notifier-alex.json
+simple-update-notifier/nodemon.json
