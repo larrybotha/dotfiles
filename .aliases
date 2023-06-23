@@ -69,6 +69,11 @@ fi
 # Always use color output for `ls`
 alias ls="command ls ${colorflag}"
 
+# Use nnn for ls if it's present
+if type "nnn" >/dev/null; then
+  alias ls='nnn -de'
+fi
+
 # Enable aliases to be sudo’ed
 alias sudo='sudo '
 
