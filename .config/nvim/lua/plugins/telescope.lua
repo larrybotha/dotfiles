@@ -21,6 +21,16 @@ function custom_actions.fzf_multi_select(prompt_bufnr)
 end
 
 require("telescope").setup({
+	pickers = {
+		live_grep = {
+			mappings = {
+				n = {
+					["<c-f>"] = actions.to_fuzzy_refine, -- switch to files filter during live_grep
+				},
+			},
+		},
+	},
+
 	defaults = {
 		mappings = {
 			i = {
