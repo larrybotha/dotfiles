@@ -49,6 +49,7 @@ formatter.setup({
 		vue = { custom_formatters.prettierd(), formatters.eslint_d },
 		toml = { custom_formatters.taplo },
 		yaml = { custom_formatters.prettierd("yaml") },
+		zig = { formatters.zig },
 	},
 
 	["svx"] = { custom_formatters.prettierd() },
