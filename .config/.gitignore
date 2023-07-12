@@ -10,6 +10,9 @@ karabiner/*
 nnn/*
 !nnn/custom
 
+# packer
+packer/*
+
 # gcloud
 gcloud
 
