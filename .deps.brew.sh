@@ -113,6 +113,10 @@ brew tap homebrew/versions
 brew install lua
 brew install lua-language-server
 
+# zig
+brew install zig
+brew install zls
+
 # patched fonts
 brew tap homebrew/cask-fonts
 brew install --cask font-roboto-mono-nerd-font

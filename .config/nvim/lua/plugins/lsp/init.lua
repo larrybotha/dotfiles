@@ -95,6 +95,7 @@ local server_configs = {
 	{ name = "tsserver", options = {} },
 	{ name = "vimls", options = {} },
 	{ name = "yamlls", options = {} },
+	{ name = "zls", options = {} },
 }
 for _, config in ipairs(server_configs) do
 	local attach_options = {
