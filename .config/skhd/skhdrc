@@ -82,18 +82,18 @@ hyper - k : yabai -m window --focus stack.prev || yabai -m window --focus stack.
 
 # go to previous window WITHOUT going into a stack
 hyper - p : yabai -m query --spaces | \
-  jq -re ".[] | select(.visible == 1).index" | \
+  jq -re ".[] | select(.\"is-visible\").index" | \
   xargs -I{} yabai -m query --windows --space {} | \
-  jq -re "[.[] | select(.app != \"Hammerspoon\")]" | \
-  jq -sre "add | sort_by(.display, .frame.x, .frame.y, .id) | nth(index(map(select(.focused == 1))) - 1).id" | \
+  jq -re "[.[] | select(.app)]" | \
+  jq -sre "add | sort_by(.display, .frame.x, .frame.y, .id) | nth(index(map(select(.\"has-focus\"))) - 1).id" | \
   xargs -I{} yabai -m window --focus {}
 
 # go to next window WITHOUT going into a stack
 hyper - n : yabai -m query --spaces | \
-  jq -re ".[] | select(.visible == 1).index" | \
+  jq -re ".[] | select(.\"is-visible\").index" | \
   xargs -I{} yabai -m query --windows --space {} | \
-  jq -re "[.[] | select(.app != \"Hammerspoon\")]" | \
-  jq -sre "add | sort_by(.display, .frame.x, .frame.y, .id) | reverse | nth(index(map(select(.focused == 1))) - 1).id" | \
+  jq -re "[.[] | select(.app)]" | \
+  jq -sre "add | sort_by(.display, .frame.x, .frame.y, .id) | reverse | nth(index(map(select(.\"has-focus\"))) - 1).id" | \
   xargs -I{} yabai -m window --focus {}
 
 ################################################################
