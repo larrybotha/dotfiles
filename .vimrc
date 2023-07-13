@@ -227,6 +227,14 @@
   " clear highlighted searches
   nnoremap <silent> <leader>/ :nohlsearch<CR>
 
+  " navigate using [ and ]
+  noremap [b :bprevious<CR>
+  noremap ]b :bnext<CR>
+  noremap [q :cprevious<CR>
+  noremap ]q :cnext<CR>
+  noremap [l :lprevious<CR>
+  noremap ]l :lnext<CR>
+
   " visual shifting without exiting visual mode
   vnoremap < <gv
   vnoremap > >gv
