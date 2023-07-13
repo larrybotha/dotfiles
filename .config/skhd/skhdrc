@@ -1,4 +1,4 @@
-# if you're having trouble finding key codes for a key just type the following
+# if you're having trouble finding key codes for a key type the following
 # in a terminal and type a key. Pretty cool! Or just check the wiki.
 # $ skhd --observe
 
@@ -9,9 +9,9 @@ hyper - f : alacritty --command xplr
 # YABAI
 ###############################
 ## Quickly restart the yabai launch agent
-ctrl + alt + cmd - r : launchctl kickstart -k "gui/${UID}/homebrew.mxcl.yabai"
+ctrl + alt + cmd - r : launchctl kickstart -k "gui/${UID}/com.koekeishiya.yabai"
 ## Quickly restart the skhd launch agent
-ctrl + alt + cmd - s : brew services restart skhd
+ctrl + alt + cmd - s : launchctl kickstart -k "gui/${UID}/com.koekeishiya.skhd"
 
 
 ## open terminal
