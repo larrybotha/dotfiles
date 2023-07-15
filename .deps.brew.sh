@@ -78,6 +78,7 @@ brew install lazygit
 brew install lulu
 brew install lynx
 brew install mosh
+brew install mpv
 brew install neovim
 brew install nnn
 brew install nvm
