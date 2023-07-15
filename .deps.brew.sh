@@ -67,8 +67,7 @@ brew install git-flow
 brew install gitlab-runner
 brew install go
 brew install gopls
-brew install hadolint # linter for Dockerfiles
-brew install howdoi   # linter for Dockerfiles
+brew install howdoi
 brew install htop
 brew install hub
 brew install jesseduffield/lazydocker/lazydocker
@@ -77,7 +76,6 @@ brew install jq
 brew install lazygit
 brew install lulu
 brew install lynx
-brew install mosh
 brew install mpv
 brew install neovim
 brew install nnn
@@ -127,8 +125,9 @@ brew tap hashicorp/tap
 brew install hashicorp/tap/packer
 
 # diagnostics, linting, lsp, formatters
-brew install hashicorp/tap/terraf        # diagnostics
 brew install fsouza/prettierd/prettierd  # formatter
+brew install hadolint										 # diagnostics
+brew install hashicorp/tap/terraf        # diagnostics
 brew install markdownlint-cli2           # diagnostics
 brew install rust-analyzer               # diagnostics
 brew install selene                      # diagnostics
@@ -143,7 +142,6 @@ brew install codeclimate						     # diagnostics
 
 # tmux and dependencies
 brew install tmux
-brew install reattach-to-user-namespace
 
 # Install yabai deps
 brew install koekeishiya/formulae/yabai
