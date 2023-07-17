@@ -23,7 +23,6 @@ function copy_files() {
 
 	files=(
 		".sh_completion" # allows for completion to be written after copying
-		".zshrc"         # doesn't seem to be `source`able when symlinked
 	)
 
 	source_dir="."
@@ -94,6 +93,7 @@ function symlink_to_home() {
 		".vimrc"
 		".wgetrc"
 		".zsh_completion"
+		".zshrc"
 		"init"
 	)
 
