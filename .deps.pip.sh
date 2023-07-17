@@ -36,4 +36,4 @@ pip_install ptpython
 pip_install epy-reader
 
 # ChatGPT
-pip_install gpt-cli
+pip_install gpt-command-line
