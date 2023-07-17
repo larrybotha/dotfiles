@@ -124,6 +124,10 @@ brew install --cask font-roboto-mono-nerd-font
 brew tap hashicorp/tap
 brew install hashicorp/tap/packer
 
+# hoard
+brew tap Hyde46/hoard
+brew install hoard
+
 # diagnostics, linting, lsp, formatters
 brew install fsouza/prettierd/prettierd  # formatter
 brew install hadolint										 # diagnostics

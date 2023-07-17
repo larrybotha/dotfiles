@@ -50,6 +50,14 @@ function prepare_completions() {
 		fi
 	fi
 
+	if type "hoard" >/dev/null; then
+		if [ "$SHELL" == "/bin/zsh" ]; then
+			hoard shell-config --shell zsh >>"$HOME/.sh_completion"
+		else
+			hoard shell-config --shell bash >>"$HOME/.sh_completion"
+		fi
+	fi
+
 	log 'done'
 }
 
