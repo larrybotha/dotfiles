@@ -2,9 +2,6 @@
 # in a terminal and type a key. Pretty cool! Or just check the wiki.
 # $ skhd --observe
 
-## open a terminal with xplr
-hyper - f : alacritty --command xplr
-
 ###############################
 # YABAI
 ###############################
