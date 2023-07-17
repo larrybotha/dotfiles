@@ -56,4 +56,6 @@ if type -p "atuin" >/dev/null; then
   fi
 fi
 
+source ~/.config/gpt-cli/.env
+
 source ~/.sh_completion

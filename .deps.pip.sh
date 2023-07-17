@@ -34,3 +34,6 @@ pip_install ptpython
 
 # reading epubs
 pip_install epy-reader
+
+# ChatGPT
+pip_install gpt-cli
