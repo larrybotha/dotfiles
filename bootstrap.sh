@@ -29,6 +29,7 @@ function copy_files() {
 	destination_dir="$HOME"
 
 	for file in "${files[@]}"; do
+		rm -f "${destination_dir}/${file}"
 		rsync -avz "${source_dir}/${file}" "${destination_dir}/"
 	done
 }
