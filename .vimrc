@@ -139,6 +139,20 @@
 
   set fillchars=diff:·
 
+  " use ripgrep for :grep and populating quickfix list
+  if executable('rg')
+    set grepprg=rg\ --vimgrep\ --hidden\ --smart-case
+    " `%f` represents the file name where the match was found
+    " `%l` represents the line number where the match was found
+    " `%c` represents the column number where the match was found
+    " `%m` represents the matched text itself
+    set grepformat^=%f:%l:%c:%m
+
+    augroup au_open_quick_fix
+      autocmd QuickFixCmdPost grep copen
+    augroup END
+  endif
+
   " run checktime to reload file if changed
   augroup au_checktime
     au!
@@ -266,9 +280,7 @@
 
   if has('autocmd')
     " Also load indent files, to automatically do language-dependent indenting.
-
-    " Put these in an autocmd group, so that we can delete them easily.
-    augroup vimrcEx
+    augroup au_vimrcEx
       autocmd!
 
       " For all text files set 'textwidth' to 80 characters.
@@ -292,7 +304,7 @@
 
     " Use hybrid line numbers when in any mode other than 'insert' mode,
     " otherwise use 'number'
-    augroup numbertoggle
+    augroup au_numbertoggle
       autocmd!
 
       autocmd BufEnter,FocusGained,InsertLeave,WinEnter *
@@ -310,7 +322,6 @@
   source ~/.vim/local/neovim.vim
 
   source ~/.vim/local/plugins/vim-plug.vim
-  "source ~/.vim/local/plugins/airline.vim
   source ~/.vim/local/plugins/asynctasks.vim
   source ~/.vim/local/plugins/cmp.vim
   source ~/.vim/local/plugins/codeium.vim
