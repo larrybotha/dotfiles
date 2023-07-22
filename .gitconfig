@@ -109,6 +109,10 @@
 [push]
   default = simple
 
+[rebase]
+  autosquash = true
+  autostash = true
+
 [status]
   # show submodule changes on status
   submoduleSummary = true
