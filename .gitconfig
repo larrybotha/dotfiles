@@ -32,8 +32,8 @@
   whitespace = warn
 
 [core]
-  # Use vim for merges
-  editor = vim
+  # Use Neovim for merges
+  editor = nvim
   # Use custom `.gitignore` and `.gitattributes`
   excludesfile = ~/.gitignore
   attributesfile = ~/.gitattributes
