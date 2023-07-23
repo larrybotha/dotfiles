@@ -15,7 +15,7 @@
   # Checkout a branch
   co = checkout
   # Checkout a branch
-  br = branch
+  sw = switch
   # Show verbose output about tags, branches or remotes
   tags = tag -l --sort=taggerdate
   branches = branch -a
