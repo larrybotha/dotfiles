@@ -13,6 +13,7 @@ function ensure_has_rust() {
 ensure_has_rust
 
 cargo install evcxr # repl
+cargo install git-stack # tool for visualising and working with stacked Git branches
 
 # diagnostics, linting, lsp, formatters
 cargo install blackd-client  # formatter
