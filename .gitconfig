@@ -110,7 +110,6 @@
 [rebase]
   autosquash = true
   autostash = true
-  updateRefs = true
 
 [status]
   # show submodule changes on status
