@@ -72,6 +72,7 @@ brew install htop
 brew install hub
 brew install jesseduffield/lazydocker/lazydocker
 brew install jesseduffield/lazynpm/lazynpm
+brew install jid
 brew install jq
 brew install lazygit
 brew install lulu
