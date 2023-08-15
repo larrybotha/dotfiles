@@ -9,7 +9,8 @@ for dir in vim.fs.dir(vaults_dir) do
 	table.insert(vault_dirs, path)
 end
 
-local function configure_obsidian(vaults, cwd, options)
+local function configure_obsidian(vaults, options)
+	local cwd = vim.fn.getcwd()
 	local dirs = { cwd }
 	local vault_dir = nil
 	local vault_map = {}
@@ -44,9 +45,9 @@ vim.api.nvim_create_autocmd("DirChanged", {
 	pattern = "*",
 	group = au_group,
 	callback = function()
-		configure_obsidian(vault_dirs, vim.fn.getcwd(), base_options)
+		configure_obsidian(vault_dirs, base_options)
 	end,
 	desc = "Re-initialises Obsidian when the working directory changes",
 })
 
-configure_obsidian(vault_dirs, vim.fn.getcwd(), base_options)
+configure_obsidian(vault_dirs, base_options)
