@@ -106,6 +106,7 @@
     Plug 'GustavoKatel/telescope-asynctasks.nvim'
     Plug 'lukas-reineke/indent-blankline.nvim'
     Plug 'lewis6991/gitsigns.nvim'
+    Plug 'epwalsh/obsidian.nvim'
 
     " AI tools
     Plug 'Exafunction/codeium.vim'
