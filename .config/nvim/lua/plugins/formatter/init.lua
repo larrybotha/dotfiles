@@ -61,7 +61,8 @@ local au_group = vim.api.nvim_create_augroup("FormatAutogroup", { clear = true }
 vim.api.nvim_create_autocmd("BufWritePost", {
 	pattern = "*",
 	group = au_group,
-	-- silence errors raised by formatters that fail on syntx errors
+	-- silence errors raised by formatters that fail on syntax errors
 	-- see https://github.com/mhartington/formatter.nvim/issues/100
 	command = "silent FormatWrite",
+	desc = "Format buffer on save",
 })
