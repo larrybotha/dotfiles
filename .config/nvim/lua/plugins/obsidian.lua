@@ -1,6 +1,14 @@
 local obsidian = require("obsidian")
 
-local base_options = {}
+local base_options = {
+	-- don't manage frontmatter
+	disable_frontmatter = true,
+
+	mappings = {
+		-- navigate to markdown files using gf - overrides Vim's default behaviour
+		["gf"] = require("obsidian.mapping").gf_passthrough(),
+	},
+}
 local vault_dirs = {}
 local vaults_dir = "~/projects/obsidian-vaults"
 
