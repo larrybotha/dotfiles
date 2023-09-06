@@ -90,7 +90,6 @@ common_modules=(
 	nginxbeautifier					# formatter
 	prettier                # formatter
 	prettier-plugin-svelte  # formatter
-	rome                    # diagnostics / formatter
 	stylelint               # diagnostics
 
 	# language servers
