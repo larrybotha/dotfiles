@@ -159,6 +159,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		alacritty
 		alfred
 		anki
+		arc
 		beekeeper-studio
 		betterzip
 		brave-browser
