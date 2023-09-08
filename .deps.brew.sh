@@ -40,7 +40,6 @@ brew install rbenv ruby-build
 brew install mysql
 
 # Install other useful binaries
-brew install ack
 brew install ansible
 brew install ansible-lint
 brew install atuin
@@ -54,14 +53,10 @@ brew install dive
 brew install dust
 brew install editorconfig
 brew install elasticsearch
-brew install exa
-brew install fcp
 brew install fd
-brew install flow
 brew install fluent-bit
 brew install fzf
 brew install git
-brew install git-crypt
 brew install git-delta
 brew install git-flow
 brew install gitlab-runner
@@ -69,7 +64,6 @@ brew install go
 brew install gopls
 brew install howdoi
 brew install htop
-brew install hub
 brew install jesseduffield/lazydocker/lazydocker
 brew install jesseduffield/lazynpm/lazynpm
 brew install jid
@@ -89,13 +83,10 @@ brew install pyenv-virtualenv
 brew install python
 brew install qt
 brew install redis
-brew install rename
 brew install ripgrep
-brew install sbt
 brew install starship
 brew install tealdeer
 brew install terraform
-brew install the_silver_searcher
 brew install tmuxinator
 brew install tre-command
 brew install vim
@@ -124,10 +115,6 @@ brew install --cask font-roboto-mono-nerd-font
 # Hashicorp Packer
 brew tap hashicorp/tap
 brew install hashicorp/tap/packer
-
-# hoard
-brew tap Hyde46/hoard
-brew install hoard
 
 # diagnostics, linting, lsp, formatters
 brew install fsouza/prettierd/prettierd  # formatter
@@ -167,7 +154,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		dbgate
 		dbvisualizer
 		docker
-		dropbox
 		figma
 		firefox
 		flameshot
@@ -183,8 +169,6 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		karabiner-elements
 		keycastr
 		libreoffice
-		moom
-		mysqlworkbench
 		postman
 		proxyman
 		qlImageSize
@@ -195,11 +179,8 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		quicklook-csv
 		quicklook-json
 		rescuetime
-		robo-3t
 		safari-technology-preview
 		skype
-		slack
-		sourcetree
 		the-unarchiver
 		transmission
 		virtualbox
