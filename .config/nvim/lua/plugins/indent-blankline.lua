@@ -4,7 +4,9 @@ local highlight = {
 }
 
 require("ibl").setup({
-	buftype_exclude = { "terminal" },
+	exclude = {
+		buftypes = { "terminal" },
+	},
 	indent = { highlight = highlight, char = "" },
 	whitespace = {
 		highlight = highlight,
