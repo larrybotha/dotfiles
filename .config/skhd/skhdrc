@@ -6,9 +6,9 @@
 # YABAI
 ###############################
 ## Quickly restart the yabai launch agent
-ctrl + alt + cmd - r : launchctl kickstart -k "gui/${UID}/com.koekeishiya.yabai"
+ctrl + alt + cmd - r : yabai --restart-service
 ## Quickly restart the skhd launch agent
-ctrl + alt + cmd - s : launchctl kickstart -k "gui/${UID}/com.koekeishiya.skhd"
+ctrl + alt + cmd - s : skhd --restart-service
 
 
 ## open terminal
