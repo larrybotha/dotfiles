@@ -49,6 +49,7 @@ brew install checkmake
 brew install codespell
 brew install ctop
 brew install deno
+brew install difftastic
 brew install dive
 brew install dust
 brew install editorconfig
@@ -57,7 +58,6 @@ brew install fd
 brew install fluent-bit
 brew install fzf
 brew install git
-brew install git-delta
 brew install git-flow
 brew install gitlab-runner
 brew install go
