@@ -59,6 +59,7 @@
   ignorecase = false
 
 [diff]
+  # use difftastic by default
   external = difft
   # use difft for diffing
   tool = difftastic
@@ -87,10 +88,6 @@
 
 [pager]
   difftool = true
-  diff = difftastic
-  log = difftastic
-  reflog = difftastic
-  show = difftastic
 
 [pull]
   # Stop Git from emitting a warning when pulling branches
