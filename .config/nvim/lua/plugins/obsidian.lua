@@ -6,7 +6,7 @@ local base_options = {
 
 	mappings = {
 		-- navigate to markdown files using gf - overrides Vim's default behaviour
-		["gf"] = require("obsidian.mapping").gf_passthrough(),
+		["gf"] = require("obsidian").util.gf_passthrough(),
 	},
 }
 local vault_dirs = {}
