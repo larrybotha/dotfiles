@@ -90,8 +90,7 @@ brew install terraform
 brew install tmuxinator
 brew install tre-command
 brew install vim
-brew install watch
-brew install watchman
+brew install watchexec
 brew install webkit2png
 brew install xh # httpie alternative
 brew install xplr
