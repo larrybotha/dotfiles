@@ -35,7 +35,7 @@
 
   " Themes
   "Plug 'tanvirtin/monokai.nvim'
-  Plug 'kvrohit/mellow.nvim'
+  Plug 'mellow-theme/mellow.nvim'
 
   Plug 'skywind3000/asynctasks.vim'
   Plug 'skywind3000/asyncrun.vim'
