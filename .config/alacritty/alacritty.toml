@@ -1,0 +1,20 @@
+import = ["/Users/larrybotha/.vim/plugged/mellow.nvim/extras/alacritty/mellow.toml"]
+
+[font]
+size = 13.0
+
+[font.bold]
+family = "RobotoMono Nerd Font"
+style = "Light"
+
+[font.bold_italic]
+family = "RobotoMono Nerd Font"
+style = "Light Italic"
+
+[font.italic]
+family = "RobotoMono Nerd Font"
+style = "Thin Italic"
+
+[font.normal]
+family = "RobotoMono Nerd Font"
+style = "Thin"
