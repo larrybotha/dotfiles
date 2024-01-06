@@ -26,6 +26,7 @@ local function get_workspaces(vaults_dir)
 end
 
 local vaults_dir = "~/projects/obsidian-vaults"
+local workspaces = get_workspaces(vaults_dir)
 local options = {
 	-- don't manage frontmatter
 	disable_frontmatter = true,
@@ -40,7 +41,13 @@ local options = {
 		},
 	},
 
-	workspaces = get_workspaces(vaults_dir),
+	workspaces = workspaces,
 }
 
-obsidian.setup(options)
+if #workspaces > 0 then
+	-- TODO: use an autocommand to set this when opening markdown files
+	-- see https://github.com/epwalsh/obsidian.nvim#concealing-characters
+	vim.opt_local.conceallevel = 1
+
+	obsidian.setup(options)
+end
