@@ -7,7 +7,7 @@ require("plugins/mason") -- must be before lsp
 require("plugins/lsp")
 require("plugins/lspfuzzy")
 require("plugins/neogen")
-require("plugins/null-ls")
+require("plugins/none-ls")
 require("plugins/nvim-dap")
 require("plugins/nvim-web-devicons")
 require("plugins/obsidian")

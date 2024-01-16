@@ -74,7 +74,7 @@
   " only load if we are in Neovim
   Plug 'folke/neodev.nvim', Cond(has('nvim'))
   Plug 'folke/trouble.nvim', Cond(has('nvim'))
-  Plug 'jose-elias-alvarez/null-ls.nvim', Cond(has('nvim'))
+  Plug 'nvimtools/none-ls.nvim', Cond(has('nvim'))
   Plug 'mhartington/formatter.nvim', Cond(has('nvim'))
   Plug 'jodosha/vim-godebug', Cond(has('nvim'))
   Plug 'williamboman/mason.nvim', Cond(has('nvim'))

@@ -1,4 +1,4 @@
-local null_ls = require("null-ls")
+local null_ls = require("null-ls") -- uses null-ls for legacy support
 
 local options = {
 	sources = {
@@ -20,6 +20,9 @@ local options = {
 		null_ls.builtins.diagnostics.tsc,
 		null_ls.builtins.diagnostics.vint,
 		null_ls.builtins.diagnostics.yamllint,
+
+		-- lua
+		null_ls.builtins.diagnostics.luacheck,
 
 		-- english
 		null_ls.builtins.diagnostics.alex,
