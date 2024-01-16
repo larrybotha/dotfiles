@@ -1,3 +1,5 @@
+tmp
+
 # vim plugins
 .vim/plugged
 .vim/autoload/plug.vim
