@@ -62,6 +62,7 @@ brew install git-flow
 brew install gitlab-runner
 brew install go
 brew install gopls
+brew install withgraphite/tap/graphite
 brew install howdoi
 brew install htop
 brew install jesseduffield/lazydocker/lazydocker
