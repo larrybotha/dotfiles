@@ -41,7 +41,7 @@ formatter.setup({
 			custom_formatters.shfmt,
 			custom_formatters.shellharden,
 		},
-		sql = { custom_formatters.sqlfluff },
+		sql = { custom_formatters.sleek },
 		svelte = { custom_formatters.prettierd("svelte"), formatters.eslint_d },
 		svg = { custom_formatters.prettierd("html") },
 		terraform = { custom_formatters.terraform },

@@ -191,16 +191,12 @@ local M = {
 		}
 	end,
 
-	sqlfluff = function()
+	-- sql formatter
+	sleek = function()
 		return {
-			exe = "sqlfluff",
-			args = {
-				"fix",
-				"--disable-progress-bar",
-				get_file(),
-				"-",
-			},
-			stdin = true,
+			exe = "sleek",
+			args = {},
+			stdin = false,
 		}
 	end,
 

@@ -18,9 +18,10 @@ cargo install git-stack # tool for visualising and working with stacked Git bran
 cargo install cargo-expand # prints out the expansions of macros
 
 # diagnostics, linting, lsp, formatters
-cargo install blackd-client  # formatter
-cargo install cbfmt          # formatter
-cargo install dotenv-linter  # diagnostics
-cargo install selene         # diagnostics
-cargo install shellharden    # formatter
-cargo install taplo-cli      # formatter + diagnostics
+cargo install blackd-client		# formatter
+cargo install cbfmt         	# formatter
+cargo install dotenv-linter 	# diagnostics
+cargo install selene        	# diagnostics
+cargo install sleek						# diagnostics for sql
+cargo install shellharden   	# formatter
+cargo install taplo-cli     	# formatter + diagnostics
