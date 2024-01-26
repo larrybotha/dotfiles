@@ -109,7 +109,8 @@
     Plug 'epwalsh/obsidian.nvim'
 
     " AI tools
-    Plug 'Exafunction/codeium.vim'
+    " see https://github.com/Exafunction/codeium.nvim/issues/138
+    Plug 'Exafunction/codeium.vim', { 'commit': 'a1c3d6b369a18514d656dac149de807becacbdf7' }
   end
 
   call plug#end()
