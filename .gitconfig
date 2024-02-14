@@ -14,6 +14,14 @@
   co = checkout
   # Checkout a branch
   sw = switch
+  # Get better info for a blame:
+  #   - -w: ignore whitespace
+  #   - -C: and if the file was moved
+  #   - -C: or, if the file was created
+  #   - -C: or, if there were any commits at all
+  #
+  # See https://youtu.be/aolI_Rz0ZqY?si=OipSkcO4PnIpwgQg&t=693
+  bblame = blame -w -C -C -C
   # Show verbose output about tags, branches or remotes
   tags = tag -l --sort=taggerdate
   branches = branch -a
@@ -28,6 +36,10 @@
 [apply]
   # Detect whitespace errors when applying a patch
   whitespace = warn
+
+[branch]
+  # sort branches by commiterdate descending
+	sort = -committerdate
 
 [color]
   # Use colors in Git commands that are capable of colored output when outputting to the terminal
@@ -45,6 +57,10 @@
   added = blue
   changed = green
   untracked = cyan
+
+[column]
+  # render branches from `git branch` in columns
+	ui = auto
 
 [core]
   # Use Neovim for merges
@@ -99,6 +115,11 @@
   autosquash = true
   autostash = true
 
+[rerere]
+  # record merge conflict resolutions, and autamatically apply if possible
+  # See https://youtu.be/aolI_Rz0ZqY?si=oDZ4Ww79zqFaSYxx&t=901
+	enabled = true
+
 [status]
   # show submodule changes on status
   submoduleSummary = true
@@ -116,3 +137,6 @@
   pushInsteadOf = "git://gist.github.com/"
 [url "git://gist.github.com/"]
   insteadOf = "gist:"
+[maintenance]
+	repo = /Users/larrybotha/projects/practice-manager-orthodontics
+	repo = /Users/larrybotha/projects/obsidian-vaults/everything
