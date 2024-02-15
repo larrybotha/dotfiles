@@ -42,10 +42,11 @@ brew install mysql
 # Install other useful binaries
 brew install ansible
 brew install ansible-lint
+brew install ariga/tap/atlas # Terraform-like orchestration for db schemas
 brew install atuin
 brew install bat
-brew install checkov
 brew install checkmake
+brew install checkov
 brew install codespell
 brew install ctop
 brew install deno
@@ -62,7 +63,6 @@ brew install git-flow
 brew install gitlab-runner
 brew install go
 brew install gopls
-brew install withgraphite/tap/graphite
 brew install howdoi
 brew install htop
 brew install jesseduffield/lazydocker/lazydocker
@@ -93,6 +93,7 @@ brew install tre-command
 brew install vim
 brew install watchexec
 brew install webkit2png
+brew install withgraphite/tap/graphite
 brew install xh # httpie alternative
 brew install xplr
 brew install yarn
