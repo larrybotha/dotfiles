@@ -90,6 +90,7 @@ brew install tealdeer
 brew install terraform
 brew install tmuxinator
 brew install tre-command
+brew install tursodatabase/tap/turso
 brew install vim
 brew install watchexec
 brew install webkit2png
