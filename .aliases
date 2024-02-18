@@ -84,18 +84,19 @@ alias gurl='curl --compressed'
 alias week='date +%V'
 
 # Get OS X Software Updates, and update installed Ruby gems, Homebrew, npm, and their installed packages
-alias update='
+alias update-full='
   sudo softwareupdate -i -a
   update-brew
   npm update npm -g
   npm update -g
   sudo gem update
 '
-alias update-brew='
+alias update='
   brew update
   brew upgrade
   brew cleanup
   brew reinstall neovim
+  rye self update
 '
 
 # IP addresses
