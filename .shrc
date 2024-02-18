@@ -1,3 +1,6 @@
+# use vi mode
+set -o vi
+
 # Load the shell dotfiles, and then some:
 # * ~/.path can be used to extend `$PATH`.
 # * ~/.extra can be used for other settings you don’t want to commit.
@@ -11,9 +14,6 @@ if type -p "nnn" >/dev/null; then
   source ~/.config/nnn/custom/.nnn
 fi
 
-# use vi mode
-set -o vi
-
 # init rbenv
 if type -p rbenv &>/dev/null; then
   eval "$(rbenv init -)"
@@ -23,6 +23,12 @@ fi
 if type -p "pyenv" >/dev/null; then
   eval "$(pyenv init -)"
 fi
+
+# init rye / uv
+if [ -f ~/.rye/env ] >/dev/null; then
+  source ~/.rye/env
+fi
+
 
 if ! [ "$ZSH_VERSION" ]; then
   # use ctrl-p to open a file in vim
