@@ -22,7 +22,6 @@ local options = {
 		"stylelint",
 		"tfsec",
 		"vint",
-		"vulture",
 		"yamllint",
 
 		-- formatters

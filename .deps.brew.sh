@@ -130,7 +130,6 @@ brew install shfmt                       # formatter
 brew install sqlfluff                    # formatter
 brew install stylua                      # formatter
 brew install vint                        # diagnostics
-brew install vulture                     # diagnostics
 brew tap codeclimate/formulae						 # diagnostics
 brew install codeclimate						     # diagnostics
 

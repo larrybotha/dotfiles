@@ -73,21 +73,19 @@ end
 nvim_lsp.custom_lua_lsp = custom_lua_lsp
 local server_configs = {
 	{ name = "ansiblels", options = {} },
-	{ name = "bashls", options = {} },
+	{ name = "bashls", options = {} }, -- detects and uses shellcheck automatically
 	{ name = "cssls", options = {} },
 	{ name = "custom_lua_lsp", options = {} },
 	{ name = "docker_compose_language_service", options = {} },
 	{ name = "dockerls", options = {} },
 	{ name = "emmet_ls", options = {} },
-	{ name = "eslint", options = {} },
+	{ name = "eslint", options = { command = "eslint_d" } },
 	{ name = "gopls", options = {} },
 	{ name = "html", options = { filetypes = { "html", "htmldjango" } } },
 	{ name = "intelephense", options = {} },
 	{ name = "jsonls", options = {} },
 	{ name = "marksman", options = {} },
 	{ name = "pyright", options = {} },
-	-- TODO: LB - disable ruff diagnostics, already done in null-ls, resulting in
-	-- duplicated diagnostics
 	{ name = "ruff_lsp", options = {} },
 	{ name = "svelte", options = {} },
 	{ name = "taplo", options = {} },
