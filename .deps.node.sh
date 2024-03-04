@@ -69,6 +69,7 @@ function conditional_install() {
 	fi
 }
 
+# TODO: use GNU parallel to speed up installation of these deps
 common_modules=(
 	fast-cli
 	imageoptim-cli
@@ -96,6 +97,7 @@ common_modules=(
 	ansible-language-server
 	bash-language-server
 	dockerfile-language-server-nodejs
+	eslint-language-server
 	pyright
 	svelte-language-server
 	typescript-language-server
