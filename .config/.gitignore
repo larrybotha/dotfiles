@@ -6,6 +6,9 @@
 karabiner/*
 !karabiner/karabiner.json
 
+# raycast
+raycast/extensions
+
 # epy epub reader
 epy
 
