@@ -95,7 +95,18 @@ local server_configs = {
 
 	-- Python
 	{ name = "ruff_lsp" }, -- diagnostics
-	{ name = "jedi_language_server" }, -- completions, renaming
+	{
+		-- TODO: LB - replace with jedi_language_server once renaming works reliably
+		name = "pyright",
+		options = {
+			settings = {
+				python = {
+					-- don't use Pyright for static code analysis
+					analysis = { diagnosticMode = "off", typeCheckingMode = "off" },
+				},
+			},
+		},
+	},
 }
 for _, config in ipairs(server_configs) do
 	local attach_options = {

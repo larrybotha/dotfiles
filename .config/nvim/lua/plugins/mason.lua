@@ -56,7 +56,7 @@ require("mason-lspconfig").setup({
 		"eslint",
 		"gopls",
 		"html",
-		"jedi_language_server",
+		"pyright",
 		"jsonls",
 		"lua_ls",
 		"marksman",
