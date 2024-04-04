@@ -25,13 +25,11 @@ local options = {
 		"yamllint",
 
 		-- formatters
-		"blackd-client",
 		"cbfmt",
 		"djlint",
 		"eslint_d",
 		"fixjson",
 		"goimports",
-		"isort",
 		"prettierd",
 		"rustfmt",
 		"shellharden",

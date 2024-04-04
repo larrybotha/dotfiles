@@ -7,28 +7,6 @@ end
 -- For configs for various formatters, see:
 -- https://github.com/jose-elias-alvarez/null-ls.nvim/tree/main/lua/null-ls/builtins/formatting
 local M = {
-	-- prefer using blackd_client, but use this if blackd-client is raising errors
-	black = function()
-		return {
-			exe = "black",
-			args = {
-				"--stdin-filename",
-				get_file(),
-				"--quiet",
-				"-",
-			},
-			stdin = true,
-		}
-	end,
-
-	blackd_client = function()
-		return {
-			exe = "blackd-client",
-			args = {},
-			stdin = true,
-		}
-	end,
-
 	cbfmt = function()
 		return {
 			exe = "cbfmt",
@@ -94,19 +72,6 @@ local M = {
 		}
 	end,
 
-	isort = function()
-		return {
-			exe = "isort",
-			args = {
-				"--stdout",
-				"--filename",
-				get_file(),
-				"-",
-			},
-			stdin = true,
-		}
-	end,
-
 	-- https://github.com/vasilevich/nginxbeautifier
 	nginxbeautifier = function()
 		return {
@@ -145,20 +110,37 @@ local M = {
 		end
 	end,
 
-	ruff = function()
-		return {
-			exe = "ruff",
-			args = {
-				"--fix",
-				"--exit-zero",
-				"--no-cache",
-				"--stdin-filename",
-				get_file(),
-				"-",
-			},
-			stdin = true,
-		}
-	end,
+	ruff = {
+		format = function()
+			return {
+				exe = "ruff",
+				args = {
+					"format",
+					"--no-cache",
+					"--stdin-filename",
+					get_file(),
+					"-",
+				},
+				stdin = true,
+			}
+		end,
+
+		lint = function()
+			return {
+				exe = "ruff",
+				args = {
+					"check",
+					"--fix",
+					"--exit-zero",
+					"--no-cache",
+					"--stdin-filename",
+					get_file(),
+					"-",
+				},
+				stdin = true,
+			}
+		end,
+	},
 
 	pyflyby_auto_import = function()
 		return {

@@ -20,7 +20,6 @@ cargo install --git https://github.com/mitsuhiko/rye rye # Python project manage
 cargo install cargo-expand # prints out the expansions of macros
 
 # diagnostics, linting, lsp, formatters
-cargo install blackd-client		# formatter
 cargo install cbfmt         	# formatter
 cargo install dotenv-linter 	# diagnostics
 cargo install selene        	# diagnostics

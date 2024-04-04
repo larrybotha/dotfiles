@@ -26,10 +26,8 @@ packages=(
 
 	# diagnostics, linting, lsp, formatters
 	autoimport  # formatter
-	black       # formatter
 	codespell   # diagnostics
 	djlint      # formatter / diagnostics
-	isort       # formatter
 	pyflyby     # formatter
 	ruff        # formatter / diagnostics
 	ruff-lsp    # LSP

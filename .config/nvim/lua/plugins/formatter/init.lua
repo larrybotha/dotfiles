@@ -31,10 +31,8 @@ formatter.setup({
 		packer = { custom_formatters.packer },
 		python = {
 			custom_formatters.pyflyby_auto_import,
-			custom_formatters.ruff,
-			custom_formatters.isort,
-			--custom_formatters.blackd_client, -- blackd_client or black - ideally blackd_client
-			custom_formatters.black, -- blackd_client or black - ideally blackd_client
+			custom_formatters.ruff.lint,
+			custom_formatters.ruff.format,
 		},
 		rust = { filetypes.rust.rustfmt },
 		sh = {
