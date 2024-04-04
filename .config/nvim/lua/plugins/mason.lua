@@ -47,6 +47,7 @@ require("mason-lspconfig").setup({
 	ensure_installed = {
 		"ansiblels",
 		"bashls",
+		"biome",
 		"cssls",
 		"denols",
 		"docker_compose_language_service",
@@ -59,7 +60,6 @@ require("mason-lspconfig").setup({
 		"jsonls",
 		"lua_ls",
 		"marksman",
-		"biome",
 		"ruff_lsp",
 		"rust_analyzer",
 		"svelte",
