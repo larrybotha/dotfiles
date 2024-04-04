@@ -131,6 +131,7 @@ local M = {
 				args = {
 					"check",
 					"--fix",
+					"--select I", -- sort imports
 					"--exit-zero",
 					"--no-cache",
 					"--stdin-filename",
@@ -142,14 +143,10 @@ local M = {
 		end,
 	},
 
-	pyflyby_auto_import = function()
+	python_autoimport = function()
 		return {
-			exe = "tidy-imports",
-			args = {
-				"-n", -- do not format imports
-				get_file(),
-			},
-			stdin = true,
+			exe = "autoimport",
+			args = {},
 		}
 	end,
 

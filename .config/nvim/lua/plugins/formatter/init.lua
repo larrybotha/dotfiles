@@ -30,8 +30,12 @@ formatter.setup({
 		org = { custom_formatters.cbfmt },
 		packer = { custom_formatters.packer },
 		python = {
-			custom_formatters.pyflyby_auto_import,
+			custom_formatters.python_autoimport,
+			-- TODO: use unified command for linting and formatting when available:
+			-- https://github.com/astral-sh/ruff/issues/8232
 			custom_formatters.ruff.lint,
+			-- NOTE: must come after linting to remove unused imports
+			-- see https://docs.astral.sh/ruff/formatter/#sorting-imports
 			custom_formatters.ruff.format,
 		},
 		rust = { filetypes.rust.rustfmt },

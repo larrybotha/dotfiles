@@ -28,7 +28,6 @@ packages=(
 	autoimport  # formatter
 	codespell   # diagnostics
 	djlint      # formatter / diagnostics
-	pyflyby     # formatter
 	ruff        # formatter / diagnostics
 	ruff-lsp    # LSP
 	yamllint    # diagnostics
