@@ -85,7 +85,6 @@ local server_configs = {
 	{ name = "intelephense", options = {} },
 	{ name = "jsonls", options = {} },
 	{ name = "marksman", options = {} },
-	{ name = "pyright", options = {} },
 	{ name = "ruff_lsp", options = {} },
 	{ name = "svelte", options = {} },
 	{ name = "taplo", options = {} },
@@ -94,6 +93,7 @@ local server_configs = {
 	{ name = "vimls", options = {} },
 	{ name = "yamlls", options = {} },
 	{ name = "zls", options = {} },
+	{ name = "jedi_language_server" }, -- completions, renaming
 }
 for _, config in ipairs(server_configs) do
 	local attach_options = {

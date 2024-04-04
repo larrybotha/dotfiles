@@ -98,7 +98,6 @@ common_modules=(
 	bash-language-server
 	dockerfile-language-server-nodejs
 	eslint-language-server
-	pyright
 	svelte-language-server
 	typescript-language-server
 	vim-language-server
