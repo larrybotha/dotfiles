@@ -82,6 +82,7 @@ local server_configs = {
 	{ name = "eslint", options = { command = "eslint_d" } },
 	{ name = "gopls" },
 	{ name = "html", options = { filetypes = { "html", "htmldjango" } } },
+	{ name = "htmx", options = { filetypes = { "html", "htmldjango" } } },
 	{ name = "intelephense" },
 	{ name = "jsonls" },
 	{ name = "marksman" },
