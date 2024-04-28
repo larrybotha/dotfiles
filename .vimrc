@@ -34,7 +34,6 @@
   Plug 'wakatime/vim-wakatime'
 
   " Themes
-  "Plug 'tanvirtin/monokai.nvim'
   Plug 'mellow-theme/mellow.nvim'
 
   Plug 'skywind3000/asynctasks.vim'
@@ -82,11 +81,13 @@
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
   Plug 'nvim-treesitter/nvim-treesitter-context'
+
   Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
 
   " debugging
   Plug 'mfussenegger/nvim-dap', Cond(has('nvim'))
   Plug 'rcarriga/nvim-dap-ui', Cond(has('nvim'))
+  Plug 'nvim-neotest/nvim-nio', Cond(has('nvim')) " nvim-dap-ui dependency
 
   " completion
   Plug 'hrsh7th/cmp-nvim-lsp'
