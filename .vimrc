@@ -107,6 +107,7 @@
     Plug 'lukas-reineke/indent-blankline.nvim'
     Plug 'lewis6991/gitsigns.nvim'
     Plug 'epwalsh/obsidian.nvim'
+    Plug 'ThePrimeagen/harpoon', {'branch': 'harpoon2'}
 
     " AI tools
     Plug 'Exafunction/codeium.vim'

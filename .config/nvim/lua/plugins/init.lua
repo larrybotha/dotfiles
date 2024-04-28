@@ -2,6 +2,7 @@ require("plugins/neodev") -- must be run before lsp
 require("plugins/cmp")
 require("plugins/formatter")
 require("plugins/gitsigns")
+require("plugins/harpoon")
 require("plugins/indent-blankline")
 require("plugins/mason") -- must be before lsp
 require("plugins/lsp")
