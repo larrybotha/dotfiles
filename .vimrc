@@ -81,6 +81,7 @@
   Plug 'williamboman/mason-lspconfig.nvim', Cond(has('nvim'))
   Plug 'neovim/nvim-lspconfig', Cond(has('nvim'))
   Plug 'nvim-treesitter/nvim-treesitter', Cond(has('nvim'), {'do': ':TSUpdate'})
+  Plug 'nvim-treesitter/nvim-treesitter-context'
   Plug 'ojroques/nvim-lspfuzzy', Cond(has('nvim'))
 
   " debugging
