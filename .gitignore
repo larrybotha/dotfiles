@@ -30,3 +30,7 @@ Thumbs.db
 
 # ignore php cs fixer generated files
 .php_cs.cache
+
+# vim
+.vim/undodir
+
