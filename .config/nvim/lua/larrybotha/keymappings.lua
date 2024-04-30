@@ -1,5 +1,8 @@
 vim.g.mapleader = ","
 
+-- clear highlighted searches
+vim.keymap.set("n", "<leader>/", ":nohlsearch<CR>", {silent=true})
+
 -- center the cursor when navigating files
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
 vim.keymap.set("n", "<C-u>", "<C-u>zz")
@@ -13,10 +16,20 @@ vim.keymap.set("n", "J", "mzJ`z")
 vim.keymap.set('n', 'k', 'gk')
 vim.keymap.set('n', 'j', 'gj')
 
--- copy text into the void register, only during visual mode,
--- so as not to overwrite the yank register
+-- substitute all occurrences of the word under the cursor
+vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+
+-- when in visual mode (this is what 'x' denotes - it excludes selection mode),
+-- allow for pasting while placing the highlighted text into the void register,
+-- instead of the default register.
+-- This ensures that subsequent pastes contain the originally yanked text, and not
+-- the replaced text
 -- see https://youtu.be/w7i4amO_zaE?si=C5sHtqfMIaKs2aWV&t=1596
 vim.keymap.set("x", "<leader>p", [["_dP]])
+
+-- delete text into the void register to prevent overwriting the currently yanked
+-- text
+vim.keymap.set({"n", "v"}, "<leader>d", [["_d]])
 
 -- yank into the system clipboard
 vim.keymap.set({"n", "v"}, "<leader>y", [["+y]])
@@ -45,9 +58,6 @@ vim.keymap.set("i", "˚", "<Esc>:m .-2<CR>==gi")
 vim.keymap.set("v", "∆", ":m '>+1<CR>gv=gv")
 vim.keymap.set("v", "˚", ":m '<-2<CR>gv=gv")
 
--- paste, fix indentation and clear the mark by default
-vim.keymap.set("n", "p", "p=`]`<esc>p")
-
 -- quickly move to next and previous buffers
 vim.keymap.set("", "<leader>bn", ":bn<CR>")
 vim.keymap.set("", "<leader>bp", ":bp<CR>")
@@ -58,3 +68,4 @@ vim.keymap.set("", "<leader>vi", ":tabedit ~/.config/nvim<CR>")
 
 -- set all windows to equal width
 vim.keymap.set("", "<leader>=", "<C-w>=")
+
