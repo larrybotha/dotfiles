@@ -48,3 +48,16 @@ vim.api.nvim_create_autocmd({"VimEnter", "BufNewFile","BufReadPost"}, {
 	callback = setSpacing
 })
 
+-- Configure Python virtual environment for neovim
+--
+-- Run :checkhealth to determine if python3_host_prog is pointing to the
+-- virtualenv python binary
+--
+-- see :help provider-python for virtualenv config instructions
+local python3_host_prog = vim.fn.expand("$HOME/.pyenv/versions/py3nvim/bin/python")
+
+if vim.fn.filereadable(python3_host_prog) then
+	vim.g.python3_host_prog = python3_host_prog
+else
+	print("neovim python virtualenv is not configured")
+end
