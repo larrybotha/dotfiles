@@ -1,13 +1,19 @@
 return {
 	"williamboman/mason.nvim",
 
-	config = function()
-		local mason = require("mason")
+	dependencies = {
+		"WhoIsSethDaniel/mason-tool-installer.nvim",
+	},
 
-		local options = {
-			-- custom property for storing list of packages to install
-			_custom_ensure_installed = {
-				-- diagnostics
+	config = function()
+		require("mason").setup({
+			max_concurrent_installers = 10,
+			PATH = "append", -- prefer local packages if they exist
+		})
+		require("mason-tool-installer").setup({
+			auto_update = true,
+			ensure_installed = {
+				-- diagnostics / none-ls | null-ls
 				"alex",
 				"ansible-lint",
 				"biome",
@@ -16,6 +22,7 @@ return {
 				"eslint_d",
 				"hadolint",
 				"mypy",
+				"pyright",
 				"revive",
 				"ruff",
 				"selene",
@@ -35,20 +42,12 @@ return {
 				"fixjson",
 				"goimports",
 				"prettierd",
-				"rustfmt",
+				--"rustfmt", -- install via rustup
 				"shellharden",
 				"shfmt",
 				"stylua",
 				"taplo",
 			},
-			max_concurrent_installers = 10,
-			PATH = "append", -- prefer local packages if they exist
-		}
-
-		mason.setup(options)
-
-		vim.api.nvim_create_user_command("MasonInstallCustom", function()
-			vim.cmd("MasonInstall " .. table.concat(options._custom_ensure_installed, " "))
-		end, {})
+		})
 	end,
 }

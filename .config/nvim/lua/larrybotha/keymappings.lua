@@ -1,7 +1,7 @@
 vim.g.mapleader = ","
 
 -- clear highlighted searches
-vim.keymap.set("n", "<leader>/", ":nohlsearch<CR>", {silent=true})
+vim.keymap.set("n", "<leader>/", ":nohlsearch<CR>", { silent = true })
 
 -- center the cursor when navigating files
 vim.keymap.set("n", "<C-d>", "<C-d>zz")
@@ -13,8 +13,8 @@ vim.keymap.set("n", "N", "Nzzzv")
 vim.keymap.set("n", "J", "mzJ`z")
 
 -- j and k navigate through wrapped lines
-vim.keymap.set('n', 'k', 'gk')
-vim.keymap.set('n', 'j', 'gj')
+vim.keymap.set("n", "k", "gk")
+vim.keymap.set("n", "j", "gj")
 
 -- substitute all occurrences of the word under the cursor
 vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
@@ -29,10 +29,10 @@ vim.keymap.set("x", "<leader>p", [["_dP]])
 
 -- delete text into the void register to prevent overwriting the currently yanked
 -- text
-vim.keymap.set({"n", "v"}, "<leader>d", [["_d]])
+vim.keymap.set({ "n", "v" }, "<leader>d", [["_d]])
 
 -- yank into the system clipboard
-vim.keymap.set({"n", "v"}, "<leader>y", [["+y]])
+vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]])
 vim.keymap.set("n", "<leader>Y", [["+Y]])
 
 -- yank from cursor to EOL the same as C and D do
@@ -64,8 +64,7 @@ vim.keymap.set("", "<leader>bp", ":bp<CR>")
 
 -- quick access to this .vimrc
 vim.keymap.set("", "<leader>vs", ":source $MYVIMRC<CR>")
-vim.keymap.set("", "<leader>vi", ":tabedit ~/.config/nvim<CR>")
+vim.keymap.set("", "<leader>vi", ":tabedit $MYVIMRC<CR>")
 
 -- set all windows to equal width
 vim.keymap.set("", "<leader>=", "<C-w>=")
-

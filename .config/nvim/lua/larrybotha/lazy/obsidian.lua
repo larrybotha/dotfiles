@@ -23,11 +23,11 @@ local function get_workspaces(vaults_dir)
 	return workspaces
 end
 
-
 return {
 	{
-		'epwalsh/obsidian.nvim',
+		"epwalsh/obsidian.nvim",
 		name = "obsididan.nvim",
+		dependencies = { "nvim-lua/plenary.nvim" },
 		config = function()
 			local obsidian = require("obsidian")
 
@@ -54,6 +54,6 @@ return {
 
 				obsidian.setup(options)
 			end
-		end
-	}
+		end,
+	},
 }

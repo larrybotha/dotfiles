@@ -1,4 +1,4 @@
 return {
-  'nvim-lualine/lualine.nvim',
-  opts = { theme = 'auto' }
+	"nvim-lualine/lualine.nvim",
+	opts = { theme = "auto" },
 }

@@ -1,7 +1,7 @@
 return {
 	{
-		'ThePrimeagen/harpoon', 
-		branch = 'harpoon2',
+		"ThePrimeagen/harpoon",
+		branch = "harpoon2",
 
 		config = function()
 			local harpoon = require("harpoon")
@@ -50,8 +50,6 @@ return {
 					end, { buffer = cx.bufnr })
 				end,
 			})
-		end
-
-	}
-
+		end,
+	},
 }
