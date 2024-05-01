@@ -55,30 +55,69 @@ local function extendFormatters(conform)
 		}
 	end
 
-	--formatters.custom_prettierd = function()
-	--  return {
-	--    command = "prettierd",
-	--    args = function(context)
-	--      print(vim.inspect(context))
+	formatters.prettierd = function()
+		return {
+			args = function(_, context)
+				local extension = string.match(context.filename, "%.([^%.]+)$")
+				local parser_by_ext = {
+					svg = "html",
+					svelte = "html", -- TODO: determine why 'svelte' parser doesn't work
+				}
+				local parser = parser_by_ext[extension]
+				local args = { "$FILENAME" }
 
-	--      local args = { "$FILENAME" }
+				if parser then
+					table.insert(args, "--parser=" .. parser)
+				end
 
-	--      -- TODO: determine if parsers are even needed anymore
-	--      if string.sub(context.args[1], -5) == ".json" then
-	--        table.insert(args, "--parser=json")
-	--      end
+				print(vim.inspect(args))
 
-	--      return args
-	--    end,
-	--    stdin = true,
-	--  }
-	--end,
+				return args
+			end,
+			inherit = false,
+			stdin = true,
+			command = "prettierd",
+		}
+	end
 
 	-- https://pypi.org/project/autoimport/
 	formatters.custom_python_autoimport = function()
 		return {
 			command = "autoimport",
-			args = {},
+			args = { "$FILENAME" },
+			stdin = false, -- file updated in-place
+		}
+	end
+
+	formatters.custom_ruff_lint = function()
+		return {
+			command = "ruff",
+			args = {
+				"check",
+				"--fix",
+				"--select",
+				"I", -- sort imports
+				"--exit-zero",
+				"--no-cache",
+				"--stdin-filename",
+				"$FILENAME",
+				"-",
+			},
+			stdin = true,
+		}
+	end
+
+	formatters.custom_ruff_format = function()
+		return {
+			command = "ruff",
+			args = {
+				"format",
+				"--no-cache",
+				"--stdin-filename",
+				"$FILENAME",
+				"-",
+			},
+			stdin = true,
 		}
 	end
 end
@@ -86,6 +125,8 @@ end
 return {
 	{
 		"stevearc/conform.nvim",
+		log_level = vim.log.levels.ERROR,
+
 		config = function()
 			local conform = require("conform")
 
@@ -107,7 +148,11 @@ return {
 					nginx = { "custom_nginxbeautifier" },
 					org = { "cbfmt", "custom_doctoc", "prettierd" }, -- format code within markdown code fence blocks
 					packer = { "packer_fmt" },
-					python = { "custom_python_autoimport", "ruff_fix", "ruff_format" }, -- ruff_fix must be run before formatter
+					python = {
+						"custom_python_autoimport",
+						"custom_ruff_lint",
+						"custom_ruff_format",
+					}, -- ruff_lint must be run before formatter
 					rust = { "rustfmt" },
 					sh = { "shfmt", "shellharden" },
 					sql = { "custom_sleek" },
@@ -132,5 +177,6 @@ return {
 				desc = "Re-enable autoformat-on-save",
 			})
 		end,
+		enabled = false,
 	},
 }
