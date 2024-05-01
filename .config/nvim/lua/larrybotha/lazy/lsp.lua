@@ -5,7 +5,7 @@ local function configureKeyMaps(event)
 	local opts = { buffer = event.buf }
 
 	setKeymap("n", "<C-]>", lspBuf.definition, opts)
-	setKeymap("n", "<C-k>", lspBuf.signature_help, opts)
+	setKeymap("i", "<C-S>", lspBuf.signature_help, opts)
 	setKeymap("n", "<leader>rn", lspBuf.rename, opts)
 	setKeymap("n", "K", lspBuf.hover, opts)
 	setKeymap("n", "[d", vim.diagnostic.goto_prev, opts)
@@ -85,6 +85,25 @@ local function configureMasonLsp(capabilities)
 				lspconfig.htmx.setup({
 					capabilities = capabilities,
 					filetypes = { "html", "htmldjango" },
+				})
+			end,
+
+			["rust_analyzer"] = function()
+				lspconfig.htmx.setup({
+					capabilities = capabilities,
+					diagnostics = {
+						enable = false,
+					},
+					settings = {
+						-- to enable rust-analyzer settings visit:
+						-- https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/user/generated_config.adoc
+						["rust-analyzer"] = {
+							-- enable clippy on save
+							checkOnSave = {
+								command = "clippy",
+							},
+						},
+					},
 				})
 			end,
 
