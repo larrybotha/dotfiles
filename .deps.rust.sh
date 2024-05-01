@@ -12,7 +12,7 @@ function ensure_has_rust() {
 
 ensure_has_rust
 
-cargo install evcxr # repl
+cargo install evcxr     # repl
 cargo install git-stack # tool for visualising and working with stacked Git branches
 
 cargo install --git https://github.com/mitsuhiko/rye rye # Python project manager
@@ -20,9 +20,11 @@ cargo install --git https://github.com/mitsuhiko/rye rye # Python project manage
 cargo install cargo-expand # prints out the expansions of macros
 
 # diagnostics, linting, lsp, formatters
-cargo install cbfmt         	# formatter
-cargo install dotenv-linter 	# diagnostics
-cargo install selene        	# diagnostics
-cargo install sleek						# diagnostics for sql
-cargo install shellharden   	# formatter
-cargo install taplo-cli     	# formatter + diagnostics
+cargo install cbfmt         # formatter
+cargo install dotenv-linter # diagnostics
+cargo install selene        # diagnostics
+cargo install sleek         # diagnostics for sql
+cargo install shellharden   # formatter
+cargo install taplo-cli     # formatter + diagnostics
+
+rustup component add rustfmt
