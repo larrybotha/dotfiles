@@ -1,5 +1,5 @@
 return {
-	"nvimtools/none-ls.nvim",
+	"nvimtools/none-ls.nvim", -- TODO: - consider nvim-lint
 	config = function()
 		local null_ls = require("null-ls") -- uses null-ls for legacy support
 		local diagnostics = null_ls.builtins.diagnostics
