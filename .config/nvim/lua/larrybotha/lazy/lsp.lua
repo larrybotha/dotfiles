@@ -1,4 +1,27 @@
+--- @param event object
+local function configureKeyMaps(event)
+	local setKeymap = vim.keymap.set
+	local lspBuf = vim.lsp.buf
+	local opts = { buffer = event.buf }
+
+	setKeymap("n", "<C-]>", lspBuf.definition, opts)
+	setKeymap("n", "<C-k>", lspBuf.signature_help, opts)
+	setKeymap("n", "<leader>rn", lspBuf.rename, opts)
+	setKeymap("n", "K", lspBuf.hover, opts)
+	setKeymap("n", "[d", vim.diagnostic.goto_prev, opts)
+	setKeymap("n", "]d", vim.diagnostic.goto_next, opts)
+	setKeymap("n", "gD", lspBuf.declaration, opts)
+	setKeymap("n", "gd", lspBuf.definition, opts) -- go to where symbol is defined
+	setKeymap("n", "gi", lspBuf.implementation, opts) -- go to implementation, e.g. with interfaces
+	setKeymap({ "n", "v" }, "<space>ca", lspBuf.code_action, opts)
+
+	-- Enable completion triggered by <c-x><c-o> (overridden by nvim-cmp, below)
+	vim.bo[event.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
+end
+
 local function configureMasonLsp(capabilities)
+	local lspconfig = require("lspconfig")
+
 	local opts = {
 		ensure_installed = {
 			"ansiblels",
@@ -11,12 +34,12 @@ local function configureMasonLsp(capabilities)
 			"emmet_ls",
 			"eslint",
 			"gopls",
-			"gopls",
 			"html",
 			"htmx",
 			"jsonls",
 			"lua_ls",
 			"marksman",
+			"pyright",
 			"ruff_lsp",
 			"rust_analyzer",
 			"svelte",
@@ -28,20 +51,53 @@ local function configureMasonLsp(capabilities)
 		},
 		handlers = {
 			function(server_name) -- default handler (optional)
-				require("lspconfig")[server_name].setup({
-					capabilities = capabilities,
-				})
+				lspconfig[server_name].setup({ capabilities = capabilities })
 			end,
 
 			["lua_ls"] = function()
-				local lspconfig = require("lspconfig")
-
 				lspconfig.lua_ls.setup({
 					capabilities = capabilities,
 					settings = {
 						Lua = {
-							runtime = { version = "Lua 5.1" },
-							diagnostics = { globals = { "vim" } },
+							completion = {
+								callSnippet = "Replace", -- see https://github.com/folke/neodev.nvim
+							},
+						},
+					},
+				})
+			end,
+
+			["eslint"] = function()
+				lspconfig.eslint.setup({
+					capabilities = capabilities,
+					settings = { command = "eslint_d" },
+				})
+			end,
+
+			["html"] = function()
+				lspconfig.html.setup({
+					capabilities = capabilities,
+					filetypes = { "html", "htmldjango" },
+				})
+			end,
+
+			["htmx"] = function()
+				lspconfig.htmx.setup({
+					capabilities = capabilities,
+					filetypes = { "html", "htmldjango" },
+				})
+			end,
+
+			["pyright"] = function()
+				lspconfig.pyright.setup({
+					capabilities = capabilities,
+					settings = {
+						python = {
+							-- use pyright _only_ for renaming in Python, not diagnostics
+							analysis = {
+								diagnosticMode = "off",
+								typeCheckingMode = "off",
+							},
 						},
 					},
 				})
@@ -68,10 +124,8 @@ local function configureCmp()
 			end,
 		},
 		mapping = cmp.mapping.preset.insert({
-			["<C-b>"] = cmp.mapping.scroll_docs(-4),
-			["<C-f>"] = cmp.mapping.scroll_docs(4),
-			["<C-Space>"] = cmp.mapping.complete(),
 			["<C-e>"] = cmp.mapping.abort(),
+			["<C-x><C-o>"] = cmp.mapping.complete(), -- replace Vim's omnifunc
 			["<CR>"] = cmp.mapping.confirm({ select = true }),
 		}),
 		sources = cmp.config.sources({
@@ -102,7 +156,6 @@ local function configureCmp()
 		}, {
 			{ name = "cmdline" },
 		}),
-		matching = { disallow_symbol_nonprefix_matching = false },
 	})
 
 	return capabilities
@@ -112,12 +165,13 @@ return {
 	"neovim/nvim-lspconfig",
 	dependencies = {
 		"L3MON4D3/LuaSnip",
+		"folke/neodev.nvim", -- neovim Lua deps
 		"hrsh7th/cmp-buffer",
 		"hrsh7th/cmp-cmdline",
 		"hrsh7th/cmp-nvim-lsp",
+		"hrsh7th/cmp-nvim-lsp-document-symbol",
 		"hrsh7th/cmp-nvim-lsp-signature-help",
 		"hrsh7th/cmp-nvim-lua",
-		"hrsh7th/cmp-nvim-lsp-document-symbol",
 		"hrsh7th/cmp-path",
 		"hrsh7th/nvim-cmp",
 		"j-hui/fidget.nvim",
@@ -126,9 +180,10 @@ return {
 		"williamboman/mason.nvim",
 	},
 	config = function()
-		local capabilities = configureCmp()
-
+		require("neodev").setup({}) -- must be called before configured lsp
 		require("fidget").setup({})
+
+		local capabilities = configureCmp()
 
 		configureMasonLsp(capabilities)
 
@@ -142,6 +197,11 @@ return {
 				header = "",
 				prefix = "",
 			},
+		})
+
+		vim.api.nvim_create_autocmd("LspAttach", {
+			group = vim.api.nvim_create_augroup("CustomLspConfig", {}),
+			callback = configureKeyMaps,
 		})
 	end,
 }
