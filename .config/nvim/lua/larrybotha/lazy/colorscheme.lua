@@ -2,7 +2,7 @@ return {
 	{
 		"mellow-theme/mellow.nvim",
 		name = "mellow",
-		config = function()
+		init = function()
 			vim.cmd.colorscheme("mellow")
 		end,
 	},

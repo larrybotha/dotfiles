@@ -95,5 +95,13 @@ return {
 		setKeymap("n", "<leader>fD", function()
 			builtin.diagnostics({ bufnr = 0 }) -- current file
 		end)
+
+		-- Style Telescope float
+		vim.api.nvim_set_hl(0, "TelescopeBorder", { link = "FloatBorder" })
+		vim.api.nvim_set_hl(0, "TelescopeNormal", { link = "Normal" })
+		vim.api.nvim_set_hl(0, "TelescopeTitle", { link = "Comment" })
+		vim.api.nvim_set_hl(0, "TelescopePromptTitle", { link = "TelescopeTitle" })
+		vim.api.nvim_set_hl(0, "TelescopePreviewTitle", { link = "TelescopeTitle" })
+		vim.api.nvim_set_hl(0, "TelescopeResultsTitle", { link = "TelescopeTitle" })
 	end,
 }
