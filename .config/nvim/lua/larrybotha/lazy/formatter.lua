@@ -275,4 +275,5 @@ return {
 			desc = "Format buffer on save",
 		})
 	end,
+	enabled = true,
 }

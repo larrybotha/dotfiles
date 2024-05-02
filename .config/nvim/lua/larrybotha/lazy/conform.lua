@@ -61,7 +61,7 @@ local function extendFormatters(conform)
 				local extension = string.match(context.filename, "%.([^%.]+)$")
 				local parser_by_ext = {
 					svg = "html",
-					svelte = "html", -- TODO: determine why 'svelte' parser doesn't work
+					svelte = "svelte",
 				}
 				local parser = parser_by_ext[extension]
 				local args = { "$FILENAME" }
@@ -177,6 +177,6 @@ return {
 				desc = "Re-enable autoformat-on-save",
 			})
 		end,
-		enabled = false,
+		enabled = false, -- TODO: determine why prettierd doesn't work on svelte files
 	},
 }
