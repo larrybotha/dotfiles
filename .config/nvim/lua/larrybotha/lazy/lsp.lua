@@ -146,6 +146,8 @@ local function configureCmp()
 			["<C-e>"] = cmp.mapping.abort(),
 			["<C-x><C-o>"] = cmp.mapping.complete(), -- replace Vim's omnifunc
 			["<CR>"] = cmp.mapping.confirm({ select = true }),
+			["<S-Tab>"] = cmp.mapping.select_prev_item(),
+			["<Tab>"] = cmp.mapping.select_next_item(),
 		}),
 		sources = cmp.config.sources({
 			-- order matters
