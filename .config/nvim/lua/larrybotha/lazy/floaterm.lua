@@ -11,6 +11,8 @@ return {
 		vim.keymap.set("t", "<F12>", "<C-\\><C-n>:FloatermToggle<CR>", { silent = true }) -- close floaterm
 
 		configs = {
+		vim.api.nvim_set_hl(0, "FloatermBorder", { link = "FloatBorder" })
+
 			{ trigger = "lzg", command = "lazygit" },
 			{ trigger = "lzn", command = "lazynpm" },
 			{ trigger = "lzd", command = "lazydocker" },
