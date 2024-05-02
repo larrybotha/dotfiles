@@ -10,9 +10,9 @@ return {
 		vim.keymap.set("n", "<F12>", ":FloatermToggle<CR>", { silent = true }) -- open floaterm
 		vim.keymap.set("t", "<F12>", "<C-\\><C-n>:FloatermToggle<CR>", { silent = true }) -- close floaterm
 
-		configs = {
 		vim.api.nvim_set_hl(0, "FloatermBorder", { link = "FloatBorder" })
 
+		local configs = {
 			{ trigger = "lzg", command = "lazygit" },
 			{ trigger = "lzn", command = "lazynpm" },
 			{ trigger = "lzd", command = "lazydocker" },
@@ -20,8 +20,8 @@ return {
 
 		for _, config in ipairs(configs) do
 			if vim.fn.executable(config.command) then
-				mapping = string.format("<leader>%s", config.trigger)
-				command = string.format(":FloatermNew %s<CR>", config.command)
+				local mapping = string.format("<leader>%s", config.trigger)
+				local command = string.format(":FloatermNew %s<CR>", config.command)
 
 				vim.keymap.set("n", mapping, command, { silent = true })
 			else
