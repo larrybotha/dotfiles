@@ -4,19 +4,18 @@ local SuperCoolGroup = vim.api.nvim_create_augroup("SuperCoolGroup", {})
 ---
 -- Colours
 ---
-local function doTheColours()
-	-- Define custom cursor colors highlights
-	local opts = { bold = true, bg = "black" }
-	vim.api.nvim_set_hl(0, "CursorLine", opts)
-	vim.api.nvim_set_hl(0, "CursorColumn", opts)
-
-	-- Highlight trailing white space
-	vim.api.nvim_set_hl(0, "ExtraWhiteSpace", { bg = "red" })
-	vim.cmd([[match ExtraWhitespace /\s\+$/]])
-end
-
 create_autocmd("ColorScheme", {
-	callback = doTheColours,
+	callback = function()
+		-- Define custom cursor color highlights
+		local opts = { bold = true, bg = "black" }
+		vim.api.nvim_set_hl(0, "CursorLine", opts)
+		vim.api.nvim_set_hl(0, "CursorColumn", opts)
+
+		-- Highlight trailing white space
+		local errorHl = vim.api.nvim_get_hl(0, { name = "Error" })
+		vim.api.nvim_set_hl(0, "ExtraWhiteSpace", { bg = errorHl.fg })
+		vim.cmd([[match ExtraWhitespace /\s\+$/]])
+	end,
 	desc = "set cursor, column, and extra whitespace colours",
 	group = SuperCoolGroup,
 	pattern = "*",
