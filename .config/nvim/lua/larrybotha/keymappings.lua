@@ -29,7 +29,7 @@ vim.keymap.set("x", "<leader>p", [["_dP]])
 
 -- delete text into the void register to prevent overwriting the currently yanked
 -- text
-vim.keymap.set({ "n", "v" }, "<leader>d", [["_d]])
+vim.keymap.set({ "n", "v" }, "<leader><leader>d", [["_d]])
 
 -- yank into the system clipboard
 vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]])
