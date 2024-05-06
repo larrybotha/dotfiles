@@ -97,6 +97,7 @@ alias update='
   brew cleanup
   brew reinstall neovim
   rye self update
+  rustup update
 '
 
 # IP addresses
@@ -124,7 +125,7 @@ command -v hd >/dev/null || alias hd="hexdump -C"
 command -v md5sum >/dev/null || alias md5sum="md5"
 
 # OS X has no `sha1sum`, so use `shasum` as a fallback
-# This, however, prevents nvm from installing differnet versions of node
+# This, however, prevents nvm from installing different versions of node
 # command -v sha1sum > /dev/null || alias sha1sum="shasum"
 
 # Trim new lines and copy to clipboard
