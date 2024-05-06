@@ -3,6 +3,7 @@ return {
 
 	dependencies = {
 		"WhoIsSethDaniel/mason-tool-installer.nvim",
+		"jay-babu/mason-nvim-dap.nvim",
 	},
 
 	config = function()
@@ -42,11 +43,11 @@ return {
 				"fixjson",
 				"goimports",
 				"prettierd",
-				--"rustfmt", -- install via rustup
 				"shellharden",
 				"shfmt",
 				"stylua",
 				"taplo",
+				--"rustfmt", -- install via rustup
 			},
 		})
 	end,
