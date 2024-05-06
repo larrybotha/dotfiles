@@ -6,7 +6,7 @@ local function setIsVim(is_vim)
 		command = command .. " yes"
 	end
 
-	vim.api.nvim_exec(command, { output = true })
+	vim.api.nvim_exec2(command, { output = true })
 end
 
 local CustomVimTmuxNavigatorGroup = vim.api.nvim_create_augroup("CustomVimTmuxNavigatorGroup", {})
