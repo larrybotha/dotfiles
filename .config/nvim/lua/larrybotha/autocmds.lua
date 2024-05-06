@@ -15,6 +15,8 @@ create_autocmd("ColorScheme", {
 		local errorHl = vim.api.nvim_get_hl(0, { name = "Error" })
 		vim.api.nvim_set_hl(0, "ExtraWhiteSpace", { bg = errorHl.fg })
 		vim.cmd([[match ExtraWhitespace /\s\+$/]])
+
+		vim.api.nvim_set_hl(0, "NvimInternalError", { reverse = true })
 	end,
 	desc = "set cursor, column, and extra whitespace colours",
 	group = SuperCoolGroup,
