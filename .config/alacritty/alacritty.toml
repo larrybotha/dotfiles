@@ -1,4 +1,6 @@
-import = ["/Users/larrybotha/.vim/plugged/mellow.nvim/extras/alacritty/mellow.toml"]
+import = [
+  "/Users/larrybotha/.local/share/nvim/lazy/mellow/extras/alacritty/mellow.toml",
+]
 
 [font]
 size = 13.0
