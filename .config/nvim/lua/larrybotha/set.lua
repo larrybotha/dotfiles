@@ -33,6 +33,8 @@ vim.opt.wrap = false -- don't wrap lines
 --  a search wraps around the end of the file.
 vim.opt.shortmess = "atI"
 
+vim.opt.winbar = "%=%m %f" -- add filename to winbar aligned to end
+
 vim.opt.swapfile = false
 vim.opt.backup = false
 
