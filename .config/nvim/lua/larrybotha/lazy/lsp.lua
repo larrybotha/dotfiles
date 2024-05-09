@@ -57,6 +57,16 @@ local function configureMasonLsp(capabilities)
 				lspconfig.denols.setup({ autostart = false })
 			end,
 
+			["biome"] = function()
+				lspconfig.biome.setup({
+					capabilities = capabilities,
+					-- enable biome when package.json is present, in addition to defaults
+					root_dir = require("lspconfig.util").root_pattern("biome.json", "biome.jsonc", "package.json"),
+					-- enable biome even when not in a biome project
+					single_file_support = true,
+				})
+			end,
+
 			["lua_ls"] = function()
 				lspconfig.lua_ls.setup({
 					capabilities = capabilities,
