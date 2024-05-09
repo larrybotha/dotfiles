@@ -28,7 +28,6 @@ local function configureMasonLsp(capabilities)
 			"bashls",
 			"biome",
 			"cssls",
-			"denols",
 			"docker_compose_language_service",
 			"dockerls",
 			"emmet_ls",
@@ -52,6 +51,10 @@ local function configureMasonLsp(capabilities)
 		handlers = {
 			function(server_name) -- default handler (optional)
 				lspconfig[server_name].setup({ capabilities = capabilities })
+			end,
+
+			["denols"] = function()
+				lspconfig.denols.setup({ autostart = false })
 			end,
 
 			["lua_ls"] = function()
