@@ -209,6 +209,8 @@ return {
 		local formatters = require("formatter.defaults")
 		local custom_formatters = getFormatters()
 
+		local javascriptishFormatters = { formatters.biome }
+
 		formatter.setup({
 			logging = true,
 			log_level = vim.log.levels.WARN,
@@ -219,12 +221,9 @@ return {
 				hcl = { custom_formatters.terraform },
 				html = { custom_formatters.prettierd("html") },
 				htmldjango = { custom_formatters.djlint },
-				javascript = { custom_formatters.prettierd(), formatters.eslint_d },
-				javascriptreact = { custom_formatters.prettierd(), formatters.eslint_d },
-				json = {
-					custom_formatters.prettierd("json"),
-					custom_formatters.fixjson,
-				},
+				javascript = javascriptishFormatters,
+				javascriptreact = javascriptishFormatters,
+				json = javascriptishFormatters,
 				lua = { filetypes.lua.stylua },
 				markdown = {
 					custom_formatters.cbfmt,
@@ -257,6 +256,8 @@ return {
 				vue = { custom_formatters.prettierd(), formatters.eslint_d },
 				toml = { custom_formatters.taplo },
 				yaml = { custom_formatters.prettierd("yaml") },
+				typescript = javascriptishFormatters,
+				typescriptreact = javascriptishFormatters,
 				zig = { formatters.zig },
 			},
 
