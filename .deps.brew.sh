@@ -49,7 +49,6 @@ brew install checkmake
 brew install checkov
 brew install codespell
 brew install ctop
-brew install deno
 brew install difftastic
 brew install dive
 brew install dust
@@ -76,6 +75,7 @@ brew install mpv
 brew install neovim
 brew install nnn
 brew install nvm
+brew install oven-sh/bun/bun
 brew install pigz
 brew install pipenv
 brew install postgresql
