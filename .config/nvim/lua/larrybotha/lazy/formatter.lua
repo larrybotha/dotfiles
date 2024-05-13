@@ -9,6 +9,22 @@ local function getFormatters()
 	local util = require("formatter.util")
 
 	local custom_formatters = {
+		biome = function()
+			return {
+				exe = "biome",
+				args = {
+					"check",
+					"--apply-unsafe",
+					"--formatter-enabled=true",
+					"--organize-imports-enabled=true",
+					"--skip-errors",
+					"--stdin-file-path",
+					get_file(),
+				},
+				stdin = true,
+			}
+		end,
+
 		cbfmt = function()
 			return {
 				exe = "cbfmt",
@@ -209,7 +225,7 @@ return {
 		local formatters = require("formatter.defaults")
 		local customFormatters = getFormatters()
 
-		local javascriptishFormatters = { formatters.biome }
+		local javascriptishFormatters = { customFormatters.biome }
 
 		formatter.setup({
 			logging = true,
