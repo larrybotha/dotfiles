@@ -9,7 +9,8 @@ return {
 				command = "nnn -H", -- display hidden files when opened
 				set_default_mappings = 0,
 				action = {
-					-- NOTE: these splits are the same as used in harpoon.lua
+					-- NOTE: these splits are the same as used in harpoon.lua, and
+					-- are the defaults for opening splits via Telescope
 					["<c-t>"] = "tab split",
 					["<c-v>"] = "vsplit",
 					["<c-x>"] = "split",
