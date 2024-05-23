@@ -68,3 +68,9 @@ vim.keymap.set("", "<leader>vi", ":tabedit $MYVIMRC<CR>")
 
 -- set all windows to equal width
 vim.keymap.set("", "<leader>=", "<C-w>=")
+
+-- resize window
+vim.keymap.set("n", "Ò", "<c-w>5<") -- <A-S-L> => Ò
+vim.keymap.set("n", "Ó", "<c-w>5>") -- <A-S-H> => Ó
+vim.keymap.set("n", "", "<c-w>5+") -- <A-S-K> => 
+vim.keymap.set("n", "Ô", "<c-w>5-") -- <A-S-J> => Ô
