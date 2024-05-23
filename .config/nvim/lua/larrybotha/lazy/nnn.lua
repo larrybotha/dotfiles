@@ -3,15 +3,16 @@ return {
 		"mcchrish/nnn.vim",
 		name = "nnn",
 		config = function()
-			nnn = require("nnn")
+			local nnn = require("nnn")
 
 			nnn.setup({
 				command = "nnn -H", -- display hidden files when opened
 				set_default_mappings = 0,
 				action = {
-					["<c-s>"] = "split", -- TODO: fix this; command is swallowed by tmux
+					-- NOTE: these splits are the same as used in harpoon.lua
 					["<c-t>"] = "tab split",
 					["<c-v>"] = "vsplit",
+					["<c-x>"] = "split",
 				},
 				layout = {
 					window = {
