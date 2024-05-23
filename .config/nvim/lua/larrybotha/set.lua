@@ -14,6 +14,7 @@ vim.opt.cursorcolumn = true -- highlight current column
 vim.opt.cursorline = true -- highlight current line
 vim.opt.hlsearch = true -- highlight search terms
 vim.opt.ignorecase = true -- case insensitive search
+vim.opt.inccommand = "split" -- show the effects of substitute while typing
 vim.opt.incsearch = true -- find as you type search
 vim.opt.scrolljump = 5 -- lines to scroll when cursor leaves screen
 vim.opt.scrolloff = 5 -- minimum lines to keep above and below cursor
