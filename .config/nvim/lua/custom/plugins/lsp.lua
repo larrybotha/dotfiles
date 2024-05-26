@@ -1,3 +1,5 @@
+local M = {}
+
 --- @param event object
 local function configureKeyMaps(event)
 	local setKeymap = vim.keymap.set
@@ -195,47 +197,30 @@ local function configureCmp()
 	return capabilities
 end
 
-return {
-	"neovim/nvim-lspconfig",
-	dependencies = {
-		"L3MON4D3/LuaSnip",
-		"folke/neodev.nvim", -- neovim Lua deps
-		"hrsh7th/cmp-buffer",
-		"hrsh7th/cmp-cmdline",
-		"hrsh7th/cmp-nvim-lsp",
-		"hrsh7th/cmp-nvim-lsp-document-symbol",
-		"hrsh7th/cmp-nvim-lsp-signature-help",
-		"hrsh7th/cmp-nvim-lua",
-		"hrsh7th/cmp-path",
-		"hrsh7th/nvim-cmp",
-		"j-hui/fidget.nvim",
-		"saadparwaiz1/cmp_luasnip",
-		"williamboman/mason-lspconfig.nvim",
-		"williamboman/mason.nvim",
-	},
-	config = function()
-		require("neodev").setup({}) -- must be called before configured lsp
-		require("fidget").setup({})
+M.setup = function()
+	require("neodev").setup({}) -- must be called before configured lsp
+	require("fidget").setup({})
 
-		local capabilities = configureCmp()
+	local capabilities = configureCmp()
 
-		configureMasonLsp(capabilities)
+	configureMasonLsp(capabilities)
 
-		vim.diagnostic.config({
-			-- update_in_insert = true,
-			float = {
-				focusable = false,
-				style = "minimal",
-				border = "rounded",
-				source = "always",
-				header = "",
-				prefix = "",
-			},
-		})
+	vim.diagnostic.config({
+		-- update_in_insert = true,
+		float = {
+			focusable = false,
+			style = "minimal",
+			border = "rounded",
+			source = true,
+			header = "",
+			prefix = "",
+		},
+	})
 
-		vim.api.nvim_create_autocmd("LspAttach", {
-			group = vim.api.nvim_create_augroup("CustomLspConfig", {}),
-			callback = configureKeyMaps,
-		})
-	end,
-}
+	vim.api.nvim_create_autocmd("LspAttach", {
+		group = vim.api.nvim_create_augroup("CustomLspConfig", {}),
+		callback = configureKeyMaps,
+	})
+end
+
+return M

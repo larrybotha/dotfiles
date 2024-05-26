@@ -1,7 +1,5 @@
 return {
 	{ "nvim-lua/plenary.nvim" },
-	{ "nvim-lua/plenary.nvim" },
-	{ "nvim-treesitter/playground" },
 	{ "sheerun/vim-polyglot" },
 	{ "tpope/vim-sensible" },
 	{ "bullets-vim/bullets.vim" },

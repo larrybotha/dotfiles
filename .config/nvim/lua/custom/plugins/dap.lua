@@ -1,4 +1,6 @@
--- Function to create a virtual environment and install debugpy
+local M = {}
+
+-- create a virtual environment and install debugpy
 local function create_virtualenv_and_install_debugpy()
 	vim.fn.mkdir("$HOME/.virtualenvs", "p")
 	--vim.fn.chdir("$HOME/.virtualenvs")
@@ -9,34 +11,16 @@ local function create_virtualenv_and_install_debugpy()
 end
 
 local configurePython = function()
-	--local uv = vim.uv or vim.loop
-	--local debugpyPath = "$HOME/.virtualenvs/debugpy/bin/python"
-
-	--if not uv.fs_stat(debugpyPath) then
-	--  create_virtualenv_and_install_debugpy()
-	--end
-
-	--local masonRegistry = require("mason-registry")
-
-	--if not masonRegistry.has_package("debugpy") then
-	--  return
-	--end
-
-	--if not masonRegistry.is_installed("debugpy") then
-	--  return
-	--end
-
-	--local debugpyPackage = masonRegistry.get_package("debugpy")
-	--local debugpyPath = debugpyPackage:get_install_path()
-
-	--require("dap-python").setup(debugpyPath)
-
-	-- TODO: automate this:
-	--  mkdir ~/.virtualenvs
-	--  cd ~/.virtualenvs
-	--  python -m venv debugpy
-	--  debugpy/bin/python -m pip install debugpy
+	-- TODO: automate this installation
 	require("dap-python").setup("~/.virtualenvs/debugpy/bin/python")
+
+	table.insert(require("dap").configurations.python, {
+		type = "python",
+		request = "launch",
+		name = "Django",
+		program = vim.fn.getcwd() .. "/src/manage.py",
+		args = { "runserver", "--noreload" },
+	})
 end
 
 local configureKeymaps = function()
@@ -100,17 +84,11 @@ local configureUi = function()
 	end
 end
 
-return {
-	"rcarriga/nvim-dap-ui",
-	dependencies = {
-		"mfussenegger/nvim-dap",
-		"mfussenegger/nvim-dap-python",
-		"nvim-neotest/nvim-nio",
-		"williamboman/mason.nvim",
-	},
-	config = function()
-		configureKeymaps()
-		configureUi()
-		configurePython()
-	end,
-}
+M.setup = function()
+	configureKeymaps()
+	configureUi()
+	require("dap-go").setup()
+	configurePython()
+end
+
+return M

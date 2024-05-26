@@ -1,3 +1,4 @@
+local M = {}
 local prop = "_conform_disable_autoformat"
 
 local function formatOnSave(bufnr)
@@ -122,61 +123,55 @@ local function extendFormatters(conform)
 	end
 end
 
-return {
-	{
-		"stevearc/conform.nvim",
-		log_level = vim.log.levels.ERROR,
+M.setup = function()
+	local conform = require("conform")
 
-		config = function()
-			local conform = require("conform")
+	extendFormatters(conform)
 
-			extendFormatters(conform)
+	conform.setup({
+		format_on_save = formatOnSave,
 
-			conform.setup({
-				format_on_save = formatOnSave,
+		formatters_by_ft = {
+			hcl = { "terraform_fmt" },
+			html = { "prettierd" },
+			htmldjango = { "djlint" },
+			javascript = { "prettierd", "eslint_d" },
+			javascriptreact = { "prettierd", "eslint_d" },
+			json = { "prettierd", "fixjson" },
+			just = { "justfile" },
+			lua = { "stylua" },
+			markdown = { "cbfmt" },
+			nginx = { "custom_nginxbeautifier" },
+			org = { "cbfmt", "custom_doctoc", "prettierd" }, -- format code within markdown code fence blocks
+			packer = { "packer_fmt" },
+			python = {
+				"custom_python_autoimport",
+				"custom_ruff_lint",
+				"custom_ruff_format",
+			}, -- ruff_lint must be run before formatter
+			rust = { "rustfmt" },
+			sh = { "shfmt", "shellharden" },
+			sql = { "custom_sleek" },
+			svelte = { "prettierd", "eslint_d" },
+			svg = { "prettierd" },
+			svx = { "prettierd" },
+			terraform = { "terraform_fmt" },
+			toml = { "taplo" },
+			typescript = { "prettierd", "eslint_d" },
+			typescriptreact = { "prettierd", "eslint_d" },
+			yaml = { "prettierd" },
+			zig = { "zigfmt" },
+		},
+	})
 
-				formatters_by_ft = {
-					hcl = { "terraform_fmt" },
-					html = { "prettierd" },
-					htmldjango = { "djlint" },
-					javascript = { "prettierd", "eslint_d" },
-					javascriptreact = { "prettierd", "eslint_d" },
-					json = { "prettierd", "fixjson" },
-					just = { "justfile" },
-					lua = { "stylua" },
-					markdown = { "cbfmt" },
-					nginx = { "custom_nginxbeautifier" },
-					org = { "cbfmt", "custom_doctoc", "prettierd" }, -- format code within markdown code fence blocks
-					packer = { "packer_fmt" },
-					python = {
-						"custom_python_autoimport",
-						"custom_ruff_lint",
-						"custom_ruff_format",
-					}, -- ruff_lint must be run before formatter
-					rust = { "rustfmt" },
-					sh = { "shfmt", "shellharden" },
-					sql = { "custom_sleek" },
-					svelte = { "prettierd", "eslint_d" },
-					svg = { "prettierd" },
-					svx = { "prettierd" },
-					terraform = { "terraform_fmt" },
-					toml = { "taplo" },
-					typescript = { "prettierd", "eslint_d" },
-					typescriptreact = { "prettierd", "eslint_d" },
-					yaml = { "prettierd" },
-					zig = { "zigfmt" },
-				},
-			})
+	vim.api.nvim_create_user_command("FormatDisable", disableFormatting, {
+		desc = "Disable autoformat-on-save",
+		bang = true,
+	})
 
-			vim.api.nvim_create_user_command("FormatDisable", disableFormatting, {
-				desc = "Disable autoformat-on-save",
-				bang = true,
-			})
+	vim.api.nvim_create_user_command("FormatEnable", enableFormatting, {
+		desc = "Re-enable autoformat-on-save",
+	})
+end
 
-			vim.api.nvim_create_user_command("FormatEnable", enableFormatting, {
-				desc = "Re-enable autoformat-on-save",
-			})
-		end,
-		enabled = false, -- TODO: determine why prettierd doesn't work on svelte files
-	},
-}
+return M
