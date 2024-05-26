@@ -1,5 +1,3 @@
-vim.g.mapleader = ","
-
 -- clear highlighted searches
 vim.keymap.set("n", "<leader>/", ":nohlsearch<CR>", { silent = true })
 
