@@ -8,6 +8,7 @@ return {
 		"lukas-reineke/indent-blankline.nvim",
 		name = "indent-blankline",
 		main = "ibl",
+		priority = 1000,
 		opts = {
 			exclude = {
 				buftypes = { "terminal" },

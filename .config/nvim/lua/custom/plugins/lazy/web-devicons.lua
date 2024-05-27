@@ -2,6 +2,7 @@ return {
 	{
 		"kyazdani42/nvim-web-devicons",
 		dependencies = { "nvim-lua/plenary.nvim" },
+		lazy = true,
 		opts = {
 			override = {
 				zsh = {
