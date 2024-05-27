@@ -71,8 +71,6 @@ local function extendFormatters(conform)
 					table.insert(args, "--parser=" .. parser)
 				end
 
-				print(vim.inspect(args))
-
 				return args
 			end,
 			inherit = false,
