@@ -26,6 +26,7 @@ return {
 				"rst",
 				"rust",
 				"scss",
+				"sql",
 				"svelte",
 				"toml",
 				"typescript",
