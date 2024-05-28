@@ -5,7 +5,7 @@ local cmp = require("cmp")
 vim.opt.completeopt = {
 	"menu", -- use popup menu to show completion items
 	"menuone", -- show popup menu even when there is only 1 item
-	"noselect", -- require user to select item explicitly
+	--"noselect", -- require user to select item explicitly
 }
 vim.opt.shortmess:append("c") -- don't send messages to ins-completion-menu
 
@@ -18,9 +18,17 @@ cmp.setup({
 	mapping = cmp.mapping.preset.insert({
 		["<C-e>"] = cmp.mapping.abort(),
 		["<C-x><C-o>"] = cmp.mapping.complete(), -- replace Vim's omnifunc
-		["<C-y>"] = cmp.mapping.confirm({ select = true }),
-		["<S-Tab>"] = cmp.mapping.select_prev_item(),
-		["<Tab>"] = cmp.mapping.select_next_item(),
+		["<Tab>"] = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Insert }),
+		["<S-Tab>"] = cmp.mapping.select_prev_item({ behavior = cmp.SelectBehavior.Insert }),
+		["<C-n>"] = cmp.mapping.select_next_item({ behavior = cmp.SelectBehavior.Insert }),
+		["<C-p>"] = cmp.mapping.select_prev_item({ behavior = cmp.SelectBehavior.Insert }),
+		["<C-y>"] = cmp.mapping( -- sluggish in HTML due to emmet's key mappings
+			cmp.mapping.confirm({
+				behavior = cmp.ConfirmBehavior.Insert,
+				select = true,
+			}),
+			{ "i", "c" }
+		),
 	}),
 	sources = cmp.config.sources({
 		-- order matters
@@ -52,7 +60,7 @@ cmp.setup.cmdline(":", {
 	}),
 })
 
--- configure dadbod
+-- Use dadbod
 cmp.setup.filetype({ "sql" }, {
 	sources = {
 		{ name = "vim-dadbod-completion" },

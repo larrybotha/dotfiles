@@ -34,6 +34,7 @@ ls.config.set_config({
 	override_builtin = true,
 })
 
+-- autoload snippets
 for _, ft_path in ipairs(vim.api.nvim_get_runtime_file("lua/custom/snippets/*.lua", true)) do
 	loadfile(ft_path)()
 end
