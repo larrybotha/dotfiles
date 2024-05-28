@@ -27,6 +27,7 @@ opt.smartindent = true -- autoindent on new lines
 opt.spell = false -- disable spellcheck
 opt.wildmenu = true -- show list instead of just completing
 opt.wildmode = "list:longest,full" -- command <Tab> completion, list matches, then longest common part, then all.
+opt.winbar = "%=%m %f" -- add filename to winbar aligned to end
 opt.winminheight = 0 -- windows can be 0 line high
 opt.wrap = false -- don't wrap lines
 
@@ -36,10 +37,10 @@ opt.wrap = false -- don't wrap lines
 --  a search wraps around the end of the file.
 opt.shortmess = "atI"
 
-opt.winbar = "%=%m %f" -- add filename to winbar aligned to end
-
 opt.swapfile = false
 opt.backup = false
+
+opt.formatoptions:remove("o") -- don't have `o` add a comment
 
 local function setSpacing()
 	opt.autoindent = true -- indent at the same level of the previous line
