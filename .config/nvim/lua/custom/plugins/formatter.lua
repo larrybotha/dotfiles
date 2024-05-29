@@ -242,6 +242,7 @@ M.setup = function()
 			javascript = javascriptishFormatters,
 			javascriptreact = javascriptishFormatters,
 			json = javascriptishFormatters,
+			jsonc = javascriptishFormatters,
 			lua = { filetypes.lua.stylua },
 			markdown = {
 				customFormatters.cbfmt,
