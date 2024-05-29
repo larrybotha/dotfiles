@@ -37,9 +37,6 @@ telescope.setup({
 			"--smart-case",
 		},
 	},
-	["ui-select"] = {
-		require("telescope.themes").get_dropdown({}),
-	},
 	extensions = {
 		fzf = {
 			fuzzy = true,
@@ -62,7 +59,6 @@ telescope.setup({
 
 pcall(require("telescope").load_extension("fzf"))
 pcall(require("telescope").load_extension("asynctasks"))
-pcall(require("telescope").load_extension, "ui-select")
 
 setKeymap("n", "<C-p>", function()
 	builtin.find_files({ hidden = true })
