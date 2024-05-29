@@ -1,5 +1,3 @@
-local M = {}
-
 local function get_file()
 	local util = require("formatter.util")
 	return util.escape_path(util.get_current_buffer_file_path())
@@ -221,77 +219,78 @@ local function getFormatters()
 	return custom_formatters
 end
 
-M.setup = function()
-	local formatter = require("formatter")
-	local filetypes = require("formatter.filetypes")
-	local formatters = require("formatter.defaults")
-	local customFormatters = getFormatters()
+local formatter = require("formatter")
+local filetypes = require("formatter.filetypes")
+local formatters = require("formatter.defaults")
+local customFormatters = getFormatters()
 
-	local javascriptishFormatters = { customFormatters.biome.javascript }
+local javascriptishFormatters = { customFormatters.biome.javascript }
 
-	formatter.setup({
-		logging = true,
-		log_level = vim.log.levels.WARN,
+formatter.setup({
+	logging = true,
+	log_level = vim.log.levels.WARN,
 
-		filetype = {
-			go = { customFormatters.goimports, customFormatters.gofmt },
-			graphql = { customFormatters.prettierd("graphql") },
-			hcl = { customFormatters.terraform },
-			html = { customFormatters.prettierd("html") }, -- replace with biome once supported
-			htmldjango = { customFormatters.djlint },
-			javascript = javascriptishFormatters,
-			javascriptreact = javascriptishFormatters,
-			json = javascriptishFormatters,
-			jsonc = javascriptishFormatters,
-			lua = { filetypes.lua.stylua },
-			markdown = {
-				customFormatters.cbfmt,
-				customFormatters.doctoc,
-				customFormatters.prettierd(), -- replace with biome once supported
-			},
-			nginx = { customFormatters.nginxbeautifier },
-			org = { customFormatters.cbfmt },
-			packer = { customFormatters.packer },
-			python = {
-				customFormatters.python_autoimport,
-				-- TODO: use unified command for linting and formatting when available:
-				-- https://github.com/astral-sh/ruff/issues/8232
-				customFormatters.ruff.lint,
-				-- NOTE: must come after linting to remove unused imports
-				-- see https://docs.astral.sh/ruff/formatter/#sorting-imports
-				customFormatters.ruff.format,
-			},
-			rust = { filetypes.rust.rustfmt },
-			sh = {
-				customFormatters.shfmt,
-				customFormatters.shellharden,
-			},
-			sql = { customFormatters.sleek },
-			svelte = { customFormatters.prettierd("svelte"), formatters.eslint_d }, -- replace with biome once supported
-			svg = { customFormatters.prettierd("html") }, -- replace with biome once supported
-			terraform = { customFormatters.terraform },
-			typescript = javascriptishFormatters,
-			typescriptreact = javascriptishFormatters,
-			vue = { customFormatters.prettierd(), formatters.eslint_d }, -- replace with biome once supported
-			toml = { customFormatters.taplo },
-			yaml = { customFormatters.prettierd("yaml") }, -- replace with biome once supported
-			zig = { formatters.zig },
+	filetype = {
+		go = { customFormatters.goimports, customFormatters.gofmt },
+		graphql = { customFormatters.prettierd("graphql") },
+		hcl = { customFormatters.terraform },
+		html = { customFormatters.prettierd("html") }, -- replace with biome once supported
+		htmldjango = { customFormatters.djlint },
+		javascript = javascriptishFormatters,
+		javascriptreact = javascriptishFormatters,
+		json = javascriptishFormatters,
+		jsonc = javascriptishFormatters,
+		lua = { filetypes.lua.stylua },
+		markdown = {
+			customFormatters.cbfmt,
+			customFormatters.doctoc,
+			customFormatters.prettierd(), -- replace with biome once supported
 		},
+		nginx = { customFormatters.nginxbeautifier },
+		org = { customFormatters.cbfmt },
+		packer = { customFormatters.packer },
+		python = {
+			customFormatters.python_autoimport,
+			-- TODO: use unified command for linting and formatting when available:
+			-- https://github.com/astral-sh/ruff/issues/8232
+			customFormatters.ruff.lint,
+			-- NOTE: must come after linting to remove unused imports
+			-- see https://docs.astral.sh/ruff/formatter/#sorting-imports
+			customFormatters.ruff.format,
+		},
+		rust = { filetypes.rust.rustfmt },
+		sh = {
+			customFormatters.shfmt,
+			customFormatters.shellharden,
+		},
+		sql = { customFormatters.sleek },
+		svelte = {
+			customFormatters.prettierd("svelte"),
+			--formatters.eslint_d
+		}, -- replace with biome once supported
+		svg = { customFormatters.prettierd("html") }, -- replace with biome once supported
+		terraform = { customFormatters.terraform },
+		typescript = javascriptishFormatters,
+		typescriptreact = javascriptishFormatters,
+		vue = { customFormatters.prettierd(), formatters.eslint_d }, -- replace with biome once supported
+		toml = { customFormatters.taplo },
+		yaml = { customFormatters.prettierd("yaml") }, -- replace with biome once supported
+		zig = { formatters.zig },
+	},
 
-		["svx"] = { customFormatters.prettierd() }, -- replace with biome once supported
-	})
+	["svx"] = { customFormatters.prettierd() }, -- replace with biome once supported
+})
 
-	local au_group = vim.api.nvim_create_augroup("FormatAutogroup", { clear = true })
+local au_group = vim.api.nvim_create_augroup("FormatAutogroup", { clear = true })
 
-	-- format on save
-	vim.api.nvim_create_autocmd("BufWritePost", {
-		pattern = "*",
-		group = au_group,
-		-- silence errors raised by formatters that fail on syntax errors
-		-- see https://github.com/mhartington/formatter.nvim/issues/100
-		command = "silent FormatWrite",
-		desc = "Format buffer on save",
-	})
-end
-
-return M
+-- format on save
+vim.api.nvim_create_autocmd("BufWritePost", {
+	pattern = "*",
+	group = au_group,
+	-- silence errors raised by formatters that fail on syntax errors
+	-- see https://github.com/mhartington/formatter.nvim/issues/100
+	--command = "silent FormatWrite",
+	--command = "silent FormatWrite",
+	command = "FormatWrite",
+	desc = "Format buffer on save",
+})
