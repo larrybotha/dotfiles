@@ -155,6 +155,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	callback = function(event)
 		local setKeymap = vim.keymap.set
 		local lspBuf = vim.lsp.buf
+		---@type vim.keymap.set.Opts
 		local opts = { buffer = event.buf }
 
 		setKeymap("n", "<C-]>", lspBuf.definition, opts)
