@@ -1,5 +1,3 @@
-local M = {}
-
 local function get_workspaces(vaults_dir)
 	local child_dirs = {}
 	local workspaces = {}
@@ -25,32 +23,28 @@ local function get_workspaces(vaults_dir)
 	return workspaces
 end
 
-M.setup = function()
-	local obsidian = require("obsidian")
+local obsidian = require("obsidian")
 
-	local vaults_dir = "~/projects/obsidian-vaults"
-	local workspaces = get_workspaces(vaults_dir)
-	local options = {
-		disable_frontmatter = true, -- don't manage frontmatter
-		mappings = {
-			-- navigate to markdown files using gf - overrides Vim's default behaviour
-			["gf"] = {
-				action = function()
-					return require("obsidian").util.gf_passthrough()
-				end,
-				opts = { noremap = false, expr = true, buffer = true },
-			},
+local vaults_dir = "~/projects/obsidian-vaults"
+local workspaces = get_workspaces(vaults_dir)
+local options = {
+	disable_frontmatter = true, -- don't manage frontmatter
+	mappings = {
+		-- navigate to markdown files using gf - overrides Vim's default behaviour
+		["gf"] = {
+			action = function()
+				return require("obsidian").util.gf_passthrough()
+			end,
+			opts = { noremap = false, expr = true, buffer = true },
 		},
-		workspaces = workspaces,
-	}
+	},
+	workspaces = workspaces,
+}
 
-	if #workspaces > 0 then
-		-- TODO: use an autocommand to set this when opening markdown files
-		-- see https://github.com/epwalsh/obsidian.nvim#concealing-characters
-		vim.opt_local.conceallevel = 1
+if #workspaces > 0 then
+	-- TODO: use an autocommand to set this when opening markdown files
+	-- see https://github.com/epwalsh/obsidian.nvim#concealing-characters
+	vim.opt_local.conceallevel = 1
 
-		obsidian.setup(options)
-	end
+	obsidian.setup(options)
 end
-
-return M
