@@ -1,94 +1,66 @@
-local M = {}
+local function ensureDebugpyInstalled(envDir)
+	local envName = "debugpy-nvim-dap"
+	local debugpyPath = envDir .. "/" .. envName
+	local envPython = envName .. "/bin/python"
 
--- create a virtual environment and install debugpy
-local function create_virtualenv_and_install_debugpy()
-	vim.fn.mkdir("$HOME/.virtualenvs", "p")
-	--vim.fn.chdir("$HOME/.virtualenvs")
-	vim.fn.system("$(cd $HOME/.virtualenvs && python -m venv debugpy)")
-	--vim.fn.chdir("debugpy")
-	vim.fn.system("$HOME/.virtualenvs/debugpy/ && python -m pip install debugpy)")
-	--vim.fn.chdir(vim.fn.getcwd())
-end
+	vim.fn.mkdir(envDir, "p")
 
-local configurePython = function()
-	-- TODO: automate this installation
-	require("dap-python").setup("~/.virtualenvs/debugpy/bin/python")
+	if not vim.uv.fs_stat(debugpyPath) then
+		vim.print("creating virtualenv...")
+		vim.system({ "python", "-m", "venv", envName }, {
+			cwd = envDir,
+			text = true,
+		}):wait()
 
-	table.insert(require("dap").configurations.python, {
-		type = "python",
-		request = "launch",
-		name = "Django",
-		program = vim.fn.getcwd() .. "/src/manage.py",
-		args = { "runserver", "--noreload" },
-	})
-end
+		vim.print("installing debugpy...")
 
-local configureKeymaps = function()
-	local dap = require("dap")
+		vim.system({ envPython, "-m", "pip", "install", "debugpy" }, {
+			cwd = envDir,
+			text = true,
+		}):wait()
 
-	vim.keymap.set("n", "<F5>", function()
-		dap.continue()
-	end)
-	vim.keymap.set("n", "<leader>dc", function()
-		dap.continue()
-	end)
-	vim.keymap.set("n", "<leader>dso", function()
-		dap.step_over()
-	end)
-	vim.keymap.set("n", "<F11>", function()
-		dap.step_into()
-	end)
-	vim.keymap.set("n", "<leader>dsi", function()
-		dap.step_into()
-	end)
-	vim.keymap.set("n", "<S-F11>", function()
-		dap.step_out()
-	end)
-	vim.keymap.set("n", "<leader>dsO", function()
-		dap.step_out()
-	end)
-	vim.keymap.set("n", "<leader>db", function()
-		dap.toggle_breakpoint()
-	end)
-	vim.keymap.set("n", "<leader>dB", function()
-		dap.set_breakpoint()
-	end)
-	vim.keymap.set("n", "<leader>dlp", function()
-		dap.set_breakpoint(nil, nil, vim.fn.input("Log point message: "))
-	end)
-	vim.keymap.set("n", "<leader>dl", function()
-		dap.run_last()
-	end)
-end
-
-local configureUi = function()
-	local dap, dapui = require("dap"), require("dapui")
-
-	dapui.setup()
-
-	vim.keymap.set("n", "<leader>dk", function()
-		dapui.eval()
-	end)
-
-	dap.listeners.before.attach.dapui_config = function()
-		dapui.open()
+		vim.print("debugpy installed!")
 	end
-	dap.listeners.before.launch.dapui_config = function()
-		dapui.open()
-	end
-	dap.listeners.before.event_terminated.dapui_config = function()
-		dapui.close()
-	end
-	dap.listeners.before.event_exited.dapui_config = function()
-		dapui.close()
-	end
+
+	return envDir .. "/" .. envPython
 end
 
-M.setup = function()
-	configureKeymaps()
-	configureUi()
-	require("dap-go").setup()
-	configurePython()
-end
+local dap, dapui = require("dap"), require("dapui")
+local setKeymap = vim.keymap.set
 
-return M
+dapui.setup()
+
+setKeymap("n", "<F5>", dap.continue)
+setKeymap("n", "<leader>dc", dap.continue)
+setKeymap("n", "<leader>dso", dap.step_over)
+setKeymap("n", "<F11>", dap.step_into)
+setKeymap("n", "<leader>dsi", dap.step_into)
+setKeymap("n", "<S-F11>", dap.step_out)
+setKeymap("n", "<leader>dsO", dap.step_out)
+setKeymap("n", "<leader>db", dap.toggle_breakpoint)
+setKeymap("n", "<leader>dB", dap.set_breakpoint)
+setKeymap("n", "<leader>dlp", function()
+	dap.set_breakpoint(nil, nil, vim.fn.input("Log point message: "))
+end)
+setKeymap("n", "<leader>dl", dap.run_last)
+setKeymap("n", "<leader>dk", dapui.eval)
+
+-- open and close ui
+dap.listeners.before.attach.dapui_config = dapui.open
+dap.listeners.before.launch.dapui_config = dapui.open
+dap.listeners.before.event_terminated.dapui_config = dapui.close
+dap.listeners.before.event_exited.dapui_config = dapui.close
+
+require("dap-go").setup()
+
+local debugpyPython = ensureDebugpyInstalled(vim.fn.expand("$HOME/.local/share/virtualenvs"))
+
+require("dap-python").setup(debugpyPython)
+
+table.insert(require("dap").configurations.python, {
+	type = "python",
+	request = "launch",
+	name = "Django",
+	program = vim.fn.getcwd() .. "/src/manage.py",
+	args = { "runserver", "--noreload" },
+})

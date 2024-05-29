@@ -10,6 +10,6 @@ return {
 		"williamboman/mason.nvim",
 	},
 	config = function()
-		require("custom.plugins.dap").setup()
+		require("custom.plugins.dap")
 	end,
 }
