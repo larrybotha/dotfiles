@@ -1,21 +1,21 @@
--- clear highlighted searches
-vim.keymap.set("n", "<leader>/", ":nohlsearch<CR>", { silent = true })
+local set = vim.keymap.set
+
+set("n", "<leader>/", ":nohlsearch<CR>", { silent = true, desc = "clear highlighted searches" })
 
 -- center the cursor when navigating files
-vim.keymap.set("n", "<C-d>", "<C-d>zz")
-vim.keymap.set("n", "<C-u>", "<C-u>zz")
-vim.keymap.set("n", "n", "nzzzv")
-vim.keymap.set("n", "N", "Nzzzv")
+set("n", "<C-d>", "<C-d>zz", { desc = "page down with centered cursor" })
+set("n", "<C-u>", "<C-u>zz", { desc = "page up with centered cursor" })
+set("n", "n", "nzzzv", { desc = "next search hit with centered cursor" })
+set("n", "N", "Nzzzv", { desc = "previous search hit with centered cursor" })
 
--- maintain cursor positioning when joining lines
-vim.keymap.set("n", "J", "mzJ`z")
+set("n", "J", "mzJ`z", { desc = "join lines maintaining cursor position" })
 
 -- j and k navigate through wrapped lines
-vim.keymap.set("n", "k", "gk")
-vim.keymap.set("n", "j", "gj")
+set("n", "k", "gk", { desc = "navigate up through wrapped lines" })
+set("n", "j", "gj", { desc = "navigate down through wrapped lines" })
 
 -- substitute all occurrences of the word under the cursor
-vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]])
+set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><Left>]], { desc = "substitute word under cursor" })
 
 -- when in visual mode (this is what 'x' denotes - it excludes selection mode),
 -- allow for pasting while placing the highlighted text into the void register,
@@ -23,52 +23,48 @@ vim.keymap.set("n", "<leader>s", [[:%s/\<<C-r><C-w>\>/<C-r><C-w>/gI<Left><Left><
 -- This ensures that subsequent pastes contain the originally yanked text, and not
 -- the replaced text
 -- see https://youtu.be/w7i4amO_zaE?si=C5sHtqfMIaKs2aWV&t=1596
-vim.keymap.set("x", "<leader>p", [["_dP]])
+set("x", "<leader>p", [["_dP]], { desc = "paste into void register" })
 
 -- delete text into the void register to prevent overwriting the currently yanked
 -- text
-vim.keymap.set({ "n", "v" }, "<leader><leader>d", [["_d]])
+set({ "n", "v" }, "<leader><leader>d", [["_d]], { desc = "delete into void register" })
 
 -- yank into the system clipboard
-vim.keymap.set({ "n", "v" }, "<leader>y", [["+y]])
-vim.keymap.set("n", "<leader>Y", [["+Y]])
+set({ "n", "v" }, "<leader>y", [["+y]], { desc = "yank to system clipboard" })
+set("n", "<leader>Y", [["+Y]], { desc = "yank to system clipboard" })
 
 -- yank from cursor to EOL the same as C and D do
-vim.keymap.set("n", "Y", "y$")
+set("n", "Y", "y$", { desc = "yank to end of line" })
 
 -- navigate using [ and ]
-vim.keymap.set("", "[b", ":bprevious<CR>")
-vim.keymap.set("", "]b", ":bnext<CR>")
-vim.keymap.set("", "[q", ":cprevious<CR>")
-vim.keymap.set("", "]q", ":cnext<CR>")
-vim.keymap.set("", "[l", ":lprevious<CR>")
-vim.keymap.set("", "]l", ":lnext<CR>")
+set("", "[b", ":bprevious<CR>", { desc = "previous buffer" })
+set("", "]b", ":bnext<CR>", { desc = "next buffer" })
+set("", "[q", ":cprevious<CR>", { desc = "previous quickfix entry" })
+set("", "]q", ":cnext<CR>", { desc = "next quickfix entry" })
+set("", "[l", ":lprevious<CR>", { desc = "previous location list entry" })
+set("", "]l", ":lnext<CR>", { desc = "next location list entry" })
 
 -- visual shifting without exiting visual mode
-vim.keymap.set("v", "<", "<gv")
-vim.keymap.set("v", ">", ">gv")
+set("v", "<", "<gv", { desc = "indent left without exiting visual mode" })
+set("v", ">", ">gv", { desc = "indent right without exiting visual mode" })
 
 -- quickly move lines up and down with <A-J> == ∆ and <A-K> == ˚
-vim.keymap.set("n", "∆", ":m .+1<CR>==")
-vim.keymap.set("n", "˚", ":m .-2<CR>==")
-vim.keymap.set("i", "∆", "<Esc>:m .+1<CR>==gi")
-vim.keymap.set("i", "˚", "<Esc>:m .-2<CR>==gi")
-vim.keymap.set("v", "∆", ":m '>+1<CR>gv=gv")
-vim.keymap.set("v", "˚", ":m '<-2<CR>gv=gv")
+set("i", "∆", "<Esc>:m .+1<CR>==gi", { desc = "move line down - <A-J>" })
+set("n", "∆", ":m .+1<CR>==", { desc = "move line down - A-J>" })
+set("v", "∆", ":m '>+1<CR>gv=gv", { desc = "move selection down - <A-J>" })
+set("i", "˚", "<Esc>:m .-2<CR>==gi", { desc = "move line up - <A-K>" })
+set("n", "˚", ":m .-2<CR>==", { desc = "move line up - <A-K>" })
+set("v", "˚", ":m '<-2<CR>gv=gv", { desc = "move selection up - <A-K>" })
 
--- quickly move to next and previous buffers
-vim.keymap.set("", "<leader>bn", ":bn<CR>")
-vim.keymap.set("", "<leader>bp", ":bp<CR>")
+set("", "<leader>vs", ":source $MYVIMRC<CR>", { desc = "source .vimrc" })
+set("", "<leader>vi", ":tabedit $MYVIMRC<CR>", { desc = "open .vimrc in tab" })
 
--- quick access to this .vimrc
-vim.keymap.set("", "<leader>vs", ":source $MYVIMRC<CR>")
-vim.keymap.set("", "<leader>vi", ":tabedit $MYVIMRC<CR>")
-
--- set all windows to equal width
-vim.keymap.set("", "<leader>=", "<C-w>=")
+set("", "<leader>=", "<C-w>=", { desc = "set all windows to equal width" })
 
 -- resize window
-vim.keymap.set("n", "Ò", "<c-w>5<") -- <A-S-L> => Ò
-vim.keymap.set("n", "Ó", "<c-w>5>") -- <A-S-H> => Ó
-vim.keymap.set("n", "", "<c-w>5+") -- <A-S-K> => 
-vim.keymap.set("n", "Ô", "<c-w>5-") -- <A-S-J> => Ô
+set("n", "Ò", "<c-w>5>", { desc = "resize window right - <A-S-L> => Ò" })
+set("n", "Ó", "<c-w>5<", { desc = "resize window left - <A-S-H> => Ó" })
+set("n", "", "<c-w>5+", { desc = "resize window top - <A-S-K> => " })
+set("n", "Ô", "<c-w>5-", { desc = "resize window bottom - <A-S-J> => Ô" })
+
+set("n", "<leader><leader>x", "<cmd>source %<CR>", { desc = "execute the current file" })
