@@ -1,25 +1,4 @@
---- @param event object
-local function configureKeyMaps(event)
-	local setKeymap = vim.keymap.set
-	local lspBuf = vim.lsp.buf
-	local opts = { buffer = event.buf }
-
-	setKeymap("n", "<C-]>", lspBuf.definition, opts)
-	setKeymap("i", "<C-S>", lspBuf.signature_help, opts)
-	setKeymap("n", "<leader>rn", lspBuf.rename, opts)
-	setKeymap("n", "K", lspBuf.hover, opts)
-	setKeymap("n", "[d", vim.diagnostic.goto_prev, opts)
-	setKeymap("n", "]d", vim.diagnostic.goto_next, opts)
-	setKeymap("n", "gD", lspBuf.declaration, opts)
-	setKeymap("n", "gd", lspBuf.definition, opts) -- go to where symbol is defined
-	setKeymap("n", "gi", lspBuf.implementation, opts) -- go to implementation, e.g. with interfaces
-	setKeymap({ "n", "v" }, "<space>ca", lspBuf.code_action, opts)
-
-	-- Enable completion triggered by <c-x><c-o> (overridden by nvim-cmp, below)
-	vim.bo[event.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
-end
-
-local function configureMasonLsp()
+local function configureLsp()
 	local lspconfig = require("lspconfig")
 	local capabilities = vim.tbl_deep_extend(
 		"force",
@@ -27,132 +6,140 @@ local function configureMasonLsp()
 		vim.lsp.protocol.make_client_capabilities(),
 		require("cmp_nvim_lsp").default_capabilities()
 	)
-
-	local opts = {
-		ensure_installed = {
-			"ansiblels",
-			"bashls",
-			"biome",
-			"cssls",
-			"docker_compose_language_service",
-			"dockerls",
-			"emmet_ls",
-			"eslint",
-			"gopls",
-			"html",
-			"htmx",
-			"jsonls",
-			"lua_ls",
-			"marksman",
-			"pyright",
-			"ruff_lsp",
-			"rust_analyzer",
-			"svelte",
-			"taplo",
-			"terraformls",
-			"tsserver",
-			"vimls",
-			"yamlls",
+	local servers = {
+		denols = { autostart = false },
+		biome = {
+			-- enable biome when package.json is present, in addition to defaults
+			root_dir = require("lspconfig.util").root_pattern("biome.json", "biome.jsonc", "package.json"),
+			-- enable biome even when not in a biome project
+			single_file_support = true,
 		},
-		handlers = {
-			function(server_name) -- default handler (optional)
-				lspconfig[server_name].setup({ capabilities = capabilities })
-			end,
 
-			["denols"] = function()
-				lspconfig.denols.setup({ autostart = false })
-			end,
-
-			["biome"] = function()
-				lspconfig.biome.setup({
-					capabilities = capabilities,
-					-- enable biome when package.json is present, in addition to defaults
-					root_dir = require("lspconfig.util").root_pattern("biome.json", "biome.jsonc", "package.json"),
-					-- enable biome even when not in a biome project
-					single_file_support = true,
-				})
-			end,
-
-			["lua_ls"] = function()
-				lspconfig.lua_ls.setup({
-					capabilities = capabilities,
-					settings = {
-						Lua = {
-							completion = {
-								callSnippet = "Replace", -- see https://github.com/folke/neodev.nvim
-							},
-						},
+		lua_ls = {
+			settings = {
+				Lua = {
+					completion = {
+						callSnippet = "Replace", -- see https://github.com/folke/neodev.nvim
 					},
-				})
-			end,
-
-			["eslint"] = function()
-				lspconfig.eslint.setup({
-					capabilities = capabilities,
-					settings = { command = "eslint_d" },
-				})
-			end,
-
-			["html"] = function()
-				lspconfig.html.setup({
-					capabilities = capabilities,
-					filetypes = { "html", "htmldjango" },
-				})
-			end,
-
-			["htmx"] = function()
-				lspconfig.htmx.setup({
-					capabilities = capabilities,
-					filetypes = { "html", "htmldjango" },
-				})
-			end,
-
-			["rust_analyzer"] = function()
-				lspconfig.htmx.setup({
-					capabilities = capabilities,
-					diagnostics = {
-						enable = false,
-					},
-					settings = {
-						-- to enable rust-analyzer settings visit:
-						-- https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/user/generated_config.adoc
-						["rust-analyzer"] = {
-							-- enable clippy on save
-							checkOnSave = {
-								command = "clippy",
-							},
-						},
-					},
-				})
-			end,
-
-			["pyright"] = function()
-				lspconfig.pyright.setup({
-					capabilities = capabilities,
-					settings = {
-						python = {
-							-- use pyright _only_ for renaming in Python, not diagnostics
-							analysis = {
-								diagnosticMode = "off",
-								typeCheckingMode = "off",
-							},
-						},
-					},
-				})
-			end,
+				},
+			},
 		},
+
+		eslint = { settings = { command = "eslint_d" } },
+
+		gopls = {
+			settings = {
+				gopls = {
+					hints = {
+						assignVariableTypes = true,
+						compositeLiteralFields = true,
+						compositeLiteralTypes = true,
+						constantValues = true,
+						functionTypeParameters = true,
+						parameterNames = true,
+						rangeVariableTypes = true,
+					},
+				},
+			},
+		},
+
+		html = { filetypes = { "html", "htmldjango" } },
+		htmx = { filetypes = { "html", "htmldjango" } },
+
+		rust_analyzer = {
+			diagnostics = { enable = false },
+			settings = {
+				-- to enable rust-analyzer settings visit:
+				-- https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/user/generated_config.adoc
+				["rust-analyzer"] = {
+					-- enable clippy on save
+					checkOnSave = { command = "clippy" },
+				},
+			},
+		},
+
+		pyright = {
+			settings = {
+				python = {
+					-- use pyright _only_ for renaming in Python, not diagnostics
+					analysis = {
+						diagnosticMode = "off",
+						typeCheckingMode = "off",
+					},
+				},
+			},
+		},
+
+		jsonls = {
+			settings = {
+				json = {
+					schemas = require("schemastore").json.schemas(),
+					validate = { enable = true },
+				},
+			},
+		},
+
+		yamlls = {
+			settings = {
+				yaml = {
+					schemaStore = { enable = false, url = "" },
+					schemas = require("schemastore").yaml.schemas(),
+				},
+			},
+		},
+
+		ansiblels = true,
+		bashls = true,
+		cmake = true,
+		css_variables = true,
+		cssls = true,
+		docker_compose_language_service = true,
+		dockerls = true,
+		emmet_ls = true,
+		gitlab_ci_ls = true,
+		marksman = true,
+		ruff_lsp = true,
+		somesass_ls = true,
+		sqlls = true,
+		svelte = true,
+		tailwindcss = true,
+		taplo = true,
+		templ = true,
+		terraformls = true,
+		tsserver = true,
+		vimls = true,
 	}
+	local ensure_installed = {}
 
-	require("mason-lspconfig").setup(opts)
+	for name, _ in pairs(servers) do
+		vim.list_extend(ensure_installed, { name })
+	end
+
+	require("custom.plugins.mason").setup()
+	-- must come _after_ mason.setup()
+	require("mason-lspconfig").setup({
+		ensure_installed = ensure_installed,
+		automatic_installation = true,
+	})
+
+	for name, config in pairs(servers) do
+		if config == true then
+			config = {}
+		end
+		config = vim.tbl_deep_extend("force", {}, {
+			capabilities = capabilities,
+		}, config)
+
+		lspconfig[name].setup(config)
+	end
 end
 
 require("neodev").setup({}) -- must be called before configured lsp
 require("fidget").setup({})
 
-configureMasonLsp()
+configureLsp()
 
 vim.diagnostic.config({
-	-- update_in_insert = true,
 	float = {
 		focusable = false,
 		style = "minimal",
@@ -165,5 +152,23 @@ vim.diagnostic.config({
 
 vim.api.nvim_create_autocmd("LspAttach", {
 	group = vim.api.nvim_create_augroup("CustomLspConfig", {}),
-	callback = configureKeyMaps,
+	callback = function(event)
+		local setKeymap = vim.keymap.set
+		local lspBuf = vim.lsp.buf
+		local opts = { buffer = event.buf }
+
+		setKeymap("n", "<C-]>", lspBuf.definition, opts)
+		setKeymap("i", "<C-S>", lspBuf.signature_help, opts)
+		setKeymap("n", "<leader>rn", lspBuf.rename, opts)
+		setKeymap("n", "K", lspBuf.hover, opts)
+		setKeymap("n", "[d", vim.diagnostic.goto_prev, opts)
+		setKeymap("n", "]d", vim.diagnostic.goto_next, opts)
+		setKeymap("n", "gD", lspBuf.declaration, opts)
+		setKeymap("n", "gd", lspBuf.definition, opts) -- go to where symbol is defined
+		setKeymap("n", "gi", lspBuf.implementation, opts) -- go to implementation, e.g. with interfaces
+		setKeymap({ "n", "v" }, "<space>ca", lspBuf.code_action, opts)
+
+		-- Enable completion triggered by <c-x><c-o> (overridden by nvim-cmp, below)
+		vim.bo[event.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
+	end,
 })

@@ -1,12 +1,14 @@
 return {
 	"neovim/nvim-lspconfig",
 	dependencies = {
+		"WhoIsSethDaniel/mason-tool-installer.nvim",
+		"b0o/schemastore.nvim",
 		"folke/neodev.nvim", -- neovim Lua deps
-		"saadparwaiz1/cmp_luasnip",
+		"hrsh7th/cmp-nvim-lsp",
 		"j-hui/fidget.nvim",
+		"saadparwaiz1/cmp_luasnip",
 		"williamboman/mason-lspconfig.nvim",
 		"williamboman/mason.nvim",
-		"hrsh7th/cmp-nvim-lsp",
 	},
 	config = function()
 		require("custom.plugins.lsp")
