@@ -108,19 +108,24 @@ local function getFormatters()
 			}
 		end,
 
+		-- TODO: determine why svelte files are not always formatted
+		-- Appears to be something related to position of .prettierrc.cjs relative to
+		-- file
 		prettierd = function(parser)
 			return function()
 				local args = { util.escape_path(util.get_current_buffer_file_path()) }
+				local defaultConfig = string.format(
+					"PRETTIERD_DEFAULT_CONFIG=%s",
+					-- see bootstrap.sh for this path
+					vim.fn.expand("~/.local/share/nvim/prettierd/.prettierrc.cjs")
+				)
+				local exe = defaultConfig .. " prettierd"
 
 				if parser then
 					table.insert(args, "--parser=" .. parser)
 				end
 
-				return {
-					exe = "prettierd",
-					args = args,
-					stdin = true,
-				}
+				return { exe = exe, args = args, stdin = true }
 			end
 		end,
 

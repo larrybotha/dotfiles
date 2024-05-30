@@ -161,9 +161,15 @@ function symlink_files() {
 		"${script_dir}/.config/lazygit"
 		"${HOME}/Library/Application Support/lazygit"
 	)
+	local prettierrc_config=(
+		".prettierrc.cjs"
+		"$script_dir"
+		"${HOME}/.local/share/nvim/prettierd"
+	)
 
 	link_file "${vimspector_config[@]}"
 	link_file "${lazygit_config[@]}"
+	link_file "${prettierrc_config[@]}"
 }
 
 function update_nnn_plugins() {
