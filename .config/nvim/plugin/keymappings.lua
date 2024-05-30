@@ -61,10 +61,4 @@ set("", "<leader>vi", ":tabedit $MYVIMRC<CR>", { desc = "open .vimrc in tab" })
 
 set("", "<leader>=", "<C-w>=", { desc = "set all windows to equal width" })
 
--- resize window
-set("n", "Ò", "<c-w>5>", { desc = "resize window right - <A-S-L> => Ò" })
-set("n", "Ó", "<c-w>5<", { desc = "resize window left - <A-S-H> => Ó" })
-set("n", "", "<c-w>5+", { desc = "resize window top - <A-S-K> => " })
-set("n", "Ô", "<c-w>5-", { desc = "resize window bottom - <A-S-J> => Ô" })
-
 set("n", "<leader><leader>x", "<cmd>source %<CR>", { desc = "execute the current file" })
