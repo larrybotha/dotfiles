@@ -1,8 +1,6 @@
 local opt = vim.opt
 
 opt.termguicolors = true -- use gui color attributes instead of cterm attributes
-opt.splitright = true -- open split panes to the right of the current pane
-opt.splitbelow = true -- open split panes underneath the current pane
 
 opt.backspace = "indent,eol,start" -- allow backspacing over everything in insert mode
 opt.linespace = 0 -- No extra spaces between rows
@@ -25,6 +23,8 @@ opt.showmatch = true -- show matching brackets/parenthesis
 opt.smartcase = true -- case sensitive when uc present
 opt.smartindent = true -- autoindent on new lines
 opt.spell = false -- disable spellcheck
+opt.splitbelow = true -- open split panes underneath the current pane
+opt.splitright = true -- open split panes to the right of the current pane
 opt.wildmenu = true -- show list instead of just completing
 opt.wildmode = "list:longest,full" -- command <Tab> completion, list matches, then longest common part, then all.
 opt.winbar = "%=%m %f" -- add filename to winbar aligned to end
@@ -42,20 +42,12 @@ opt.backup = false
 
 opt.formatoptions:remove("o") -- don't have `o` add a comment
 
-local function setSpacing()
-	opt.autoindent = true -- indent at the same level of the previous line
-	opt.shiftwidth = 2 -- use indents of 2 spaces
-	opt.tabstop = 2 -- indent every 2 columns
-	opt.softtabstop = 2 -- let backspace delete indent
-	opt.expandtab = true
-end
-
-vim.api.nvim_create_autocmd({ "VimEnter", "BufNewFile", "BufReadPost" }, {
-	callback = setSpacing,
-	pattern = "*",
-	desc = "Set consistent spacing when starting Neovim or adding files to buffers",
-	group = vim.api.nvim_create_augroup("CustomSpaceGroup", {}),
-})
+-- indentation
+opt.autoindent = true -- indent at the same level of the previous line
+opt.shiftwidth = 2 -- use indents of 2 spaces
+opt.tabstop = 2 -- indent every 2 columns
+opt.softtabstop = 2 -- let backspace delete indent
+opt.expandtab = true
 
 -- Configure Python virtual environment for neovim
 --
