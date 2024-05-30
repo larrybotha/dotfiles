@@ -1,4 +1,1 @@
-vim.bo.shiftwidth = 4
-vim.bo.tabstop = 4
-vim.bo.softtabstop = 4
-vim.opt.formatoptions:append("r") -- ensure comment leader is added on 'Enter'
+vim.opt_local.formatoptions:append("r") -- ensure comment leader is added on 'Enter'
