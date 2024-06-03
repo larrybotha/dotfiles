@@ -68,6 +68,7 @@ brew install jesseduffield/lazydocker/lazydocker
 brew install jesseduffield/lazynpm/lazynpm
 brew install jid
 brew install jq
+brew install keymapp
 brew install lazygit
 brew install lulu
 brew install lynx
