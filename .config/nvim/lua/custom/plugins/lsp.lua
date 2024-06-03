@@ -15,16 +15,6 @@ local function configureLsp()
 			single_file_support = true,
 		},
 
-		lua_ls = {
-			settings = {
-				Lua = {
-					completion = {
-						callSnippet = "Replace", -- see https://github.com/folke/neodev.nvim
-					},
-				},
-			},
-		},
-
 		eslint = { settings = { command = "eslint_d" } },
 
 		gopls = {
@@ -97,6 +87,7 @@ local function configureLsp()
 		dockerls = true,
 		emmet_ls = true,
 		gitlab_ci_ls = true,
+		lua_ls = true,
 		marksman = true,
 		ruff_lsp = true,
 		somesass_ls = true,
@@ -134,7 +125,6 @@ local function configureLsp()
 	end
 end
 
-require("neodev").setup({}) -- must be called before configured lsp
 require("fidget").setup({})
 
 configureLsp()

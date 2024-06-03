@@ -3,7 +3,6 @@ return {
 	dependencies = {
 		"WhoIsSethDaniel/mason-tool-installer.nvim",
 		"b0o/schemastore.nvim",
-		"folke/neodev.nvim", -- neovim Lua deps
 		"hrsh7th/cmp-nvim-lsp",
 		"j-hui/fidget.nvim",
 		"saadparwaiz1/cmp_luasnip",
