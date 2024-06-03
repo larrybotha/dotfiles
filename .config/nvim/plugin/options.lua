@@ -60,5 +60,5 @@ local python3_host_prog = vim.fn.expand("$HOME/.pyenv/versions/py3nvim/bin/pytho
 if vim.fn.filereadable(python3_host_prog) then
 	vim.g.python3_host_prog = python3_host_prog
 else
-	print("neovim python virtualenv is not configured")
+	vim.print("neovim python virtualenv is not configured")
 end
