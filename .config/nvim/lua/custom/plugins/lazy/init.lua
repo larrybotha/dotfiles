@@ -6,4 +6,5 @@ return {
 	{ "wakatime/vim-wakatime" },
 	{ "mg979/vim-visual-multi" },
 	{ "rhysd/git-messenger.vim" },
+	{ "kmonad/kmonad-vim" },
 }
