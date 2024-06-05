@@ -15,7 +15,7 @@ local function getFormatters()
 					exe = "biome",
 					args = {
 						"check",
-						"--apply",
+						"--write",
 						"--formatter-enabled=true",
 						"--organize-imports-enabled=true",
 						"--skip-errors",
