@@ -48,15 +48,13 @@ local function configureLsp()
 			},
 		},
 
+		-- see https://www.andersevenrud.net/neovim.github.io/lsp/configurations/pyright/
 		pyright = {
 			settings = {
-				python = {
-					-- use pyright _only_ for renaming in Python, not diagnostics
-					analysis = {
-						diagnosticMode = "off",
-						typeCheckingMode = "off",
-					},
-				},
+				-- rely on other LSPs for offer completions, definitions, and references
+				disableLanguageServices = true,
+				-- rely on other formatters for organising imports
+				disableOrganizeImports = true,
 			},
 		},
 
