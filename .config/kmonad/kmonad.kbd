@@ -27,19 +27,19 @@
 )
 
 (defsrc
-  f10  f11  f12
   tab  q    w    e    r    t    u    i    o    p
   esc  a    s    d    f    g    h    j    k    l    ;
   lsft z    x    c    v    b    n    m    ,    .    /
   fn lctl lalt lmet space rmet
+  esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
 )
 
 (deflayer base
-  mute vold volu
   tab   q       w       e       r       t   u   i       o       p
   @esc_l   @mod_a  @mod_s  @mod_d  @mod_f  g   h   @mod_j  @mod_k  @mod_l   @mod_semic
   lsft  z       x       c       v       b   n   m       ,       .        /
   fn  lctl lalt lmet space bspc
+  _    f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
 )
 
 (deflayer function
