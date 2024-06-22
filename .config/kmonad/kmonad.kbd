@@ -11,17 +11,18 @@
 
 
 (defalias
-    hyper_l (around lctrl (around lalt (around lmeta lshft)))
-    esc_l (tap-hold-next-release 200 esc @hyper_l)
-    mod_a (tap-hold-next-release 200 a lmet)
-    mod_s (tap-hold-next-release 200 s lalt)
-    mod_d (tap-hold-next-release 200 d lctl)
-    mod_f (tap-hold-next-release 200 f lshft)
+    lhyp (around lctrl (around lalt (around lmeta lshft)))
 
-    mod_j (tap-hold-next-release 200 j rshft)
-    mod_k (tap-hold-next-release 200 k rctl)
-    mod_l (tap-hold-next-release 200 l lalt)
-    mod_semic (tap-hold-next-release 200 ; rmet)
+    cap (tap-hold-next-release 200 esc @lhyp)
+    a (tap-hold-next-release 200 a lmet)
+    s (tap-hold-next-release 200 s lalt)
+    d (tap-hold-next-release 200 d lctl)
+    f (tap-hold-next-release 200 f lshft)
+
+    j (tap-hold-next-release 200 j rshft)
+    k (tap-hold-next-release 200 k rctl)
+    l (tap-hold-next-release 200 l lalt)
+    ; (tap-hold-next-release 200 ; rmet)
 
     fn (around (layer-toggle function) fn)
 )
@@ -32,14 +33,14 @@
   lsft z    x    c    v    b    n    m    ,    .    /
   fn lctl lalt lmet space rmet
   esc  f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+  fn   lctl lalt lmet           spc            rmet ralt left down rght
 )
 
 (deflayer base
   tab   q       w       e       r       t   u   i       o       p
-  @esc_l   @mod_a  @mod_s  @mod_d  @mod_f  g   h   @mod_j  @mod_k  @mod_l   @mod_semic
   lsft  z       x       c       v       b   n   m       ,       .        /
-  fn  lctl lalt lmet space bspc
   _    f1   f2   f3   f4   f5   f6   f7   f8   f9   f10  f11  f12
+  @fn  _    _    _              _              _    _    _    _    _
 )
 
 (deflayer function
