@@ -22,6 +22,8 @@
     mod_k (tap-hold-next-release 200 k rctl)
     mod_l (tap-hold-next-release 200 l lalt)
     mod_semic (tap-hold-next-release 200 ; rmet)
+
+    fn (around (layer-toggle function) fn)
 )
 
 (defsrc
@@ -38,6 +40,15 @@
   @esc_l   @mod_a  @mod_s  @mod_d  @mod_f  g   h   @mod_j  @mod_k  @mod_l   @mod_semic
   lsft  z       x       c       v       b   n   m       ,       .        /
   fn  lctl lalt lmet space bspc
+)
+
+(deflayer function
+  _    brdn brup lp   mctl bldn blup prev pp   next mute vold volu
+  _    _    _    _    _    _    _    pgup _    _    _    _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    pgdn _    _    left down up   rght _    _    _
+  _    _    _    _    _    _    _    _    _    _    _    _    _
+  _    _    _    _              _              _    _    _    _    _
 )
 
 ;; vim: ft=lisp
