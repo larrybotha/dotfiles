@@ -11,20 +11,20 @@
 
 
 (defalias
-    lhyp (around lctrl (around lalt (around lmeta lshft)))
+  lhyp (around lctrl (around lalt (around lmeta lshft)))
 
-    cap (tap-hold-next-release 200 esc @lhyp)
-    a (tap-hold-next-release 200 a lmet)
-    s (tap-hold-next-release 200 s lalt)
-    d (tap-hold-next-release 200 d lctl)
-    f (tap-hold-next-release 200 f lshft)
+  cap (tap-hold-next-release 200 esc @lhyp)
+  a (tap-hold-next-release 200 a lmet)
+  s (tap-hold-next-release 200 s lalt)
+  d (tap-hold-next-release 200 d lctl)
+  f (tap-hold-next-release 200 f lshft)
 
-    j (tap-hold-next-release 200 j rshft)
-    k (tap-hold-next-release 200 k rctl)
-    l (tap-hold-next-release 200 l lalt)
-    ; (tap-hold-next-release 200 ; rmet)
+  j (tap-hold-next-release 200 j rshft)
+  k (tap-hold-next-release 200 k rctl)
+  l (tap-hold-next-release 200 l lalt)
+  ; (tap-hold-next-release 200 ; rmet)
 
-    fn (around (layer-toggle function) fn)
+  fn (around (layer-toggle function) fn)
 )
 
 (defsrc
@@ -53,5 +53,3 @@
   _    _    _    _    _    _    _    _    _    _    _    _    _
   _    _    _    _              _              _    _    _    _    _
 )
-
-;; vim: ft=lisp
