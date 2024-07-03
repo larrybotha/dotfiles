@@ -11,7 +11,7 @@ luasnip.add_snippets("htmldjango", {
 	s("djlint", fmt("{{# djlint:off #}}\n{}\n{{# djlint:on #}}", { i(0) })),
 	s("elif", fmt("{{% elif {} %}}\n{}\n", { i(1), i(0) })),
 	s("for", fmt("{{% for {} in {} %}}\n{}\n{{% empty %}}\n{}\n{{% endfor %}}", { i(1), i(2), i(3), i(0) })),
-	s("if", fmt("{{% if {} %}}\n{}\n{{% else %}}\n{}\n{{% endif %}}", { i(2), i(1), i(0) })),
+	s("if", fmt("{{% if {} %}}\n{}\n{{% else %}}\n{}\n{{% endif %}}", { i(1), i(2), i(0) })),
 	s("if", fmt("{{% if {} %}}\n{}\n{{% endif %}}", { i(1), i(0) })),
 	s("include", fmt('{{% include "{}"{} %}}', { i(1), i(0) })),
 	s("load", fmt("{{% load {} %}}", { i(0) })),
