@@ -146,7 +146,6 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		---@type vim.keymap.set.Opts
 		local opts = { buffer = event.buf }
 
-		setKeymap("n", "<C-]>", lspBuf.definition, opts)
 		setKeymap("i", "<C-S>", lspBuf.signature_help, opts)
 		setKeymap("n", "<leader>rn", lspBuf.rename, opts)
 		setKeymap("n", "K", lspBuf.hover, opts)
