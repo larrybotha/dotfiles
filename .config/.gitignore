@@ -6,9 +6,6 @@
 karabiner/*
 !karabiner/karabiner.json
 
-# raycast
-raycast/extensions
-
 # epy epub reader
 epy
 
@@ -24,6 +21,9 @@ graphite
 
 # packer
 packer/*
+
+# tracy
+tracy
 
 # updates
 update-notifier-alex.json
