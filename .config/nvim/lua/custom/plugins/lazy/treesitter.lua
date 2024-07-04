@@ -31,6 +31,7 @@ return {
 				"toml",
 				"typescript",
 				"vim",
+				"vimdoc",
 			},
 			indent = {
 				enable = true,
