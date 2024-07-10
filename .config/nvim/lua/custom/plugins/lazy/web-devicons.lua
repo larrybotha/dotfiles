@@ -1,7 +1,7 @@
 return {
 	{
 		"kyazdani42/nvim-web-devicons",
-		event = "VeryLazy",
+		lazy = true,
 		dependencies = { "nvim-lua/plenary.nvim" },
 		opts = {
 			override = {

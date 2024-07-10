@@ -1,13 +1,13 @@
 return {
 	"neovim/nvim-lspconfig",
 	dependencies = {
-		"WhoIsSethDaniel/mason-tool-installer.nvim",
-		"b0o/schemastore.nvim",
-		"hrsh7th/cmp-nvim-lsp",
-		"j-hui/fidget.nvim",
-		"saadparwaiz1/cmp_luasnip",
-		"williamboman/mason-lspconfig.nvim",
-		"williamboman/mason.nvim",
+		{ "WhoIsSethDaniel/mason-tool-installer.nvim", lazy = true },
+		{ "b0o/schemastore.nvim", lazy = true },
+		{ "hrsh7th/cmp-nvim-lsp", lazy = true },
+		{ "j-hui/fidget.nvim", lazy = true },
+		{ "saadparwaiz1/cmp_luasnip", lazy = true },
+		{ "williamboman/mason-lspconfig.nvim", lazy = true },
+		{ "williamboman/mason.nvim", lazy = true },
 	},
 	event = "VeryLazy",
 	config = function()
