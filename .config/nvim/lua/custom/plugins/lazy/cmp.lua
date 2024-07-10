@@ -1,5 +1,6 @@
 return {
 	"hrsh7th/nvim-cmp",
+	event = "VeryLazy",
 	dependencies = {
 		"kristijanhusak/vim-dadbod-completion",
 		"L3MON4D3/LuaSnip", -- see https://www.youtube.com/watch?v=22mrSjknDHI for snippet configs

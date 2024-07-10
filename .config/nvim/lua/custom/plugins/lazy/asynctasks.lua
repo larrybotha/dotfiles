@@ -1,6 +1,7 @@
 return {
 	"skywind3000/asynctasks.vim",
 	dependencies = { "skywind3000/asyncrun.vim" },
+	event = "VeryLazy",
 	init = function()
 		-- open quickfix window automatically
 		vim.g.asyncrun_open = 6

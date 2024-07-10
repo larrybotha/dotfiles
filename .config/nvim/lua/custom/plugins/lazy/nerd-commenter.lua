@@ -1,8 +1,9 @@
 return {
 	{
 		"preservim/nerdcommenter",
+		event = "VeryLazy",
 		name = "nerdcommenter",
-		init = function()
+		config = function()
 			vim.g.NERDDefaultAlign = "left"
 
 			vim.api.nvim_create_autocmd("FileType", {

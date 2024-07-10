@@ -1,6 +1,7 @@
 return {
 	"voldikss/vim-floaterm",
 	name = "floaterm",
+	event = "VeryLazy",
 	init = function()
 		vim.g.floaterm_width = 0.91
 		vim.g.floaterm_height = 0.98

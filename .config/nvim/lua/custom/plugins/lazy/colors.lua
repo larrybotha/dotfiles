@@ -16,7 +16,7 @@ return {
 	{
 		"mellow-theme/mellow.nvim",
 		name = "mellow",
-		lazy = true,
+		lazy = false,
 		priority = 1000,
 		init = function()
 			local colors = require("mellow.colors").dark
@@ -46,8 +46,6 @@ return {
 	{
 		"norcalli/nvim-colorizer.lua",
 		event = "VeryLazy",
-		config = function()
-			require("colorizer").setup()
-		end,
+		opts = {},
 	},
 }

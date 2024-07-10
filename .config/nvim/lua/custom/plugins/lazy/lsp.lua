@@ -9,6 +9,7 @@ return {
 		"williamboman/mason-lspconfig.nvim",
 		"williamboman/mason.nvim",
 	},
+	event = "VeryLazy",
 	config = function()
 		require("custom.plugins.lsp")
 	end,
