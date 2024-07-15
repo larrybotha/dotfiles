@@ -15,7 +15,6 @@ return {
 	{
 		"christoomey/vim-tmux-navigator",
 		name = "vim-tmux-navigator",
-		event = "VeryLazy",
 		config = function()
 			vim.api.nvim_create_autocmd({ "VimEnter", "VimResume" }, {
 				callback = function()
