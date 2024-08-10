@@ -47,15 +47,15 @@ local function getFormatters()
 			}
 		end,
 
-		-- https://github.com/thlorenz/doctoc
+		-- https://github.com/kevingimbel/mktoc
 		-- Will only generate TOC in files containing:
-		-- <!-- START doctoc -->
-		-- <!-- END doctoc -->
-		doctoc = function()
+		-- <!-- BEGIN mktoc -->
+		-- <!-- END mktoc -->
+		mktoc = function()
 			return {
-				exe = "doctoc",
-				args = { "--update-only" },
-				stdin = false,
+				exe = "mktoc",
+				args = { "-s", get_file() },
+				stdin = true,
 			}
 		end,
 
@@ -248,7 +248,7 @@ formatter.setup({
 		lua = { filetypes.lua.stylua },
 		markdown = {
 			customFormatters.cbfmt,
-			customFormatters.doctoc,
+			customFormatters.mktoc,
 			customFormatters.prettierd(), -- replace with biome once supported
 		},
 		nginx = { customFormatters.nginxbeautifier },

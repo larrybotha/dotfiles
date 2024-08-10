@@ -84,7 +84,6 @@ common_modules=(
 
 	# diagnostics, linting, lsp, formatters
 	alex                    # diagnostics
-	doctoc                  # formatter
 	eslint_d                # formatter / diagnostics
 	fixjson                 # formatter
 	jsonlint                # diagnostics

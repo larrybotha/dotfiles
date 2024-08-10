@@ -22,9 +22,10 @@ cargo install cargo-expand # prints out the expansions of macros
 # diagnostics, linting, lsp, formatters
 cargo install cbfmt         # formatter
 cargo install dotenv-linter # diagnostics
+cargo install mktoc         # formatter
 cargo install selene        # diagnostics
-cargo install sleek         # diagnostics for sql
 cargo install shellharden   # formatter
+cargo install sleek         # diagnostics for sql
 cargo install taplo-cli     # formatter + diagnostics
 
 rustup component add rustfmt
