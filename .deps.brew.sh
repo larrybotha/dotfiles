@@ -43,6 +43,7 @@ brew install mysql
 brew install ansible
 brew install ansible-lint
 brew install ariga/tap/atlas # Terraform-like orchestration for db schemas
+brew install aldente
 brew install atuin
 brew install bat
 brew install checkmake
