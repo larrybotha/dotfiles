@@ -78,6 +78,7 @@ brew install neovim
 brew install nnn
 brew install nvm
 brew install oven-sh/bun/bun
+brew install peterldowns/tap/nix-search-cli
 brew install pigz
 brew install pipenv
 brew install postgresql
