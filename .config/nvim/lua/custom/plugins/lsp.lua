@@ -79,7 +79,6 @@ local function configureLsp()
 		ansiblels = true,
 		bashls = true,
 		cmake = true,
-		print = true,
 		css_variables = true,
 		cssls = true,
 		docker_compose_language_service = true,
