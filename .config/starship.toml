@@ -10,6 +10,7 @@ $git_status\
 $cmd_duration\
 $line_break\
 $python\
+$nix_shell\
 $character"""
 
 [directory]
