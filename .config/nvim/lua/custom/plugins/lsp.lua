@@ -87,6 +87,7 @@ local function configureLsp()
 		gitlab_ci_ls = true,
 		lua_ls = true,
 		marksman = true,
+		nil_ls = true,
 		ruff_lsp = true,
 		somesass_ls = true,
 		sqlls = true,

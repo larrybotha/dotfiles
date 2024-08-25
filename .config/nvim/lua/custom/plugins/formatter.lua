@@ -252,6 +252,7 @@ formatter.setup({
 			customFormatters.prettierd(), -- replace with biome once supported
 		},
 		nginx = { customFormatters.nginxbeautifier },
+		nix = { formatters.nixfmt },
 		org = { customFormatters.cbfmt },
 		packer = { customFormatters.packer },
 		python = {

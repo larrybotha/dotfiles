@@ -8,6 +8,7 @@ M.setup = function()
 		sources = {
 			diagnostics.ansiblelint,
 			diagnostics.checkmake,
+			diagnostics.deadnix,
 			diagnostics.djlint,
 			diagnostics.dotenv_linter,
 			diagnostics.hadolint,
