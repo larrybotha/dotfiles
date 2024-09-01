@@ -20,6 +20,7 @@ cargo install --git https://github.com/mitsuhiko/rye rye # Python project manage
 cargo install cargo-expand # prints out the expansions of macros
 
 # diagnostics, linting, lsp, formatters
+cargo install alejandra     # nix formatter. TODO: install using flakes
 cargo install cbfmt         # formatter
 cargo install dotenv-linter # diagnostics
 cargo install mktoc         # formatter

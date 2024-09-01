@@ -8,6 +8,7 @@ ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
 ./.deps.brew.sh
 ./.deps.node.sh
 ./.deps.python.sh
+./.deps.nix.sh
 
 # make a code directory for dependencies
 if [ ! -d ~/code ]; then
