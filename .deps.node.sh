@@ -98,7 +98,7 @@ common_modules=(
 	dockerfile-language-server-nodejs
 	eslint-language-server
 	svelte-language-server
-	typescript-language-server
+	typescript-language-server   # ts_ls in lspconfig
 	vim-language-server
 	vscode-langservers-extracted # css, html, json
 	yaml-language-server

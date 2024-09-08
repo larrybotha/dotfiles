@@ -96,7 +96,7 @@ local function configureLsp()
 		taplo = true,
 		templ = true,
 		terraformls = true,
-		tsserver = true,
+		ts_ls = true,
 		vimls = true,
 	}
 	local ensure_installed = {}
