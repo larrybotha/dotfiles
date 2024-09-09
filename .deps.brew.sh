@@ -185,6 +185,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
 		quicklook-json
 		rescuetime
 		safari-technology-preview
+		skim
 		skype
 		the-unarchiver
 		transmission
