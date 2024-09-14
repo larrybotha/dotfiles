@@ -5,7 +5,7 @@ git pull origin master
 
 function heading() {
 	local divider="==================================="
-	echo -e "\n${divider}"
+	echo -e "\n$divider"
 	echo -e "  $*"
 	echo "$divider"
 }
@@ -32,33 +32,6 @@ function copy_files() {
 		rm -f "${destination_dir}/${file}"
 		rsync -avz "${source_dir}/${file}" "${destination_dir}/"
 	done
-}
-
-function prepare_completions() {
-	heading "preparing completions"
-
-	# append npm script completion
-	if type "npm" >/dev/null; then
-		npm completion >>"$HOME/.sh_completion"
-	fi
-
-	if type "starship" >/dev/null; then
-		if [ "$SHELL" == "/bin/zsh" ]; then
-			starship completions zsh >>"$HOME/.sh_completion"
-		else
-			starship completions bash >>"$HOME/.sh_completion"
-		fi
-	fi
-
-	if type "hoard" >/dev/null; then
-		if [ "$SHELL" == "/bin/zsh" ]; then
-			hoard shell-config --shell zsh >>"$HOME/.sh_completion"
-		else
-			hoard shell-config --shell bash >>"$HOME/.sh_completion"
-		fi
-	fi
-
-	log 'done'
 }
 
 function source_shell() {
@@ -200,7 +173,6 @@ function update_nnn_plugins() {
 function do_it() {
 	copy_files
 	symlink_to_home
-	prepare_completions
 	symlink_files
 	has_internet_access && update_nnn_plugins
 	source_shell
