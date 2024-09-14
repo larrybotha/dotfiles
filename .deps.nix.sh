@@ -15,6 +15,7 @@ packages=(
   deadnix # diagnostics
 
   just # task runner
+  nushell # shell
 )
 
 nix-env -i "${packages[@]}"
