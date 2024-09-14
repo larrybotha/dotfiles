@@ -34,3 +34,11 @@ fi
 if type starship >/dev/null; then
   eval "$(starship init zsh)"
 fi
+
+if type -p "carapace" &>/dev/null; then
+  export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
+  zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
+  source <(carapace _carapace)
+else
+  echo "carapace not installed"
+fi

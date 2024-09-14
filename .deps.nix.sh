@@ -11,11 +11,12 @@ function ensure_has_nix() {
 ensure_has_nix
 
 packages=(
-  alejandra # formatter
+  alejandra # nix formatter
   deadnix # diagnostics
 
   just # task runner
   nushell # shell
+  carapace # shell completer
 )
 
 nix-env -i "${packages[@]}"
