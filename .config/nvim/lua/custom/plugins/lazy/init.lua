@@ -1,5 +1,6 @@
 return {
 	{ "nvim-lua/plenary.nvim" },
+	{ "NoahTheDuke/vim-just", ft = "just" },
 	{ "tpope/vim-sensible", event = "VeryLazy" },
 	{ "bullets-vim/bullets.vim", event = "VeryLazy" },
 	{ "kylechui/nvim-surround", event = "VeryLazy", opts = {} },
