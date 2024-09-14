@@ -1,11 +1,4 @@
-# enable fzf completion
-if [ "$ZSH_VERSION" ]; then
-  [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
-else
-  [ -f ~/.fzf.bash ] && source ~/.fzf.bash
-fi
-
-# tmux completion
+### tmux completion
 if ! [ "$ZSH_VERSION" ]; then
   # activate tmux autocomplete
   source ~/.tmux/tmux_completion.sh
@@ -18,58 +11,9 @@ if ! [ "$ZSH_VERSION" ]; then
   [ -f /etc/bash_completion ] && source /etc/bash_completion
 fi
 
-# init git-completion https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
+## init git-completion https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
 if ! [ "$ZSH_VERSION" ]; then
   if [ -f ~/code/git-completion/git-completion.bash ] && ! [ "$ZSH_VERSION" ]; then
     . ~/code/git-completion/git-completion.bash
-  fi
-fi
-
-# See https://docs.brew.sh/Shell-Completion#configuring-completions-in-zsh
-if type brew &>/dev/null
-then
-  FPATH="$(brew --prefix)/share/zsh/site-functions:${FPATH}"
-
-  autoload -Uz compinit
-  compinit
-fi
-
-# Add tab completion for SSH hostnames based on ~/.ssh/config, ignoring wildcards
-if [ -e "$HOME/.ssh/config" ]; then
-  if ! [ "$ZSH_VERSION" ]; then
-    complete -o "default" \
-      -o "nospace" \
-      -W "$(grep "^Host" ~/.ssh/config | grep -v "[?*]" | cut -d " " -f2 | tr ' ' '\n')" \
-      scp sftp ssh
-  fi
-fi
-
-# Add google-cloud-sdk / gcloud completion
-if type -p gcloud &>/dev/null; then
-  __gcloud_bin=$(realpath "$(which gcloud)")
-  __gcloud_dir=$(realpath "$(dirname "${__gcloud_bin}")"/..)
-
-  if [ "${ZSH_VERSION}" ]; then
-    __gcloud_files=(
-      "${__gcloud_dir}/path.zsh.inc"
-      "${__gcloud_dir}/completion.zsh.inc"
-    )
-
-    for file in "${__gcloud_files[@]}"; do
-      if [ -f "${file}" ]; then
-        . "${file}"
-      fi
-    done
-  else
-    __gcloud_files=(
-      "${__gcloud_dir}/path.bash.inc"
-      "${__gcloud_dir}/completion.bash.inc"
-    )
-
-    for file in "${__gcloud_files[@]}"; do
-      if [ -f "${file}" ]; then
-        . "${file}"
-      fi
-    done
   fi
 fi

@@ -14,15 +14,3 @@ ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
 if [ ! -d ~/code ]; then
 	mkdir ~/code
 fi
-
-# https://github.com/git/git/blob/master/contrib/completion/git-completion.bash
-# Autocomplete motherflippin' git branches
-if [ ! -d ~/code/git-completion ]; then
-	mkdir ~/code/git-completion
-fi
-pushd ~/code/git-completion/ >/dev/null
-curl https://raw.github.com/git/git/master/contrib/completion/git-completion.bash -OL
-chmod -X ~/code/git-completion/git-completion.bash
-popd
-
-# git-completion binary is already referenced from .shrc
