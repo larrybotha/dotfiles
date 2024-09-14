@@ -32,10 +32,6 @@ brew install wget
 
 brew tap homebrew/services
 
-# Install rbenv for Ruby version management
-# eval "$(rbenv init -)" is already added in .bash_profile
-brew install rbenv ruby-build
-
 # Install MySQL so we can run mysql commands from the host
 brew install mysql
 

@@ -14,9 +14,6 @@ if type -p "nnn" >/dev/null; then
   source ~/.config/nnn/custom/.nnn
 fi
 
-# init rbenv
-if type -p rbenv &>/dev/null; then
-  eval "$(rbenv init -)"
 fi
 
 # init pyenv
