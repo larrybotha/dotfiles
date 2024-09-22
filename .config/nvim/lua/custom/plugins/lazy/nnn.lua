@@ -24,11 +24,13 @@ return {
 				},
 			})
 
-			-- open n³
-			vim.keymap.set("n", "<leader>n", ":NnnPicker<CR>", { silent = true })
-
-			-- open n³ in the current file's directory
-			vim.keymap.set("n", "<leader>ff", ":NnnPicker %:p:h<CR>", { silent = true })
+			vim.keymap.set("n", "<leader>n", ":NnnPicker<CR>", { silent = true, desc = "nnn open at root" })
+			vim.keymap.set(
+				"n",
+				"<leader>ff",
+				":NnnPicker %:p:h<CR>",
+				{ silent = true, desc = "nnn open at current file's dir" }
+			)
 		end,
 	},
 }

@@ -10,30 +10,30 @@ return {
 
 			vim.keymap.set("n", "<leader>hh", function()
 				harpoon.ui:toggle_quick_menu(harpoon:list())
-			end)
+			end, { desc = "Toggle harpoon menu" })
 			vim.keymap.set("n", "<leader>ha", function()
 				harpoon:list():add()
-			end)
+			end, { desc = "Add file to harpoon" })
 
 			vim.keymap.set("n", "<leader>h1", function()
 				harpoon:list():select(1)
-			end)
+			end, { desc = "Select harpoon item 1" })
 			vim.keymap.set("n", "<leader>h2", function()
 				harpoon:list():select(2)
-			end)
+			end, { desc = "Select harpoon item 2" })
 			vim.keymap.set("n", "<leader>h3", function()
 				harpoon:list():select(3)
-			end)
+			end, { desc = "Select harpoon item 3" })
 			vim.keymap.set("n", "<leader>h4", function()
 				harpoon:list():select(4)
-			end)
+			end, { desc = "Select harpoon item 4" })
 
 			vim.keymap.set("n", "<leader>hp", function()
 				harpoon:list():prev()
-			end)
+			end, { desc = "Previous harpoon item" })
 			vim.keymap.set("n", "<leader>hn", function()
 				harpoon:list():next()
-			end)
+			end, { desc = "Next harpoon item" })
 
 			harpoon:extend({
 				UI_CREATE = function(cx)
@@ -41,15 +41,15 @@ return {
 					-- are the defaults for opening splits via Telescope
 					vim.keymap.set("n", "<C-t>", function()
 						harpoon.ui:select_menu_item({ tabedit = true })
-					end, { buffer = cx.bufnr })
+					end, { buffer = cx.bufnr, desc = "Open in new tab" })
 
 					vim.keymap.set("n", "<C-v>", function()
 						harpoon.ui:select_menu_item({ vsplit = true })
-					end, { buffer = cx.bufnr })
+					end, { buffer = cx.bufnr, desc = "Open in vertical split" })
 
 					vim.keymap.set("n", "<C-x>", function()
 						harpoon.ui:select_menu_item({ split = true })
-					end, { buffer = cx.bufnr })
+					end, { buffer = cx.bufnr, desc = "Open in horizontal split" })
 				end,
 			})
 		end,

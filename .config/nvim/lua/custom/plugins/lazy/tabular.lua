@@ -23,16 +23,18 @@ return {
 	"godlygeek/tabular",
 	name = "tabular",
 	init = function()
-		-- align equal signs in normal and visual mode
-		vim.keymap.set({ "n", "v" }, "<Leader>a=", ":Tabularize /=<CR>")
-
-		-- align colons in normal and visual mode
-		vim.keymap.set({ "n", "v" }, "<Leader>a:", ":Tabularize /:\zs<CR>")
+		vim.keymap.set({ "n", "v" }, "<Leader>a=", ":Tabularize /=<CR>", { desc = "Tabularize align equal signs" })
+		vim.keymap.set({ "n", "v" }, "<Leader>a:", ":Tabularize /:\zs<CR>", { desc = "Tabularize align colons" })
 
 		_G.DoTheTableAlign = tabularizePipes
 
 		-- use Tabularize when in insert mode and a | is typed
 		-- http://vimcasts.org/episodes/aligning-text-with-tabular-vim/
-		vim.keymap.set("i", "<Bar>", "<Bar><Esc>:lua DoTheTableAlign()<CR>a", { silent = true })
+		vim.keymap.set(
+			"i",
+			"<Bar>",
+			"<Bar><Esc>:lua DoTheTableAlign()<CR>a",
+			{ silent = true, desc = "Tabularize markdown table" }
+		)
 	end,
 }

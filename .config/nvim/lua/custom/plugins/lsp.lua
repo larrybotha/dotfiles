@@ -144,18 +144,23 @@ vim.api.nvim_create_autocmd("LspAttach", {
 	callback = function(event)
 		local setKeymap = vim.keymap.set
 		local lspBuf = vim.lsp.buf
-		---@type vim.keymap.set.Opts
-		local opts = { buffer = event.buf }
+		local getOpts = function(description)
+			---@type vim.keymap.set.Opts
+			local opts = { buffer = event.buf }
+			opts.desc = description
 
-		setKeymap("i", "<C-S>", lspBuf.signature_help, opts)
-		setKeymap("n", "<leader>rn", lspBuf.rename, opts)
-		setKeymap("n", "K", lspBuf.hover, opts)
-		setKeymap("n", "[d", vim.diagnostic.goto_prev, opts)
-		setKeymap("n", "]d", vim.diagnostic.goto_next, opts)
-		setKeymap("n", "gD", lspBuf.declaration, opts)
-		setKeymap("n", "gd", lspBuf.definition, opts) -- go to where symbol is defined
-		setKeymap("n", "gi", lspBuf.implementation, opts) -- go to implementation, e.g. with interfaces
-		setKeymap({ "n", "v" }, "<space>ca", lspBuf.code_action, opts)
+			return opts
+		end
+
+		setKeymap({ "i", "n" }, "<C-S>", lspBuf.signature_help, getOpts("LSP show signature help"))
+		setKeymap("n", "<leader>rn", lspBuf.rename, getOpts("LSP rename symbol"))
+		setKeymap("n", "K", lspBuf.hover, getOpts("LSP show hover"))
+		setKeymap("n", "[d", vim.diagnostic.goto_prev, getOpts("LSP go to previous diagnostic"))
+		setKeymap("n", "]d", vim.diagnostic.goto_next, getOpts("LSP go to next diagnostic"))
+		setKeymap("n", "gD", lspBuf.declaration, getOpts("LSP go to declaration"))
+		setKeymap("n", "gd", lspBuf.definition, getOpts("LSP go to where symbol is defined"))
+		setKeymap("n", "gi", lspBuf.implementation, getOpts("LSP go to implementation, .e.g with interfaces"))
+		setKeymap({ "n", "v" }, "<space>ca", lspBuf.code_action, getOpts("LSP show code actions"))
 
 		-- Enable completion triggered by <c-x><c-o> (overridden by nvim-cmp, below)
 		vim.bo[event.buf].omnifunc = "v:lua.vim.lsp.omnifunc"

@@ -62,21 +62,19 @@ pcall(require("telescope").load_extension("asynctasks"))
 
 setKeymap("n", "<C-p>", function()
 	builtin.find_files({ hidden = true })
-end)
-setKeymap("n", "<leader>fg", builtin.live_grep, {})
-setKeymap("n", "<leader>fb", builtin.buffers, {})
-setKeymap("n", "<leader>fh", builtin.help_tags, {})
-setKeymap("n", "<leader>fa", builtin.builtin, {})
+end, { desc = "Telescope find files" })
+setKeymap("n", "<leader>fg", builtin.live_grep, { desc = "Telescope live grep" })
+setKeymap("n", "<leader>fb", builtin.buffers, { desc = "Telescope buffers" })
+setKeymap("n", "<leader>fh", builtin.help_tags, { desc = "Telescope help tags" })
+setKeymap("n", "<leader>fa", builtin.builtin, { desc = "Telescope builtins" })
 setKeymap("n", "<leader>fr", function()
 	builtin.lsp_references({ trim_text = true })
-end)
-setKeymap("n", "<leader>fR", function()
-	vim.lsp.buf.references()
-end, { buffer = true }) -- add references to quickfix
-setKeymap("n", "<leader>ft", telescope.extensions.asynctasks.all, {})
+end, { desc = "Telescope lsp references" })
+setKeymap("n", "<leader>fR", vim.lsp.buf.references, { buffer = true, desc = "LSP References" }) -- add references to quickfix
+setKeymap("n", "<leader>ft", telescope.extensions.asynctasks.all, { desc = "Telescope async tasks" })
 
 -- Diagnostics
-setKeymap("n", "<leader>fd", builtin.diagnostics, {}) -- all files
+setKeymap("n", "<leader>fd", builtin.diagnostics, { desc = "Telescope diagnostics" }) -- all files
 setKeymap("n", "<leader>fD", function()
-	builtin.diagnostics({ bufnr = 0 }) -- current file
-end)
+	builtin.diagnostics({ bufnr = 0 })
+end, { desc = "Telescope diagnostics for current file" })
