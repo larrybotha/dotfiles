@@ -8,6 +8,11 @@ return {
 			},
 		})
 
-		vim.api.nvim_set_keymap("n", "<C-_>", ":lua require('neogen').generate()<CR>", { silent = true })
+		vim.api.nvim_set_keymap(
+			"n",
+			"<C-_>",
+			":lua require('neogen').generate()<CR>",
+			{ silent = true, desc = "Generate documentation" }
+		)
 	end,
 }
