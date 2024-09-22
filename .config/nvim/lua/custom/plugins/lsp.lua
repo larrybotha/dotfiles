@@ -152,15 +152,15 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			return opts
 		end
 
-		setKeymap({ "i", "n" }, "<C-S>", lspBuf.signature_help, getOpts("LSP show signature help"))
-		setKeymap("n", "<leader>rn", lspBuf.rename, getOpts("LSP rename symbol"))
-		setKeymap("n", "K", lspBuf.hover, getOpts("LSP show hover"))
+		setKeymap({ "i", "n" }, "<leader>lss", lspBuf.signature_help, getOpts("LSP show signature help"))
+		setKeymap("n", "<leader>lsr", lspBuf.rename, getOpts("LSP rename symbol"))
+		setKeymap("n", "<leader>lsh", lspBuf.hover, getOpts("LSP show hover information"))
 		setKeymap("n", "[d", vim.diagnostic.goto_prev, getOpts("LSP go to previous diagnostic"))
 		setKeymap("n", "]d", vim.diagnostic.goto_next, getOpts("LSP go to next diagnostic"))
 		setKeymap("n", "gD", lspBuf.declaration, getOpts("LSP go to declaration"))
 		setKeymap("n", "gd", lspBuf.definition, getOpts("LSP go to where symbol is defined"))
 		setKeymap("n", "gi", lspBuf.implementation, getOpts("LSP go to implementation, .e.g with interfaces"))
-		setKeymap({ "n", "v" }, "<space>ca", lspBuf.code_action, getOpts("LSP show code actions"))
+		setKeymap({ "n", "v" }, "<leader>lsc", lspBuf.code_action, getOpts("LSP show code actions"))
 
 		-- Enable completion triggered by <c-x><c-o> (overridden by nvim-cmp, below)
 		vim.bo[event.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
