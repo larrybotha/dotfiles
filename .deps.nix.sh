@@ -21,4 +21,6 @@ packages=(
   carapace # shell completer
 )
 
-nix-env -i "${packages[@]}"
+for package in "${packages[@]}"; do
+  nix-env -iA "$package" -f '<nixpkgs>'
+done
