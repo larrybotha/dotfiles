@@ -4,11 +4,13 @@ function ensure_has_nix() {
 	if ! type -p nix &>/dev/null; then
 		echo "installing nix"
 
-    curl -L https://nixos.org/nix/install | sh -s -- --daemon
+    sh <(curl -L https://nixos.org/nix/install)
 	fi
 }
 
 ensure_has_nix
+
+nix-channel --update
 
 packages=(
   alejandra # nix formatter

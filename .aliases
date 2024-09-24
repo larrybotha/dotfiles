@@ -98,7 +98,6 @@ alias update='
   brew reinstall neovim
   rye self update
   rustup update
-  ./.deps.nix.sh
 '
 
 # IP addresses
