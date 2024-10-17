@@ -4,7 +4,10 @@ function ensure_has_nix() {
 	if ! type -p nix &>/dev/null; then
 		echo "installing nix"
 
-    sh <(curl -L https://nixos.org/nix/install)
+    # see https://nixcademy.com/posts/nix-on-macos/
+    curl --proto '=https' --tlsv1.2 -sSf \
+      -L https://install.determinate.systems/nix \
+      | sh -s -- install
 	fi
 }
 
@@ -19,6 +22,8 @@ packages=(
   just # task runner
   nushell # shell
   carapace # shell completer
+
+  sqlite
 )
 
 for package in "${packages[@]}"; do
