@@ -2,28 +2,20 @@
 # Config ignores
 ###
 
+epy
+exercism
+gcloud
+graphite
+packer
+tracy
+
 # karabiner-elements
 karabiner/*
 !karabiner/karabiner.json
 
-# epy epub reader
-epy
-
 # nnn
 nnn/*
 !nnn/custom
-
-# gcloud
-gcloud
-
-# graphite
-graphite
-
-# packer
-packer/*
-
-# tracy
-tracy
 
 # updates
 update-notifier-alex.json
