@@ -6,7 +6,7 @@
 #
 # See https://github.com/lukas-reineke/cbfmt
 [languages]
-go = ["gofmt"]
+go = ["gofumpt"]
 javascript = ["prettierd -"]
 lua = ["stylua -s -"]
 python = ["ruff format -"]
