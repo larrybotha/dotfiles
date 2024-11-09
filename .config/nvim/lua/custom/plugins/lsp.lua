@@ -89,7 +89,7 @@ local function configureLsp()
 		lua_ls = true,
 		marksman = true,
 		nil_ls = true,
-		ruff_lsp = true,
+		ruff = true,
 		somesass_ls = true,
 		sqlls = true,
 		svelte = true,
