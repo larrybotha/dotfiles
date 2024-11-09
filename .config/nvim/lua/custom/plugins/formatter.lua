@@ -70,22 +70,6 @@ local function getFormatters()
 			}
 		end,
 
-		gofmt = function()
-			return {
-				exe = "gofmt",
-				args = { get_file() },
-				stdin = true,
-			}
-		end,
-
-		goimports = function()
-			return {
-				exe = "goimports",
-				args = { "-srcdir", util.get_cwd() },
-				stdin = true,
-			}
-		end,
-
 		-- https://github.com/vasilevich/nginxbeautifier
 		nginxbeautifier = function()
 			return {
@@ -236,7 +220,6 @@ formatter.setup({
 	log_level = vim.log.levels.WARN,
 
 	filetype = {
-		go = { customFormatters.goimports, customFormatters.gofmt },
 		graphql = { customFormatters.prettierd("graphql") },
 		hcl = { customFormatters.terraform },
 		html = { customFormatters.prettierd("html") }, -- replace with biome once supported

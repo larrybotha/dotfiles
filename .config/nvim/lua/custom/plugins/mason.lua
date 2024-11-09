@@ -29,6 +29,7 @@ M.setup = function()
 
 		-- formatters
 		"cbfmt",
+		"gofumpt",
 		"djlint",
 		"eslint_d",
 		"fixjson",

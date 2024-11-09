@@ -29,6 +29,7 @@ local function configureLsp()
 						parameterNames = true,
 						rangeVariableTypes = true,
 					},
+					gofumpt = true,
 				},
 			},
 		},
