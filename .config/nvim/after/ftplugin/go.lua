@@ -1,11 +1,12 @@
 local group = vim.api.nvim_create_augroup("CustomGoGroup", { clear = true })
 
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
+	group = group,
 	desc = [[
     Organize imports on save. See https://github.com/golang/tools/blob/master/gopls/doc/vim.md#imports-and-formatting
     for more information
   ]],
-	group = group,
+	pattern = { "*.go", "*.tmpl" },
 	callback = function()
 		local params = vim.lsp.util.make_range_params()
 		params.context = { only = { "source.organizeImports" } }
