@@ -36,10 +36,10 @@ brew tap homebrew/services
 brew install mysql
 
 # Install other useful binaries
+brew install aldente
 brew install ansible
 brew install ansible-lint
 brew install ariga/tap/atlas # Terraform-like orchestration for db schemas
-brew install aldente
 brew install atuin
 brew install bat
 brew install bats-core
@@ -72,7 +72,6 @@ brew install lulu
 brew install lynx
 brew install mpv
 brew install neovim
-brew install nnn
 brew install nvm
 brew install oven-sh/bun/bun
 brew install peterldowns/tap/nix-search-cli
@@ -97,8 +96,8 @@ brew install watchexec
 brew install webkit2png
 brew install withgraphite/tap/graphite
 brew install xh # httpie alternative
-brew install xplr
 brew install yarn
+brew install yazi imagemagick poppler sevenzip ffmeg
 brew install zopfli
 brew install zoxide
 
