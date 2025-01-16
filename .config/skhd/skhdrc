@@ -12,7 +12,7 @@ ctrl + alt + cmd - s : skhd --restart-service
 
 
 ## open terminal
-hyper - return : $(realpath $(which alacritty))
+hyper - return : open -na ghostty
 
 ## swap window
 hyper - y : yabai -m window --swap west
