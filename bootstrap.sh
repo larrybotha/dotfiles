@@ -14,10 +14,6 @@ function log {
 	echo -e "$*"
 }
 
-function has_internet_access() {
-	ping -c 1 -q google.com >&/dev/null
-}
-
 function copy_files() {
 	heading "syncing dotfiles"
 
@@ -145,36 +141,10 @@ function symlink_files() {
 	link_file "${prettierrc_config[@]}"
 }
 
-function update_nnn_plugins() {
-	symlink_custom_nnn_plugins() {
-		local nnn_configs_path=${HOME}/.config/nnn
-		local source=${nnn_configs_path}/custom/plugins
-		local symlink=${nnn_configs_path}/plugins/personal
-
-		if [ ! -e "$symlink" ]; then
-			heading "symlinking custom nnn plugins"
-
-			ln -s "$source" "$symlink"
-			log 'done'
-		fi
-	}
-
-	heading "updating nnn plugins"
-
-	log 'removing existing nnn plugins'
-	rm -rf "$HOME/.config/nnn/plugins"
-
-	log 'updating nnn plugins'
-	curl -Ls https://raw.githubusercontent.com/jarun/nnn/master/plugins/getplugs | sh
-
-	symlink_custom_nnn_plugins
-}
-
 function do_it() {
 	copy_files
 	symlink_to_home
 	symlink_files
-	has_internet_access && update_nnn_plugins
 	source_shell
 }
 
@@ -191,5 +161,4 @@ fi
 unset do_it \
 	symlink_files \
 	symlink_configs \
-	update_nnn_plugins \
 	log heading

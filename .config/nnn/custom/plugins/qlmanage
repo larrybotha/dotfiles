@@ -1,9 +1,0 @@
-#!/usr/bin/env sh
-
-# preview any file using Mac's QuickLook
-if type qlmanage; then
-  clear
-  qlmanage -p "$PWD/$1" &>/dev/null
-else
-  printf "%s" "qlmanage not installed"
-fi

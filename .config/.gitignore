@@ -13,10 +13,6 @@ tracy
 karabiner/*
 !karabiner/karabiner.json
 
-# nnn
-nnn/*
-!nnn/custom
-
 # updates
 update-notifier-alex.json
 simple-update-notifier/nodemon.json
