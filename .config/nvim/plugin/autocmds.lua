@@ -9,7 +9,7 @@ local function grepWithRipGrep(event, opts)
 		return
 	end
 
-	vim.opt.grepprg = "rg --vimgrep --hidden --smart-case"
+	vim.opt.grepprg = "rg --vimgrep --hidden --no-ignore-parent --smart-case"
 	-- `%f` represents the file name where the match was found
 	-- `%l` represents the line number where the match was found
 	-- `%c` represents the column number where the match was found
