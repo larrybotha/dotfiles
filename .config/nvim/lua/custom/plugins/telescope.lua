@@ -30,7 +30,6 @@ telescope.setup({
 			"rg",
 			"--color=never",
 			"--hidden",
-			"--no-ignore-parent",
 			"--no-heading",
 			"--with-filename",
 			"--line-number",
