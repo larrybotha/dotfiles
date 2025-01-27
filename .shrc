@@ -19,6 +19,11 @@ then
   compinit
 fi
 
+# init nnn
+if type -p "nnn" >/dev/null; then
+  source ~/.config/nnn/custom/.nnn
+fi
+
 # init rye / uv
 if [ -f ~/.rye/env ] >/dev/null; then
   source ~/.rye/env

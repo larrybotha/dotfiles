@@ -37,7 +37,7 @@ return {
 
 			harpoon:extend({
 				UI_CREATE = function(cx)
-					-- NOTE: these splits are the same as used in yazi.lua, and
+					-- NOTE: these splits are the same as used in nnn.lua, and
 					-- are the defaults for opening splits via Telescope
 					vim.keymap.set("n", "<C-t>", function()
 						harpoon.ui:select_menu_item({ tabedit = true })

@@ -1,4 +1,4 @@
-# make Neovim the editor for applications such as tmux, etc.
+# make Neovim the editor for applications such as tmux, nnn, etc.
 export EDITOR="nvim"
 
 # Larger bash history (allow 32³ entries; default is 500)
