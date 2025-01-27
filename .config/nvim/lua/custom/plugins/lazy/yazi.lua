@@ -60,4 +60,5 @@ return {
 		vim.keymap.set("n", "<leader>n", ":Yazi cwd<CR>", { silent = true, desc = "yazi open at cwd" })
 		vim.keymap.set("n", "<leader>ff", ":Yazi<CR>", { silent = true, desc = "yazi open at current file's dir" })
 	end,
+	enabled = false,
 }
