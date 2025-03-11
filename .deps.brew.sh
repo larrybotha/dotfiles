@@ -165,10 +165,10 @@ if [ "$(uname -s)" == "Darwin" ]; then
     imagealpha
     imageoptim
     integrity
-    kap
     karabiner-elements
     keycastr
     libreoffice
+    lihaoyun6/tap/quickrecorder
     postman
     proxyman
     qlImageSize
