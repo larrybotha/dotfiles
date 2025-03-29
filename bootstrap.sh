@@ -55,6 +55,7 @@ function symlink_to_home() {
 		".bashrc"
 		".cbfmt.toml"
 		".config"
+		".cursor"
 		".exports"
 		".functions"
 		".gitattributes"
