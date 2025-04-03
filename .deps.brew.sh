@@ -36,6 +36,7 @@ brew tap homebrew/services
 brew install mysql
 
 # Install other useful binaries
+brew install 1password-cli
 brew install aldente
 brew install ansible
 brew install ansible-lint
@@ -143,6 +144,7 @@ brew install hammerspoon
 
 if [ "$(uname -s)" == "Darwin" ]; then
 	casks=(
+    1password
     a-better-finder-rename
     alfred
     anki
