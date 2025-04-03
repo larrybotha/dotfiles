@@ -39,6 +39,7 @@ local options = {
 		},
 	},
 	workspaces = workspaces,
+	ui = { enable = false }, -- let render-markdown.nvim handle UI
 }
 
 if #workspaces > 0 then
