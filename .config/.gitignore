@@ -17,6 +17,12 @@ karabiner/*
 nnn/*
 !nnn/custom
 
+# 1password
+op/config
+
+# wireshark
+wireshark/recent*
+
 # updates
 update-notifier-alex.json
 simple-update-notifier/nodemon.json
