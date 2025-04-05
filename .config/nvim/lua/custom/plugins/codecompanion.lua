@@ -1,4 +1,5 @@
 local cc = require("codecompanion")
+local spinner = require("custom.plugins.custom-spinner")
 
 cc.setup({
 	adapters = {
@@ -32,3 +33,17 @@ vim.keymap.set("v", "ga", "<cmd>CodeCompanionChat Add<cr>", { noremap = true, si
 
 -- Expand 'cc' into 'CodeCompanion' in the command line
 vim.cmd([[cab cc CodeCompanion]])
+
+vim.api.nvim_create_autocmd("User", {
+	pattern = {
+		"CodeCompanionRequestStarted",
+		"CodeCompanionRequestFinished",
+	},
+	callback = function(args)
+		if args.match == "CodeCompanionRequestStarted" then
+			spinner.start()
+		elseif args.match == "CodeCompanionRequestFinished" then
+			spinner.stop()
+		end
+	end,
+})
