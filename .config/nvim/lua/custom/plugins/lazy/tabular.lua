@@ -23,9 +23,6 @@ return {
 	"godlygeek/tabular",
 	name = "tabular",
 	init = function()
-		vim.keymap.set({ "n", "v" }, "<Leader>a=", ":Tabularize /=<CR>", { desc = "Tabularize align equal signs" })
-		vim.keymap.set({ "n", "v" }, "<Leader>a:", ":Tabularize /:\zs<CR>", { desc = "Tabularize align colons" })
-
 		_G.DoTheTableAlign = tabularizePipes
 
 		-- use Tabularize when in insert mode and a | is typed
