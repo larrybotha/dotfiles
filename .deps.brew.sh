@@ -74,6 +74,7 @@ brew install lynx
 brew install mpv
 brew install neovim
 brew install nvm
+brew install ollama
 brew install oven-sh/bun/bun
 brew install peterldowns/tap/nix-search-cli
 brew install pigz
