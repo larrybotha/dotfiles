@@ -39,10 +39,12 @@ export PYENV_ROOT="$HOME/.pyenv"
 export PATH="$PYENV_ROOT/bin:$PATH"
 
 # colourise man pages
-if type -p "bat" >/dev/null; then
+if type -p "nvim" >/dev/null; then
+  export MANPAGER="nvim +Man\!"
+elif type -p "bat" >/dev/null; then
   export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 else
-  echo "$PWD/$0: bat not installed"
+  export MANPAGER="less --incsearch"
 fi
 
 # howdoi
