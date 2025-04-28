@@ -29,7 +29,6 @@ packages=(
 	codespell   # diagnostics
 	djlint      # formatter / diagnostics
 	ruff        # formatter / diagnostics
-	ruff-lsp    # LSP
 	yamllint    # diagnostics
 
 	ptpython # better REPL
