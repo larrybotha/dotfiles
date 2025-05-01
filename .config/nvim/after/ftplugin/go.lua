@@ -1,5 +1,8 @@
 local group = vim.api.nvim_create_augroup("CustomGoGroup", { clear = true })
 
+-- See https://github.com/ray-x/go.nvim?tab=readme-ov-file for lots of tips
+-- for a good Go experience
+
 vim.api.nvim_create_autocmd({ "BufWritePre" }, {
 	group = group,
 	desc = [[
