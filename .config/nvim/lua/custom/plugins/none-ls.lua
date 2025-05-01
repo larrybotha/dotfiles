@@ -24,10 +24,10 @@ M.setup = function()
 			diagnostics.codespell,
 
 			-- go
+			--diagnostics.golangci_lint, -- locks UI until file is processed
 			diagnostics.revive,
 
 			-- python
-			diagnostics.semgrep.with({ extra_args = { "--config", "auto" } }),
 			--See https://github.com/jose-elias-alvarez/null-ls.nvim/issues/831#issuecomment-1488648192
 			--for where this config came from
 			diagnostics.mypy.with({
