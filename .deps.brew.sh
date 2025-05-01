@@ -60,6 +60,8 @@ brew install git
 brew install git-flow
 brew install gitlab-runner
 brew install go
+brew install gofumpt
+brew install golines
 brew install gopls
 brew install howdoi
 brew install htop

@@ -47,6 +47,20 @@ local function getFormatters()
 			}
 		end,
 
+		golines = function()
+			return {
+				exe = "golines",
+				args = {
+					"--base-formatter",
+					"gofumpt",
+					"--max-len",
+					"80",
+					get_file(),
+				},
+				stdin = true,
+			}
+		end,
+
 		-- https://github.com/kevingimbel/mktoc
 		-- Will only generate TOC in files containing:
 		-- <!-- BEGIN mktoc -->
@@ -221,6 +235,9 @@ formatter.setup({
 
 	filetype = {
 		graphql = { customFormatters.prettierd("graphql") },
+		go = { customFormatters.golines },
+		gohtmltmpl = { customFormatters.golines },
+		gotmpl = { customFormatters.golines },
 		hcl = { customFormatters.terraform },
 		html = { customFormatters.prettierd("html") }, -- replace with biome once supported
 		htmldjango = { customFormatters.djlint },
