@@ -159,6 +159,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
     dbgate
     dbvisualizer
     docker
+    eza # used for tree view in nnn
     figma
     firefox
     flameshot
@@ -172,6 +173,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
     integrity
     karabiner-elements
     keycastr
+    kitty # required for image previews in ghostty
     libreoffice
     lihaoyun6/tap/quickrecorder
     postman
