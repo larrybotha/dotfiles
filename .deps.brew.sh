@@ -154,23 +154,16 @@ if [ "$(uname -s)" == "Darwin" ]; then
     arc
     beekeeper-studio
     betterzip
-    brave-browser
     dash
-    dbgate
-    dbvisualizer
     docker
     eza # used for tree view in nnn
     figma
     firefox
     flameshot
     flux
+    folx
     ghostty
-    google-chrome
-    google-cloud-sdk
     homebrew/cask-versions/firefox-developer-edition
-    imagealpha
-    imageoptim
-    integrity
     karabiner-elements
     keycastr
     kitty # required for image previews in ghostty
@@ -188,9 +181,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
     rescuetime
     safari-technology-preview
     skim
-    skype
     the-unarchiver
-    transmission
     virtualbox
     visual-studio-code
     vlc
