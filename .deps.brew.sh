@@ -150,7 +150,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
     1password
     a-better-finder-rename
     alfred
-    anki
+    apparency
     arc
     beekeeper-studio
     betterzip
@@ -181,6 +181,7 @@ if [ "$(uname -s)" == "Darwin" ]; then
     rescuetime
     safari-technology-preview
     skim
+    suspicious-package
     the-unarchiver
     virtualbox
     visual-studio-code
