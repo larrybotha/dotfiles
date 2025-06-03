@@ -7,7 +7,6 @@ local function configureLsp()
 		require("cmp_nvim_lsp").default_capabilities()
 	)
 	local servers = {
-		denols = { autostart = false },
 		biome = {
 			-- enable biome when package.json is present, in addition to defaults
 			root_dir = require("lspconfig.util").root_pattern("biome.json", "biome.jsonc", "package.json"),
