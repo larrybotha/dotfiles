@@ -152,6 +152,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 			return opts
 		end
 
+		setKeymap("n", "K", lspBuf.hover, getOpts("LSP show hover information"))
 		setKeymap("n", "<leader>lss", lspBuf.signature_help, getOpts("LSP show signature help"))
 		setKeymap("n", "<leader>lsr", lspBuf.rename, getOpts("LSP rename symbol"))
 		setKeymap("n", "<leader>lsh", lspBuf.hover, getOpts("LSP show hover information"))
