@@ -36,9 +36,10 @@ cmp.setup({
 			name = "lazydev",
 			group_index = 0, -- set group index to 0 to skip loading LuaLS completions
 		},
-		{ name = "nvim_lua" }, -- Neovim lua API
+		{ name = "codecompanion" },
 		{ name = "luasnip" },
 		{ name = "nvim_lsp" },
+		{ name = "nvim_lua" }, -- Neovim lua API
 		{ name = "nvim_lsp_document_symbol" },
 		{ name = "nvim_lsp_signature_help" },
 		{ name = "path" },
