@@ -1,6 +1,8 @@
 return {
 	"nvim-treesitter/nvim-treesitter",
 	build = ":TSUpdate",
+	branch = "master",
+	lazy = false,
 
 	config = function()
 		require("nvim-treesitter.configs").setup({
@@ -32,6 +34,7 @@ return {
 				"typescript",
 				"vim",
 				"vimdoc",
+				"yaml",
 			},
 			indent = {
 				enable = true,
