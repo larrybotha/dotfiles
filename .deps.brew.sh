@@ -64,6 +64,7 @@ brew install gofumpt
 brew install golines
 brew install gopls
 brew install htop
+brew install hurl
 brew install jesseduffield/lazydocker/lazydocker
 brew install jesseduffield/lazynpm/lazynpm
 brew install jid
