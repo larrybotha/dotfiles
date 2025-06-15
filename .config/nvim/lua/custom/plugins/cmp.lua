@@ -12,7 +12,7 @@ vim.opt.shortmess:append("c") -- don't send messages to ins-completion-menu
 cmp.setup({
 	snippet = {
 		expand = function(args)
-			require("luasnip").lsp_expand(args.body)
+			--require("luasnip").lsp_expand(args.body)
 		end,
 	},
 	mapping = cmp.mapping.preset.insert({
