@@ -1,11 +1,6 @@
 local function configureLsp()
 	local lspconfig = require("lspconfig")
-	local capabilities = vim.tbl_deep_extend(
-		"force",
-		{},
-		vim.lsp.protocol.make_client_capabilities(),
-		require("cmp_nvim_lsp").default_capabilities()
-	)
+	local capabilities = require("blink.cmp").get_lsp_capabilities()
 	local servers = {
 		biome = {
 			-- enable biome when package.json is present, in addition to defaults
