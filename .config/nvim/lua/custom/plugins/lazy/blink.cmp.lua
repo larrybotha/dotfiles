@@ -1,7 +1,13 @@
 return {
 	"saghen/blink.cmp",
 
-	dependencies = { "L3MON4D3/LuaSnip", version = "v2.*" },
+	dependencies = {
+		"folke/lazydev.nvim",
+		{
+			"L3MON4D3/LuaSnip",
+			version = "v2.*",
+		},
+	},
 
 	version = "1.*",
 	opts = {
@@ -34,14 +40,21 @@ return {
 		},
 		sources = {
 			min_keyword_length = 2,
-			default = { "lsp", "path", "snippets", "buffer" },
+			default = { "lazydev", "lsp", "path", "snippets", "buffer" },
 			per_filetype = {
 				sql = { "snippets", "dadbod", "buffer" },
+				lua = { inherit_defaults = true, "lazydev" },
 			},
 			providers = {
 				dadbod = {
 					name = "Dadbod",
 					module = "vim_dadbod_completion.blink",
+				},
+				lazydev = {
+					name = "LazyDev",
+					module = "lazydev.integrations.blink",
+					-- make lazydev completions top priority (see `:h blink.cmp`)
+					score_offset = 100,
 				},
 				lsp = {
 					name = "LSP",
