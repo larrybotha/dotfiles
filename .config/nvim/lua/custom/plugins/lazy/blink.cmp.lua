@@ -9,10 +9,31 @@ return {
 		completion = {
 			documentation = {
 				auto_show = true,
+				window = { border = "single" },
 			},
-			ghost_text = { enabled = true },
+			menu = {
+				border = "single",
+				draw = {
+					columns = {
+						{ "label", "label_description", gap = 1 },
+						{ "kind_icon", "kind", "source_name", gap = 1 },
+					},
+				},
+			},
+		},
+		cmdline = {
+			completion = {
+				menu = { auto_show = true },
+				list = { selection = { preselect = false, auto_insert = true } },
+			},
+		},
+		keymap = {
+			preset = "enter",
+			["<Tab>"] = { "select_next", "fallback" },
+			["<S-Tab>"] = { "select_prev", "fallback" },
 		},
 		sources = {
+			min_keyword_length = 2,
 			default = { "lsp", "path", "snippets", "buffer" },
 			per_filetype = {
 				sql = { "snippets", "dadbod", "buffer" },
@@ -34,8 +55,23 @@ return {
 				},
 			},
 		},
-		fuzzy = { implementation = "prefer_rust_with_warning" },
-		signature = { enabled = true },
+		fuzzy = {
+			implementation = "prefer_rust_with_warning",
+			sorts = {
+				-- deprioritise emmet when matching
+				function(a, b)
+					if (a.client_name == nil or b.client_name == nil) or (a.client_name == b.client_name) then
+						return
+					end
+
+					return b.client_name == "emmet_ls"
+				end,
+				-- defaults
+				"score",
+				"sort_text",
+			},
+		},
+		signature = { enabled = true, window = { border = "single" } },
 	},
 	opts_extend = { "sources.default" },
 }
