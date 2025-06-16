@@ -3,11 +3,13 @@ return {
 
 	dependencies = {
 		"folke/lazydev.nvim",
+		"jdrupal-dev/css-vars.nvim",
 		{
 			"L3MON4D3/LuaSnip",
 			version = "v2.*",
 		},
 	},
+	event = "VeryLazy",
 
 	version = "1.*",
 	opts = {
@@ -39,13 +41,19 @@ return {
 			["<S-Tab>"] = { "select_prev", "fallback" },
 		},
 		sources = {
-			min_keyword_length = 2,
+			min_keyword_length = function()
+				return vim.bo.filetype == "markdown" and 2 or 0
+			end,
 			default = { "lazydev", "lsp", "path", "snippets", "buffer" },
 			per_filetype = {
 				sql = { "snippets", "dadbod", "buffer" },
 				lua = { inherit_defaults = true, "lazydev" },
 			},
 			providers = {
+				css_vars = {
+					name = "css-vars",
+					module = "css-vars.blink",
+				},
 				dadbod = {
 					name = "Dadbod",
 					module = "vim_dadbod_completion.blink",
@@ -87,4 +95,14 @@ return {
 		signature = { enabled = true, window = { border = "single" } },
 	},
 	opts_extend = { "sources.default" },
+
+	init = function()
+		-- manually omnifunc to open blink -
+		-- see https://github.com/Saghen/blink.cmp/issues/453#issuecomment-2539504202
+		vim.keymap.set("i", "<C-x><C-o>", function()
+			require("blink.cmp").show()
+			require("blink.cmp").show_documentation()
+			require("blink.cmp").hide_documentation()
+		end, { silent = false })
+	end,
 }

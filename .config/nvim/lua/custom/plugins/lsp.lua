@@ -158,7 +158,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		setKeymap("n", "gi", lspBuf.implementation, getOpts("LSP go to implementation, .e.g with interfaces"))
 		setKeymap({ "n", "v" }, "<leader>lsc", lspBuf.code_action, getOpts("LSP show code actions"))
 
-		-- Enable completion triggered by <c-x><c-o> (overridden by nvim-cmp, below)
+		-- Enable completion triggered by <c-x><c-o> (overridden by blink.cmp)
 		vim.bo[event.buf].omnifunc = "v:lua.vim.lsp.omnifunc"
 	end,
 })
