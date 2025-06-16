@@ -62,6 +62,16 @@ local function configureLsp()
 			},
 		},
 
+		lua_ls = {
+			settings = {
+				Lua = {
+					diagnostics = {
+						globals = { "vim" },
+					},
+				},
+			},
+		},
+
 		yamlls = {
 			settings = {
 				yaml = {
@@ -80,7 +90,6 @@ local function configureLsp()
 		dockerls = true,
 		emmet_ls = true,
 		gitlab_ci_ls = true,
-		lua_ls = true,
 		marksman = true,
 		nil_ls = true,
 		ruff = true,
