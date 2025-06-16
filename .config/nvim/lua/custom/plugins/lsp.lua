@@ -104,13 +104,14 @@ local function configureLsp()
 	-- must come _after_ mason.setup()
 	require("mason-lspconfig").setup({
 		ensure_installed = ensure_installed,
-		automatic_installation = true,
+		automatic_enable = false,
 	})
 
 	for name, config in pairs(servers) do
 		if config == true then
 			config = {}
 		end
+
 		config = vim.tbl_deep_extend("force", {}, {
 			capabilities = capabilities,
 		}, config)
