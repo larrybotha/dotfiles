@@ -75,7 +75,7 @@ cc.setup({
 		chat = {
 			adapter = "ollamaWizardLm2",
 			opts = {
-				completion_provider = "cmp",
+				completion_provider = "blink",
 			},
 		},
 		inline = { adapter = "ollamaCodeLlama" },
@@ -84,8 +84,12 @@ cc.setup({
 	display = {
 		chat = {
 			show_references = true,
+			--show_settings = true,
 			show_token_count = true,
 		},
+	},
+	opts = {
+		log_level = "ERROR", -- TRACE|DEBUG|ERROR|INFO
 	},
 })
 
