@@ -112,11 +112,8 @@ local function getFormatters()
 		prettierd = function(parser)
 			return function()
 				local args = { util.escape_path(util.get_current_buffer_file_path()) }
-				local defaultConfig = string.format(
-					"PRETTIERD_DEFAULT_CONFIG=%s",
-					-- see bootstrap.sh for this path
-					vim.fn.expand("~/.config/prettierd/.prettierrc.cjs")
-				)
+				local defaultConfig =
+					string.format("PRETTIERD_DEFAULT_CONFIG=%s", vim.fn.expand("~/.config/prettierd/.prettierrc.cjs"))
 				local exe = defaultConfig .. " prettierd"
 
 				if parser then
