@@ -16,7 +16,8 @@ return {
 			},
 			resize = {
 				enable_default_keybindings = false,
-				-- use the same resize steps as defined in $HOME/.tmux.conf
+				-- use the same resize steps as defined in $HOME/.config/tmux/tmux.conf
+				-- TODO: get dynamically from tmux
 				resize_step_x = 5,
 				resize_step_y = 5,
 			},
