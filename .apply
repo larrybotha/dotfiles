@@ -42,6 +42,7 @@ function copy_configs() {
     ".config/htop|$HOME/.config/htop"
   )
 
+  # TODO: diff files, and confirm overwrite if there are changes
   for config in "${configs[@]}"; do
     IFS='|' read -r -a config <<< "$config"
     local source_path

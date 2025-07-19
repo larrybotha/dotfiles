@@ -3,11 +3,14 @@
 # install homebrew
 ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
 
-./.rust
-./.brew
-./.node
-./.python
-./.nix
+source ~/.scripts/deps/.brew
+source ~/.scripts/deps/.go
+source ~/.scripts/deps/.nix
+source ~/.scripts/deps/.node
+source ~/.scripts/deps/.ollama
+source ~/.scripts/deps/.python
+source ~/.scripts/deps/.rust
+source ~/.scripts/deps/.nvim
 
 # make a code directory for dependencies
 if [ ! -d ~/code ]; then

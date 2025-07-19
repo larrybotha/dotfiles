@@ -1,7 +1,6 @@
 #!/usr/bin/env bash
 
 taps=(
-  "hashicorp/tap"        # required for hashicorp/tap/packer|terraform
   "codeclimate/formulae" # required for codeclimate
 )
 
@@ -58,6 +57,7 @@ brews=(
   "nvm"
   "ollama"
   "oven-sh/bun/bun"
+  "packer"
   "peterldowns/tap/nix-search-cli"
   "pigz"
   "pipenv"
@@ -121,8 +121,6 @@ brews=(
   "djlint"
   "dotenv-linter"
   "hadolint"
-  "hashicorp/tap/packer"    # requires tapping hashicorp/tap
-  "hashicorp/tap/terraform" # requires tapping hashicorp/tap
   "markdownlint-cli2"
   "rust-analyzer"
   "shellcheck"
