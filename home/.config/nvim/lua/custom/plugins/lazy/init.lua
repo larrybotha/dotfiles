@@ -9,4 +9,5 @@ return {
 	{ "rhysd/git-messenger.vim", event = "VeryLazy" },
 	{ "kmonad/kmonad-vim", event = "VeryLazy" },
 	{ "jeniasaigak/goplay.nvim", event = "VeryLazy", opts = {} },
+	{ "rakr/vim-two-firewatch", event = "VeryLazy", config = function() end },
 }
