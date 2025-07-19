@@ -1,0 +1,4 @@
+dialect = "uk"
+enter_accept = false
+keymap_mode = "vim-insert"
+search_mode = "fuzzy"

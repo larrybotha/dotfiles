@@ -1,0 +1,17 @@
+default:
+  @just --list
+
+update-deps:
+    ~/.scripts/update-deps.sh
+
+update-nnn-plugins:
+  #!/usr/bin/env bash
+	if ping -c 1 -q example.com >&/dev/null; then
+    echo "internet available to update nnn plugins..."
+  else
+    echo "internet is unavailable to update nnn plugins..."
+    exit 1
+  fi
+
+	rm -rf "$HOME/.config/nnn/plugins"
+	curl -Ls https://raw.githubusercontent.com/jarun/nnn/master/plugins/getplugs | sh

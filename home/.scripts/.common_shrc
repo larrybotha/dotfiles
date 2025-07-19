@@ -1,0 +1,85 @@
+# use vi mode
+set -o vi
+
+# Start tmux when shell starts
+#
+# This starts tmux in a way that ensures that when tmux is exited, it won't kill
+# the terminal that it was launched in
+#
+# This is useful when using services like tmuxinator that have scripts that run
+# after a tmux session is killed. If the terminal emulator is not kept alive after
+# detaching / killing a session, commands in options tmuxinator's on_project_exit
+# won't be executed
+if type tmux >/dev/null; then
+ [[ ! $TERM =~ screen ]] && [ "${TMUX+x}" = "" ] && tmux
+ #        [1]                   [2]          [3]
+ # 1 - ensure we're not running in a GNU Screen terminal multiplexer
+ # 2 - ensure the $TMUX env var is empty - i.e. no current tmux session
+ # 3 - start a tmux session
+fi
+
+# init atuin
+if type -p "atuin" >/dev/null; then
+  export ATUIN_NOBIND="true"
+
+  if [ "$ZSH_VERSION" != "" ]; then
+    eval "$(atuin init zsh)"
+  elif [ "$BASH_VERSION" != "" ]; then
+    eval "$(atuin init bash)"
+  fi
+fi
+
+# init starship
+if type -p "starship" &>/dev/null; then
+  if [ "$BASH_VERSION" != "" ]; then
+    val "$(starship init bash)"
+  elif [ "$ZSH_VERSION" != "" ]; then
+    eval "$(starship init zsh)"
+  fi
+fi
+
+# init carapace
+if type -p "carapace" &>/dev/null; then
+  if [ "$ZSH_VERSION" != "" ]; then
+    export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
+    zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
+    source <(carapace _carapace)
+  fi
+fi
+
+# init nnn
+if type -p "nnn" >/dev/null; then
+  source ~/.config/nnn/custom/.nnn
+fi
+
+# init zoxide
+if type zoxide>/dev/null; then
+  if [ "$ZSH_VERSION" != "" ]; then
+    eval "$(zoxide init zsh)"
+  elif [ "$BASH_VERSION" != "" ]; then
+    eval "$(zoxide init bash)"
+  fi
+fi
+
+# init nvm
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+
+# fzf must be sourced last before it's enabled
+if [[ ! "$PATH" == *"$HOME/.fzf/bin"* ]]; then
+  PATH="${PATH:+${PATH}:}$HOME/.fzf/bin"
+fi
+
+## set up fzf key bindings and fuzzy completion if it is installed
+if command -v fzf &>/dev/null; then
+  if [ "$ZSH_VERSION" != "" ]; then
+    source <(fzf --zsh)
+    # set ctrl-r key binding to atuin search widget if it is installed
+    if command -v atuin &>/dev/null; then
+      bindkey '^R' atuin-search
+    fi
+  elif [ "$BASH_VERSION" != "" ]; then
+    source <(fzf --bash)
+  fi
+fi
+
+# vim: set filetype=sh:

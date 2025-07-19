@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+
+# install homebrew
+ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
+
+./.rust
+./.brew
+./.node
+./.python
+./.nix
+
+# make a code directory for dependencies
+if [ ! -d ~/code ]; then
+	mkdir ~/code
+fi

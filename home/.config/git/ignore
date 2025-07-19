@@ -1,0 +1,34 @@
+tmp
+git/userconfig
+!git/userconfig.example
+
+# vim plugins
+.vim/plugged
+.vim/autoload/plug.vim
+
+# tmux plugins
+.config/tmux/plugins
+
+# null-ls files
+.null-ls*
+
+# Compiled Python files
+*.pyc
+
+# lua
+.luarc.json
+
+# Folder view configuration files
+.DS_Store
+Desktop.ini
+
+# Thumbnail cache files
+._*
+Thumbs.db
+
+# Files that might appear on external disks
+.Spotlight-V100
+.Trashes
+
+# ignore php cs fixer generated files
+.php_cs.cache

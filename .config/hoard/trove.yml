@@ -1,9 +1,0 @@
----
-version: 1.3.0
-commands:
-  - name: sudo-docker-log-container
-    namespace: larrybotha
-    tags:
-      - docker
-    command: "sudo docker logs -f $(sudo docker --filter #filter --quiet)\n"
-    description: "Logs a given container's stdout using sudo - useful in server contexts\nwhere sudo is required\n"

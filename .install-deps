@@ -1,0 +1,49 @@
+#!/usr/bin/env zsh
+
+if ! command -v brew >/dev/null; then
+  ruby <(curl -fsSkL raw.github.com/mxcl/homebrew/go)
+fi
+
+if ! command -v go >/dev/null; then
+  echo "installing Go"
+
+  brew install go
+else
+  echo "Go already installed"
+fi
+
+if ! command -v cargo >/dev/null; then
+  echo "installing Rust"
+
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+else
+  echo "Rust already installed"
+fi
+
+if ! type -p nix &>/dev/null; then
+  echo "installing nix"
+
+  # see https://nixcademy.com/posts/nix-on-macos/
+  curl --proto '=https' --tlsv1.2 -sSf \
+    -L https://install.determinate.systems/nix \
+    | sh -s -- install
+fi
+
+# install Node Version Manager and node
+if type -p nvm &>/dev/null; then
+  echo "nvm already installed"
+else
+  echo "installing nvm"
+
+  brew install nvm
+fi
+
+if type -p node &>/dev/null; then
+  echo "node already installed"
+else
+  echo "installing node"
+
+  nvm install node
+fi
+
+# vim: filetype=sh

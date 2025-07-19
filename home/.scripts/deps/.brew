@@ -1,0 +1,208 @@
+#!/usr/bin/env bash
+
+taps=(
+  "hashicorp/tap"        # required for hashicorp/tap/packer|terraform
+  "codeclimate/formulae" # required for codeclimate
+)
+
+brews=(
+  "git"
+
+  # Mac OS deps
+  "bash"      # bash 4
+  "coreutils" # OS X GNU core utils are outdated
+  "findutils" # install GNU `find`, `locate`, `updatedb`, and `xargs`, g-prefixed
+  "libiconv"  # Mojave deps (TODO: determine if this is still needed)
+  "mysql"     # allow for running MySQL commands on machine
+  "openldap"  # Mojave deps (TODO: determine if this is still needed)
+  "wget"
+
+  "ansible"
+  "ansible-lint"
+  "ariga/tap/atlas" # Terraform-like orchestration for db schemas
+  "atuin"
+  "bat"
+  "bats-core"
+  "carapace"
+  "checkmake"
+  "checkov"
+  "chezmoi"
+  "codespell"
+  "ctop"
+  "difftastic"
+  "dive"
+  "dust"
+  "editorconfig"
+  "fd"
+  "fluent-bit"
+  "fzf"
+  "git"
+  "git-flow"
+  "gitlab-runner"
+  "go"
+  "gofumpt"
+  "golines"
+  "gopls"
+  "htop"
+  "hurl"
+  "imagemagick"
+  "jesseduffield/lazydocker/lazydocker"
+  "jesseduffield/lazynpm/lazynpm"
+  "jid"
+  "jq"
+  "just"
+  "lazygit"
+  "lynx"
+  "mpv"
+  "neovim"
+  "nvm"
+  "ollama"
+  "oven-sh/bun/bun"
+  "peterldowns/tap/nix-search-cli"
+  "pigz"
+  "pipenv"
+  "poppler"
+  "postgresql"
+  "ptpython"
+  "pyenv"
+  "pyenv-virtualenv"
+  "python"
+  "qt"
+  "redis"
+  "ripgrep"
+  "ruff"
+  "sevenzip"
+  "starship"
+  "tealdeer"
+  "tfenv" # nvm for Terraform
+  "tflint" # linter for Terraform
+  "tmux"
+  "tmuxinator"
+  "tokei"
+  "tre-command"
+  "tursodatabase/tap/turso"
+  "uv"
+  "vim"
+  "watchexec"
+  "webkit2png"
+  "xh" # httpie alternative
+  "yarn"
+  "zopfli"
+  "zoxide"
+
+  # Lua
+  "lua"
+  "lua-language-server"
+
+  # Rust
+  "cargo-expand"
+
+  # Yabai
+  "koekeishiya/formulae/yabai"
+  "koekeishiya/formulae/skhd"
+
+  # zig
+  "zig"
+  "zls"
+
+  # Formatters
+  "cbfmt"
+  "fsouza/prettierd/prettierd"
+  "rustfmt"
+  "shellharden"
+  "shfmt"
+  "sqlfluff"
+  "stylua"
+
+  # Diagnostics
+  "alejandra"               # nix formatter. TODO: install using flakes
+  "codeclimate"             # requires tapping codeclimate/formulae
+  "codespell"
+  "djlint"
+  "dotenv-linter"
+  "hadolint"
+  "hashicorp/tap/packer"    # requires tapping hashicorp/tap
+  "hashicorp/tap/terraform" # requires tapping hashicorp/tap
+  "markdownlint-cli2"
+  "rust-analyzer"
+  "shellcheck"
+  "sleek"                   # diagnostics for sql
+  "vint"
+  "yamllint"
+)
+
+casks=(
+  "1password"
+  "1password-cli"
+  "a-better-finder-rename"
+  "aldente"
+  "alfred"
+  "apparency"
+  "arc"
+  "beekeeper-studio"
+  "betterzip"
+  "dash"
+  "docker"
+  "figma"
+  "firefox"
+  "flameshot"
+  "flux"
+  "folx"
+  "font-roboto-mono-nerd-font"
+  "ghostty"
+  "hammerspoon"                                      # Yabai dependency
+  "homebrew/cask-versions/firefox-developer-edition"
+  "karabiner-elements"
+  "keycastr"
+  "keymapp"
+  "kitty"                                            # required for image previews in ghostty
+  "libreoffice"
+  "lihaoyun6/tap/quickrecorder"
+  "lulu"
+  "postman"
+  "proxyman"
+  "qlImageSize"
+  "qlcolorcode"
+  "qlmarkdown"
+  "qlstephen"
+  "qlvideo"
+  "quicklook-csv"
+  "quicklook-json"
+  "rescuetime"
+  "safari-technology-preview"
+  "skim"
+  "suspicious-package"
+  "the-unarchiver"
+  "virtualbox"
+  "visual-studio-code"
+  "vlc"
+  "webpquicklook"
+  "xbar"
+  "xscope"
+)
+
+for tap in "${taps[@]}"; do
+  brew tap "$tap"
+done
+
+brew_lines=""
+cask_lines=""
+
+NL=$'\n'
+
+for brew in "${brews[@]}"; do
+  brew_lines+="brew \"${brew}\"${NL}"
+done
+
+if [ "$(uname -s)" == "Darwin" ]; then
+  for cask in "${casks[@]}"; do
+    brew_lines+="cask \"${cask}\"${NL}"
+  done
+fi
+
+brew bundle --file=/dev/stdin <<EOF
+  $brew_lines
+  $cask_lines
+EOF
+
+brew cleanup

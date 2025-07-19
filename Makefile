@@ -1,8 +1,8 @@
 SHELL = /bin/sh
 
-.PHONY = all bootstrap
+.PHONY = all apply
 
-all: bootstrap
+all: apply
 
-bootstrap:
-	./bootstrap.sh -f
+apply:
+	./.apply -f

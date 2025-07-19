@@ -1,0 +1,225 @@
+#!/usr/bin/env bash
+
+cd "$(dirname "${BASH_SOURCE[0]}")" || exit
+git pull origin master
+
+function make_heading() {
+  local divider="==================================="
+  echo -e "\n$divider"
+  echo -e "  $*"
+  echo "$divider"
+}
+
+function log {
+  echo -e "$*"
+}
+
+function has_internet_access() {
+  ping -c 1 -q google.com >&/dev/null
+}
+
+function remove_files() {
+  make_heading "deleting unnecessary files"
+
+  files=(
+    "$HOME/.tmux.conf" # we're using the XDG_HOME config
+  )
+
+  for file in "${files[@]}"; do
+    if [ -e "$file" ]; then
+      rm -f "$file"
+      log "removed: $file"
+    fi
+  done
+}
+
+function copy_configs() {
+  make_heading "copying dotfiles"
+
+  local src_dir="./home"
+  local configs=(
+    ".config/flameshot|$HOME/.config/flameshot"
+    ".config/htop|$HOME/.config/htop"
+  )
+
+  for config in "${configs[@]}"; do
+    IFS='|' read -r -a config <<< "$config"
+    local source_path
+    source_path=$(realpath "${src_dir}/${config[0]}")
+    local dest_path="${config[1]}"
+
+    local action="${dest_path} -> ${source_path}"
+    dest_dir=$(dirname "$dest_path")
+
+    mkdir -p "$dest_dir"
+    cp -r "$source_path" "$dest_path"
+
+    log "copied: $action"
+  done
+}
+
+function source_shell() {
+  make_heading "sourcing ${SHELL}"
+
+  if [ "$ZSH_VERSION" != "" ]; then
+    zsh "$ZDOTDIR"/.zshrc
+  elif [ "$BASH_VERSION" != "" ]; then
+    source "$HOME/.bash_profile"
+  fi
+
+  log 'done'
+}
+
+function symlink_configs() {
+  make_heading "symlinking configs"
+
+  local src_dir="./home"
+  local configs=(
+    # $HOME links
+    ".bash_profile|$HOME/.bash_profile"
+    ".bashrc|$HOME/.bashrc"
+    ".cbfmt.toml|$HOME/.cbfmt.toml"
+    ".cursor|$HOME/.cursor"
+    ".hushlogin|$HOME/.hushlogin"
+    ".ignore|$HOME/.ignore"
+    ".inputrc|$HOME/.inputrc"
+    ".screenrc|$HOME/.screenrc"
+    ".scripts|$HOME/.scripts"
+    ".wgetrc|$HOME/.wgetrc"
+    ".zshenv|$HOME/.zshenv"
+    "init|$HOME/init"
+
+    # .config links
+    ".config/starship.toml|$HOME/.config/starship.toml"
+    ".config/asynctasks|$HOME/.config/asynctasks"
+    ".config/atuin|$HOME/.config/atuin"
+    ".config/bat|$HOME/.config/bat"
+    ".config/ghostty|$HOME/.config/ghostty"
+    ".config/git|$HOME/.config/git"
+    ".config/just|$HOME/.config/just"
+    ".config/karabiner|$HOME/.config/karabiner"
+    ".config/kitty|$HOME/.config/kitty"
+    ".config/kmonad|$HOME/.config/kmonad"
+    ".config/lazygit|$HOME/.config/lazygit"
+    ".config/nix|$HOME/.config/nix"
+    ".config/nnn|$HOME/.config/nnn"
+    ".config/nvim|$HOME/.config/nvim"
+    ".config/prettierd|$HOME/.config/prettierd"
+    ".config/ptpython|$HOME/.config/ptpython"
+    ".config/skhd|$HOME/.config/skhd"
+    ".config/tealdeer|$HOME/.config/tealdeer"
+    ".config/tmux|$HOME/.config/tmux"
+    ".config/tmux-powerline|$HOME/.config/tmux-powerline"
+    ".config/tmuxinator|$HOME/.config/tmuxinator"
+    ".config/yabai|$HOME/.config/yabai"
+    ".config/zsh|$HOME/.config/zsh"
+  )
+
+  for config in "${configs[@]}"; do
+    IFS='|' read -r -a config <<< "$config"
+    local source_path
+    source_path=$(realpath "${src_dir}/${config[0]}")
+    local dest_path="${config[1]}"
+
+    local action="${dest_path} -> ${source_path}"
+    local message
+
+    if [ -L "$dest_path" ]; then
+      message="linked: ${action}"
+    elif [ ! -e "$dest_path" ]; then
+      message="linking: ${action}"
+
+      ln -s "$source_path" "$dest_path"
+    else
+      message="not linked: ${action}\n\t=> consider removing ${source_path}"
+    fi
+
+    log "$message"
+  done
+}
+
+function symlink_files() {
+  make_heading "symlinking files"
+
+  function link_file() {
+    local file_name=$1
+    local source_path=$2
+    local dest_path=$3
+    local source_file="$source_path/$file_name"
+    local dest_file="$dest_path/$file_name"
+
+    mkdir -p "$dest_path"
+
+    if [ ! -e "$dest_file" ]; then
+      log "linking: $source_file -> $dest_file"
+      ln -s "$source_file" "$dest_file"
+    elif [ -L "$dest_file" ]; then
+      log "linked: $source_file\n\t-> $dest_file"
+    else
+      log "not linked: $source_file -> $dest_file\n\t=> consider removing $dest_file"
+    fi
+  }
+
+  local script_dir
+  script_dir="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
+
+  local vimspector_config=(
+    "vimspector-global-config.json"
+    "${script_dir}/.vim/local/plugins/vimspector"
+    "${HOME}/.vim/plugged/vimspector/configurations/macos/_all"
+  )
+
+  link_file "${vimspector_config[@]}"
+}
+
+# TODO: move to justfile
+function update_nnn_plugins() {
+  symlink_custom_nnn_plugins() {
+    local nnn_configs_path=${HOME}/.config/nnn
+    local source=${nnn_configs_path}/custom/plugins
+    local symlink=${nnn_configs_path}/plugins/personal
+
+    if [ ! -e "$symlink" ]; then
+      make_heading "symlinking custom nnn plugins"
+
+      ln -s "$source" "$symlink"
+      log 'done'
+    fi
+  }
+
+  make_heading "updating nnn plugins"
+
+  log 'removing existing nnn plugins'
+  rm -rf "$HOME/.config/nnn/plugins"
+
+  log 'updating nnn plugins'
+  curl -Ls https://raw.githubusercontent.com/jarun/nnn/master/plugins/getplugs | sh
+
+  symlink_custom_nnn_plugins
+}
+
+function do_it() {
+  remove_files
+  copy_configs
+  symlink_configs
+  #symlink_files
+  #has_internet_access && update_nnn_plugins
+  source_shell
+}
+
+if [ "$1" == "--force" ] || [ "$1" == "-f" ]; then
+  do_it
+else
+  read -rp "This may overwrite existing files in your home directory. Are you sure? (y/n) " -n 1
+  echo
+  if [[ $REPLY =~ ^[Yy]$ ]]; then
+    do_it
+  fi
+fi
+
+unset do_it \
+  remove_files \
+  symlink_files \
+  symlink_configs \
+  update_nnn_plugins \
+  log heading

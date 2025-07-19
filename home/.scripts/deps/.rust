@@ -1,0 +1,28 @@
+#!/usr/bin/env bash
+
+packages=(
+  "evcxr"     # repl
+  "git-stack" # tool for visualising and working with stacked Git branches
+
+  # diagnostics, linting, lsp, formatters
+  "mktoc"         # formatter
+  "taplo-cli"     # formatter + diagnostics
+)
+
+function ensure_has_rust() {
+	if type -p cargo &>/dev/null; then
+		echo "Rust already installed"
+	else
+		echo "installing Rust"
+
+		curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+	fi
+}
+
+ensure_has_rust
+
+for package in "${packages[@]}"; do
+  cargo install "$package"
+done
+
+rustup component add rustfmt

@@ -1,0 +1,21 @@
+#!/usr/bin/env bash
+
+if ! type -p nvim &>/dev/null; then
+  echo "Please install Neovim and run this script again"
+
+  exit 1
+fi
+
+brew reinstall neovim
+
+# add python support for neovim
+pip3 install --upgrade --break-system-packages pynvim
+
+commands=(
+  # update plugins
+ "+Lazy! sync"
+)
+
+for x in "${commands[@]}"; do
+  nvim --headless "$x" +qa
+done
