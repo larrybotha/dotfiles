@@ -19,6 +19,7 @@ return {
 				auto_show = true,
 				window = { border = "single" },
 			},
+			list = { selection = { preselect = false, auto_insert = true } },
 			menu = {
 				border = "single",
 				draw = {
