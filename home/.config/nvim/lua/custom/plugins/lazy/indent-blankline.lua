@@ -1,24 +1,27 @@
-local highlight = {
-	"CursorColumn",
-	"Whitespace",
-}
-
 return {
 	{
 		"lukas-reineke/indent-blankline.nvim",
 		name = "indent-blankline",
 		main = "ibl",
 		event = "VeryLazy",
-		opts = {
-			exclude = {
-				buftypes = { "terminal" },
-			},
-			indent = { highlight = highlight, char = "" },
-			whitespace = {
-				highlight = highlight,
-				remove_blankline_trail = false,
-			},
-			scope = { enabled = false },
-		},
+		config = function()
+			local ibl = require("ibl")
+			local alignment = "left"
+
+			-- "┊" or "▏"
+			local char = "┊"
+
+			if alignment == "left" then
+				char = "▏"
+			end
+
+			ibl.setup({
+				exclude = {
+					buftypes = { "terminal" },
+				},
+				indent = { highlight = { "WinSeparator" }, char = char },
+				scope = { enabled = false },
+			})
+		end,
 	},
 }
