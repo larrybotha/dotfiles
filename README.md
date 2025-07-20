@@ -10,6 +10,7 @@ git clone https://github.com/larrybotha/dotfiles.git
 cd dotfiles
 ./.install-deps
 ./.apply
+./.osx
 cp ~/.config/git/userconfig.example ~/.config/git/userconfig
 vim ~/.config/git/userconfig
 ```
@@ -23,4 +24,5 @@ vim ~/.config/git/userconfig
 # update commonly used dependencies
 just -g update
 ```
+
 
