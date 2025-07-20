@@ -172,7 +172,6 @@ function symlink_files() {
 function do_it() {
   remove_files
   replace_configs
-  copy_configs
   symlink_configs
   source_shell
 }
