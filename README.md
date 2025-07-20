@@ -25,4 +25,10 @@ vim ~/.config/git/userconfig
 just -g update
 ```
 
+## Links and references
+
+- [Mathias Bynens' dotfiles](https://github.com/mathiasbynens/dotfiles)
+- [twpayne's dotfiles - creator of chezmoi](https://github.com/twpayne/dotfiles)
+- [Inspirational dotfiles](https://dotfiles.github.io/inspiration/)
+
 
