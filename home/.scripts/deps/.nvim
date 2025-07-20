@@ -12,8 +12,8 @@ brew reinstall neovim
 pip3 install --upgrade --break-system-packages pynvim
 
 commands=(
-  # update plugins
- "+Lazy! sync"
+ "+Lazy! sync" # update plugins
+ "+TSUpdate! sync" # update treesitter parsers
 )
 
 for x in "${commands[@]}"; do
