@@ -158,7 +158,7 @@ alias urlencode='python -c "import sys, urllib as ul; print ul.quote_plus(sys.ar
 alias map="xargs -n1"
 
 # alias python to python3
-if [ "$(uname -s)" = "Linux" ]; then
+if [[ "$(uname -s)" == "Linux" ]]; then
   alias python=python3
 fi
 

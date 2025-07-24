@@ -118,7 +118,7 @@ for module in "${common_modules[@]}"; do
 	conditional_install "$module" "$update_existing"
 done
 
-if [ "$(uname -s)" = "Darwin" ]; then
+if [[ "$(uname -s)" == "Darwin" ]]; then
 	for module in "${mac_modules[@]}"; do
 		conditional_install "$module" "$update_existing"
 	done
