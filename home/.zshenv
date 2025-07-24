@@ -1,4 +1,4 @@
-source "$HOME"/.exports
+source "$HOME"/.scripts/.exports
 
 # Use ~/.config/zsh as the default zsh config directory
 export ZDOTDIR="$XDG_CONFIG_HOME/zsh"
