@@ -49,7 +49,7 @@ fi
 # Add homebrew's installs to the `$PATH` before non-Homebrew things
 export PATH="/usr/local/bin:$PATH"
 
-if [ "$(uname -s)" == "Linux" ]; then
+if [ "$(uname -s)" = "Linux" ]; then
   export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
   export PATH="/home/linuxbrew/.linuxbrew/sbin:$PATH"
 fi
@@ -75,10 +75,10 @@ export NVM_DIR="$HOME/.nvm"
 # TODO: normalise this across OS's
 export PATH="$HOME/go/bin:$PATH"
 
-if [ "$(uname -s)" == "Darwin" ]; then
+if [ "$(uname -s)" = "Darwin" ]; then
   # install Go to ~/golang on Mac
   GOPATH=$HOME/golang
-elif [ "$(uname -s)" == "Linux" ]; then
+elif [ "$(uname -s)" = "Linux" ]; then
   # install Go to /usr/local/go on Linux
   GOPATH=/usr/local/go
 fi
