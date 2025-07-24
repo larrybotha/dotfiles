@@ -34,9 +34,10 @@ export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 # set config dir for ptpython
 export PTPYTHON_CONFIG_HOME=$HOME/.config/ptpython
 
-# colourise man pages
+# use Neovim for man pages
 if type -p "nvim" >/dev/null; then
   export MANPAGER="nvim +Man\!"
+# otherwise use bat to syntax highlight man pages
 elif type -p "bat" >/dev/null; then
   export MANPAGER="sh -c 'col -bx | bat -l man -p'"
 else
