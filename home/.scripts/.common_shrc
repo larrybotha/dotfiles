@@ -32,7 +32,7 @@ fi
 # init starship
 if type -p "starship" &>/dev/null; then
   if [ "$BASH_VERSION" != "" ]; then
-    val "$(starship init bash)"
+    eval "$(starship init bash)"
   elif [ "$ZSH_VERSION" != "" ]; then
     eval "$(starship init zsh)"
   fi
