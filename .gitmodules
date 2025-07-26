@@ -1,0 +1,3 @@
+[submodule "home/.password-store"]
+	path = home/.password-store
+	url = git@github.com:larrybotha/dotfiles-secrets.git
