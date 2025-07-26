@@ -80,6 +80,7 @@ function symlink_configs() {
     ".hushlogin|$HOME/.hushlogin"
     ".ignore|$HOME/.ignore"
     ".inputrc|$HOME/.inputrc"
+    ".password-store|$HOME/.password-store"
     ".screenrc|$HOME/.screenrc"
     ".scripts|$HOME/.scripts"
     ".wgetrc|$HOME/.wgetrc"
