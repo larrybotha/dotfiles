@@ -1,9 +1,11 @@
 -- See: https://github.com/christoomey/vim-tmux-navigator/issues/295#issuecomment-1123455337
 local function setIsVim(is_vim)
-	local command = "silent !tmux set-option -p @custom_is_vim"
+	local command
 
 	if is_vim then
-		command = command .. " yes"
+		command = "silent !tmux set-option -p @custom_is_vim yes"
+	else
+		command = "silent !tmux set-option -p -u @custom_is_vim"
 	end
 
 	vim.api.nvim_exec2(command, { output = true })
@@ -25,7 +27,7 @@ return {
 				pattern = "*",
 			})
 
-			vim.api.nvim_create_autocmd({ "VimLeave", "VimSuspend" }, {
+			vim.api.nvim_create_autocmd({ "VimLeavePre", "VimSuspend" }, {
 				callback = function()
 					setIsVim(false)
 				end,
