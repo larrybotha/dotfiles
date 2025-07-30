@@ -112,6 +112,9 @@ function symlink_configs() {
     ".config/tmuxinator|$HOME/.config/tmuxinator"
     ".config/yabai|$HOME/.config/yabai"
     ".config/zsh|$HOME/.config/zsh"
+
+    # Application Support
+    "Library/Application Support/xbar|$HOME/Library/Application Support/xbar"
   )
 
   for config in "${configs[@]}"; do
