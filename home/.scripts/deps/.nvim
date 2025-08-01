@@ -13,7 +13,7 @@ pip3 install --upgrade --break-system-packages pynvim
 
 commands=(
  "+Lazy! sync" # update plugins
- "+TSUpdate! sync" # update treesitter parsers
+ "+TSUpdate" # update treesitter parsers
 )
 
 for x in "${commands[@]}"; do
