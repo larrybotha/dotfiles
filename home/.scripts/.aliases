@@ -6,9 +6,6 @@ alias .....="cd ../../../.."
 alias ~="cd ~" # `cd` is probably faster to type though
 alias -- -="cd -"
 
-# silver searcher
-alias ag='ag --hidden'
-
 # Shortcuts
 alias hosts='sudo $EDITOR /etc/hosts'
 alias d='cd ~/Dropbox'
@@ -33,15 +30,19 @@ alias tml='tmux ls'
 alias tmr='tmux rename-session -t'
 alias tmk='tmux kill-session -t'
 
+# aider
+if type "aider" >/dev/null; then
+  alias aider='aider \
+    --chat-history-file ~/.config/aider/.aider.chat.history.md \
+    --input-history-file ~/.config/aider/.aider.input.history \
+    --config ~/.config/aider/.aider.conf.yml \
+    --env-file ~/.config/aider/.env
+  '
+fi
+
 # evcxr
 if type "evcxr" >/dev/null; then
   alias evcxr='evcxr --edit-mode vi'
-fi
-
-# howdoi
-if type "howdoi" >/dev/null; then
-  alias hdi='function hdi(){ howdoi $* -c -n 5 -e duckduckgo; }; hdi'
-  alias hless='function hdi(){ howdoi $* -c | less --raw-control-chars --quit-if-one-screen --no-init; }; hdi'
 fi
 
 # Detect which `ls` flavor is in use
@@ -73,9 +74,6 @@ alias ls="command ls ${colorflag}"
 if type "nnn" >/dev/null; then
   alias ls='nnn -deH'
 fi
-
-# Enable aliases to be sudo’ed
-alias sudo='sudo '
 
 # Gzip-enabled `curl`
 alias gurl='curl --compressed'

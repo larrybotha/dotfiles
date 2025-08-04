@@ -12,6 +12,12 @@ update-all:
 update-only file:
   ~/.scripts/deps/.{{ file }}
 
+start-aider:
+  aider -- --architect \
+    --model openrouter/deepseek/deepseek-r1 \
+    --editor-model openrouter/anthropic/claude-3.7-sonnet \
+    --watch-files
+
 update-nnn-plugins:
   #!/usr/bin/env bash
 
