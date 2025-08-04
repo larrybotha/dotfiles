@@ -22,25 +22,25 @@ fi
 if type -p "atuin" >/dev/null; then
   export ATUIN_NOBIND="true"
 
-  if [ "$ZSH_VERSION" != "" ]; then
+  if [ "${ZSH_VERSION:-}" != "" ]; then
     eval "$(atuin init zsh)"
-  elif [ "$BASH_VERSION" != "" ]; then
+  elif [ "${BASH_VERSION:-}" != "" ]; then
     eval "$(atuin init bash)"
   fi
 fi
 
 # init starship
 if type -p "starship" &>/dev/null; then
-  if [ "$BASH_VERSION" != "" ]; then
+  if [ "${BASH_VERSION:-}" != "" ]; then
     eval "$(starship init bash)"
-  elif [ "$ZSH_VERSION" != "" ]; then
+  elif [ "${ZSH_VERSION:-}" != "" ]; then
     eval "$(starship init zsh)"
   fi
 fi
 
 # init carapace
 if type -p "carapace" &>/dev/null; then
-  if [ "$ZSH_VERSION" != "" ]; then
+  if [ "${ZSH_VERSION:-}" != "" ]; then
     export CARAPACE_BRIDGES='zsh,fish,bash,inshellisense'
     zstyle ':completion:*' format $'\e[2;37mCompleting %d\e[m'
     source <(carapace _carapace)
@@ -54,15 +54,15 @@ fi
 
 # init zoxide
 if type zoxide>/dev/null; then
-  if [ "$ZSH_VERSION" != "" ]; then
+  if [ "${ZSH_VERSION:-}" != "" ]; then
     eval "$(zoxide init zsh)"
-  elif [ "$BASH_VERSION" != "" ]; then
+  elif [ "${BASH_VERSION:-}" != "" ]; then
     eval "$(zoxide init bash)"
   fi
 fi
 
 # init nvm
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"
+[ -s "${NVM_DIR:-}/nvm.sh" ] && \. "${NVM_DIR:-}/nvm.sh"
 
 # fzf must be sourced last before it's enabled
 if [[ ! "$PATH" == *"$HOME/.fzf/bin"* ]]; then
@@ -71,13 +71,13 @@ fi
 
 ## set up fzf key bindings and fuzzy completion if it is installed
 if command -v fzf &>/dev/null; then
-  if [ "$ZSH_VERSION" != "" ]; then
+  if [ "${ZSH_VERSION:-}" != "" ]; then
     source <(fzf --zsh)
     # set ctrl-r key binding to atuin search widget if it is installed
     if command -v atuin &>/dev/null; then
       bindkey '^R' atuin-search
     fi
-  elif [ "$BASH_VERSION" != "" ]; then
+  elif [ "${BASH_VERSION:-}" != "" ]; then
     source <(fzf --bash)
   fi
 fi
