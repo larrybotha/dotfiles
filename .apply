@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-set -euo pipefail
+set -uo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit
 git pull origin master
@@ -26,10 +26,10 @@ function log {
   local message="$2"
   local timestamp
   timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-  
+
   # Log to file with timestamp and level
   echo "[$timestamp] [$level] $message"
-  
+
   # Also output to original stdout for user visibility
   echo -e "$message" >&3
 }
@@ -90,9 +90,9 @@ function replace_configs() {
 function source_shell() {
   make_heading "sourcing ${SHELL}"
 
-  if [ -n "${ZSH_VERSION:-}" ]; then
+  if [ "${ZSH_VERSION:-}" != "" ]; then
     zsh "$ZDOTDIR"/.zshrc
-  elif [ -n "${BASH_VERSION:-}" ]; then
+  elif [ "${BASH_VERSION:-}" != "" ]; then
     source "$HOME/.bash_profile"
   fi
 
@@ -213,12 +213,12 @@ function symlink_files() {
 
 function do_it() {
   log_info "Starting dotfiles application process"
-  
+
   remove_files
   replace_configs
   symlink_configs
   source_shell
-  
+
   log_info "Dotfiles application completed successfully"
   echo "$(date '+%Y-%m-%d %H:%M:%S') - Dotfiles application completed" >&3
 }
