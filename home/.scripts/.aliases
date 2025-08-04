@@ -34,9 +34,10 @@ alias tmk='tmux kill-session -t'
 if type "aider" >/dev/null; then
   alias aider='aider \
     --chat-history-file ~/.config/aider/.aider.chat.history.md \
-    --input-history-file ~/.config/aider/.aider.input.history \
     --config ~/.config/aider/.aider.conf.yml \
-    --env-file ~/.config/aider/.env
+    --env-file ~/.config/aider/.env \
+    --input-history-file ~/.config/aider/.aider.input.history \
+    --no-gitignore
   '
 fi
 
