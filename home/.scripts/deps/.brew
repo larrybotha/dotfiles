@@ -16,6 +16,7 @@ brews=(
   "openldap"  # Mojave deps (TODO: determine if this is still needed)
   "wget"
 
+  "aider"
   "ansible"
   "ansible-lint"
   "ariga/tap/atlas" # Terraform-like orchestration for db schemas
