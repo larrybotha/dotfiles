@@ -232,7 +232,7 @@ function cleanup_logging() {
 # Ensure cleanup happens on exit
 trap cleanup_logging EXIT
 
-if [ "$1" == "--force" ] || [ "$1" == "-f" ]; then
+if [ "${1:-}" == "--force" ] || [ "${1:-}" == "-f" ]; then
   do_it
 else
   read -rp "This may overwrite existing files in your home directory. Are you sure? (y/n) " -n 1
