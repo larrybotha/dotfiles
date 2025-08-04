@@ -2,6 +2,9 @@ tmp
 git/userconfig
 !git/userconfig.example
 
+# aider
+.aider.tags.*
+
 # vim plugins
 .vim/plugged
 .vim/autoload/plug.vim
