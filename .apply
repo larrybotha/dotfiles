@@ -1,7 +1,18 @@
 #!/usr/bin/env bash
 
+set -euo pipefail
+
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit
 git pull origin master
+
+# Setup logging
+LOG_FILE="$HOME/.dotfiles-apply.log"
+exec 3>&1 4>&2
+exec 1> >(tee -a "$LOG_FILE")
+exec 2> >(tee -a "$LOG_FILE" >&2)
+
+echo "$(date '+%Y-%m-%d %H:%M:%S') - Starting dotfiles application" >&3
+echo "Log file: $LOG_FILE" >&3
 
 function make_heading() {
   local divider="==================================="
@@ -11,7 +22,28 @@ function make_heading() {
 }
 
 function log {
-  echo -e "$*"
+  local level="${1:-INFO}"
+  local message="$2"
+  local timestamp
+  timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+  
+  # Log to file with timestamp and level
+  echo "[$timestamp] [$level] $message"
+  
+  # Also output to original stdout for user visibility
+  echo -e "$message" >&3
+}
+
+function log_info {
+  log "INFO" "$1"
+}
+
+function log_warn {
+  log "WARN" "$1"
+}
+
+function log_error {
+  log "ERROR" "$1"
 }
 
 function remove_files() {
@@ -24,7 +56,7 @@ function remove_files() {
   for file in "${files[@]}"; do
     if [ -e "$file" ]; then
       rm -f "$file"
-      log "removed: $file"
+      log_info "removed: $file"
     fi
   done
 }
@@ -51,7 +83,7 @@ function replace_configs() {
     mkdir -p "$dest_dir"
     cp -r "$source_path" "$dest_path"
 
-    log "replaced: $action"
+    log_info "replaced: $action"
   done
 }
 
@@ -64,7 +96,7 @@ function source_shell() {
     source "$HOME/.bash_profile"
   fi
 
-  log 'done'
+  log_info 'shell sourcing complete'
 }
 
 function symlink_configs() {
@@ -137,7 +169,11 @@ function symlink_configs() {
       message="not linked: ${action}\n\t=> consider removing ${source_path}"
     fi
 
-    log "$message"
+    if [[ "$message" == *"not linked"* ]]; then
+      log_warn "$message"
+    else
+      log_info "$message"
+    fi
   done
 }
 
@@ -154,12 +190,12 @@ function symlink_files() {
     mkdir -p "$dest_path"
 
     if [ ! -e "$dest_file" ]; then
-      log "linking: $source_file -> $dest_file"
+      log_info "linking: $source_file -> $dest_file"
       ln -s "$source_file" "$dest_file"
     elif [ -L "$dest_file" ]; then
-      log "linked: $source_file\n\t-> $dest_file"
+      log_info "linked: $source_file\n\t-> $dest_file"
     else
-      log "not linked: $source_file -> $dest_file\n\t=> consider removing $dest_file"
+      log_warn "not linked: $source_file -> $dest_file\n\t=> consider removing $dest_file"
     fi
   }
 
@@ -176,11 +212,25 @@ function symlink_files() {
 }
 
 function do_it() {
+  log_info "Starting dotfiles application process"
+  
   remove_files
   replace_configs
   symlink_configs
   source_shell
+  
+  log_info "Dotfiles application completed successfully"
+  echo "$(date '+%Y-%m-%d %H:%M:%S') - Dotfiles application completed" >&3
 }
+
+function cleanup_logging() {
+  # Restore original file descriptors
+  exec 1>&3 2>&4
+  exec 3>&- 4>&-
+}
+
+# Ensure cleanup happens on exit
+trap cleanup_logging EXIT
 
 if [ "$1" == "--force" ] || [ "$1" == "-f" ]; then
   do_it
