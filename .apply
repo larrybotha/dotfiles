@@ -1,12 +1,9 @@
 #!/usr/bin/env bash
 
-set -uo pipefail
-
 cd "$(dirname "${BASH_SOURCE[0]}")" || exit
-git pull origin master
 
 # Setup logging
-LOG_FILE="$HOME/.dotfiles-apply.log"
+LOG_FILE="./tmp/.dotfiles-apply.log"
 exec 3>&1 4>&2
 exec 1> >(tee -a "$LOG_FILE")
 exec 2> >(tee -a "$LOG_FILE" >&2)
@@ -27,11 +24,7 @@ function log {
   local timestamp
   timestamp=$(date '+%Y-%m-%d %H:%M:%S')
 
-  # Log to file with timestamp and level
   echo "[$timestamp] [$level] $message"
-
-  # Also output to original stdout for user visibility
-  echo -e "$message" >&3
 }
 
 function log_info {
