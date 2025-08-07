@@ -9,4 +9,5 @@ return {
 	{ "rakr/vim-two-firewatch", event = "VeryLazy", config = function() end },
 	{ "rhysd/git-messenger.vim", event = "VeryLazy" },
 	{ "tpope/vim-sensible", event = "VeryLazy" },
+	{ "wakatime/vim-wakatime", event = "VeryLazy" },
 }
