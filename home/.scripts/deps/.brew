@@ -142,6 +142,8 @@ casks=(
   "arc"
   "beekeeper-studio"
   "betterzip"
+  "claude"
+  "claude-code"
   "dash"
   "docker"
   "figma"
