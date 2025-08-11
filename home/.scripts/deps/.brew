@@ -88,6 +88,7 @@ brews=(
   "vim"
   "watchexec"
   "webkit2png"
+  "pinentry-mac" # dep for gpg to use Mac's keychain for pass-phrases
   "xh" # httpie alternative
   "yarn"
   "zopfli"
