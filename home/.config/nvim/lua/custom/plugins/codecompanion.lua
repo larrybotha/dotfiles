@@ -3,6 +3,13 @@ local spinner = require("custom.plugins.custom-spinner")
 
 cc.setup({
 	adapters = {
+		anthropic = function()
+			return require("codecompanion.adapters").extend("anthropic", {
+				env = {
+					api_key = "cmd:pass anthropic/token/neovim",
+				},
+			})
+		end,
 		ollamaCodeLlama = function()
 			-- Model is useful for:
 			-- - inline completions
@@ -73,13 +80,13 @@ cc.setup({
 	},
 	strategies = {
 		chat = {
-			adapter = "ollamaWizardLm2",
+			adapter = "anthropic",
 			opts = {
 				completion_provider = "blink",
 			},
 		},
-		inline = { adapter = "ollamaCodeLlama" },
-		agent = { adapter = "ollamaQwen" },
+		inline = { adapter = "anthropic" },
+		agent = { adapter = "anthropic" },
 	},
 	display = {
 		chat = {
