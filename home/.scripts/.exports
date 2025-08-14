@@ -64,7 +64,14 @@ export PATH="$HOME/bin:$PATH"
 export PATH="$PATH:$HOME/code/depot_tools"
 
 # Add Rust's Cargo to path
-export PATH="$PATH:$HOME/.cargo/bin"
+if command -v "cargo" >/dev/null; then
+  export PATH="$PATH:$HOME/.cargo/bin"
+fi
+
+# Add uv tools to path
+if command -v "uv" >/dev/null; then
+  export PATH="$HOME/.config/local/share/../bin:$PATH"
+fi
 
 # Add Node and NVM to `$PATH`
 export NVM_DIR="$HOME/.nvm"
