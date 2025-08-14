@@ -3,24 +3,16 @@
 python3 -m pip install --upgrade pip
 
 packages=(
-	# Once python is installed, via homebrew, we have pip and Distribute. Let's ensure
-	# we can work in virtual environments, too
-	# http://docs.python-guide.org/en/latest/starting/install/osx/
-	virtualenv
-	pipenv
+  vectorcode
+  chromadb
 
 	# diagnostics, linting, lsp, formatters
 	autoimport  # formatter
-	codespell   # diagnostics
-	djlint      # formatter / diagnostics
-	ruff        # formatter / diagnostics
-	yamllint    # diagnostics
-
-	ptpython # better REPL
 
 	epy-reader # reading epubs
 )
 
 for package in "${packages[@]}"; do
-  python3 -m pip install --user --upgrade "$package"
+  uv tool install "$package"
+  uv tool upgrade "$package"
 done
