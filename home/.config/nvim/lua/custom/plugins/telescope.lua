@@ -21,11 +21,11 @@ local setKeymap = vim.keymap.set
 
 telescope.setup({
 	defaults = {
-
 		mappings = {
 			i = { ["<cr>"] = select_to_quickfix },
 			n = { ["<cr>"] = select_to_quickfix },
 		},
+		path_display = { "truncate" },
 		vimgrep_arguments = {
 			"rg",
 			"--color=never",
