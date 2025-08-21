@@ -7,7 +7,7 @@ return {
 
 			-- Persist undos to system
 			-- With undotree allows for undo / redo across Neovim startups
-			vim.opt.undodir = os.getenv("HOME") .. "/.local/share/nvim/undodir"
+			-- Nvim automatically saves to ~/.local/state/nvim/undo
 			vim.opt.undofile = true
 		end,
 	},
