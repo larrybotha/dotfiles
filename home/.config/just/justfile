@@ -4,6 +4,7 @@ default:
 update:
   ~/.scripts/deps/.brew
   ~/.scripts/deps/.nvim
+  ~/.scripts/deps/.python
   just -g update-nnn-plugins
 
 update-all:
