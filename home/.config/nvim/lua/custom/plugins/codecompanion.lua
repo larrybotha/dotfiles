@@ -3,80 +3,83 @@ local spinner = require("custom.plugins.custom-spinner")
 
 cc.setup({
 	adapters = {
-		anthropic = function()
-			return require("codecompanion.adapters").extend("anthropic", {
-				env = {
-					api_key = "cmd:pass anthropic/token/neovim",
-				},
-			})
-		end,
-		ollamaCodeLlama = function()
-			-- Model is useful for:
-			-- - inline completions
-			return require("codecompanion.adapters").extend("ollama", {
-				schema = {
-					model = {
-						default = "codellama:7b", -- https://ollama.com/library/codellama
+		http = {
+
+			anthropic = function()
+				return require("codecompanion.adapters").extend("anthropic", {
+					env = {
+						api_key = "cmd:pass anthropic/token/neovim",
 					},
-				},
-			})
-		end,
-		ollamaQwen = function()
-			-- Model is useful for:
-			-- - agentic workflows
-			return require("codecompanion.adapters").extend("ollama", {
-				schema = {
-					model = {
-						default = "qwen2:7b", -- https://ollama.com/library/qwen2
+				})
+			end,
+			ollamaCodeLlama = function()
+				-- Model is useful for:
+				-- - inline completions
+				return require("codecompanion.adapters").extend("ollama", {
+					schema = {
+						model = {
+							default = "codellama:7b", -- https://ollama.com/library/codellama
+						},
 					},
-				},
-			})
-		end,
-		ollamaStarCoder = function()
-			-- Model is useful for:
-			-- - inline completions
-			return require("codecompanion.adapters").extend("ollama", {
-				schema = {
-					model = {
-						default = "starcoder2:7b", -- https://ollama.com/library/starcoder2
+				})
+			end,
+			ollamaQwen = function()
+				-- Model is useful for:
+				-- - agentic workflows
+				return require("codecompanion.adapters").extend("ollama", {
+					schema = {
+						model = {
+							default = "qwen2:7b", -- https://ollama.com/library/qwen2
+						},
 					},
-				},
-			})
-		end,
-		ollamaGemma = function()
-			-- Model is useful for:
-			-- - agentic workflows
-			return require("codecompanion.adapters").extend("ollama", {
-				schema = {
-					model = {
-						default = "gemma2:9b", -- https://ollama.com/library/gemma2
+				})
+			end,
+			ollamaStarCoder = function()
+				-- Model is useful for:
+				-- - inline completions
+				return require("codecompanion.adapters").extend("ollama", {
+					schema = {
+						model = {
+							default = "starcoder2:7b", -- https://ollama.com/library/starcoder2
+						},
 					},
-				},
-			})
-		end,
-		ollamaVicuna = function()
-			-- Model is useful for:
-			-- - chat
-			return require("codecompanion.adapters").extend("ollama", {
-				schema = {
-					model = {
-						default = "vicuna:7b", -- https://ollama.com/library/vicuna
+				})
+			end,
+			ollamaGemma = function()
+				-- Model is useful for:
+				-- - agentic workflows
+				return require("codecompanion.adapters").extend("ollama", {
+					schema = {
+						model = {
+							default = "gemma2:9b", -- https://ollama.com/library/gemma2
+						},
 					},
-				},
-			})
-		end,
-		ollamaWizardLm2 = function()
-			-- Model is useful for:
-			-- - chat
-			-- - agentic workflows
-			return require("codecompanion.adapters").extend("ollama", {
-				schema = {
-					model = {
-						default = "wizardlm2:7b", -- https://ollama.com/library/wizardlm2
+				})
+			end,
+			ollamaVicuna = function()
+				-- Model is useful for:
+				-- - chat
+				return require("codecompanion.adapters").extend("ollama", {
+					schema = {
+						model = {
+							default = "vicuna:7b", -- https://ollama.com/library/vicuna
+						},
 					},
-				},
-			})
-		end,
+				})
+			end,
+			ollamaWizardLm2 = function()
+				-- Model is useful for:
+				-- - chat
+				-- - agentic workflows
+				return require("codecompanion.adapters").extend("ollama", {
+					schema = {
+						model = {
+							default = "wizardlm2:7b", -- https://ollama.com/library/wizardlm2
+						},
+					},
+				})
+			end,
+		},
 	},
 	strategies = {
 		chat = {
