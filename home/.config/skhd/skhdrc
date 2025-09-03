@@ -13,6 +13,8 @@ ctrl + alt + cmd - s : skhd --restart-service
 
 ## open terminal
 hyper - return : open -na ghostty
+hyper - t : open /Applications/Ghostty.app
+hyper - b : open /Applications/Arc.app
 
 ## swap window
 hyper - y : yabai -m window --swap west
@@ -145,4 +147,3 @@ hyper - n : yabai -m query --spaces | \
 #ctrl + alt - 1  : yabai -m display --focus 1
 #ctrl + alt - 2  : yabai -m display --focus 2
 #ctrl + alt - 3  : yabai -m display --focus 3
-
