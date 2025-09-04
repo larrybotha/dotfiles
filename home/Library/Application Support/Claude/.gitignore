@@ -1,0 +1,32 @@
+# Dirs
+Cache/
+Code Cache/
+Crashpad/
+DawnGraphiteCache/
+DawnWebGPUCache/
+GPUCache/
+IndexedDB/
+Local Storage/
+Service Worker/
+Session Storage/
+Shared Dictionary/
+WebStorage/
+blob_storage/
+sentry/
+
+# Files
+Cookies
+Cookies-journal
+DIPS
+DIPS-shm
+DIPS-wal
+Network Persistent State
+Preferences
+SharedStorage
+SharedStorage-wal
+TransportSecurity
+Trust Tokens
+Trust Tokens-journal
+config.json
+extensions-blocklist.json
+window-state.json

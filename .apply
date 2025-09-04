@@ -141,6 +141,7 @@ function symlink_configs() {
 
     # Application Support
     "Library/Application Support/xbar|$HOME/Library/Application Support/xbar"
+    "Library/Application Support/Claude|$HOME/Library/Application Support/Claude"
   )
 
   for config in "${configs[@]}"; do
