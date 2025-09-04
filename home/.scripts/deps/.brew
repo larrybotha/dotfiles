@@ -36,6 +36,7 @@ brews=(
   "fd"
   "fluent-bit"
   "fzf"
+  "gemini-cli"
   "git"
   "git-flow"
   "gitlab-runner"
@@ -63,6 +64,7 @@ brews=(
   "pass"
   "peterldowns/tap/nix-search-cli"
   "pigz"
+  "pinentry-mac" # dep for gpg to use Mac's keychain for pass-phrases
   "pipenv"
   "poppler"
   "postgresql"
@@ -88,7 +90,6 @@ brews=(
   "vim"
   "watchexec"
   "webkit2png"
-  "pinentry-mac" # dep for gpg to use Mac's keychain for pass-phrases
   "xh" # httpie alternative
   "yarn"
   "zopfli"
