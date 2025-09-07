@@ -1,6 +1,9 @@
 #!/usr/bin/env bash
 
-python3 -m pip install --upgrade pip
+if ! command -v uv &> /dev/null; then
+  echo "uv not installed"
+  exit 1
+fi
 
 packages=(
   vectorcode
