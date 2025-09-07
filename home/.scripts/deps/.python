@@ -18,6 +18,5 @@ packages=(
 )
 
 for package in "${packages[@]}"; do
-  uv tool install "$package"
-  uv tool upgrade "$package"
+  uv tool install --upgrade "$package"
 done
