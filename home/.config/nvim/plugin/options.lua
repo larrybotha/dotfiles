@@ -55,10 +55,12 @@ opt.expandtab = true
 -- virtualenv python binary
 --
 -- see :help provider-python for virtualenv config instructions
-local python3_host_prog = vim.fn.expand("$HOME/.pyenv/versions/py3nvim/bin/python")
+-- The path below is the pynvim path once installed via uv
+local python3_host_prog = vim.fn.expand("$XDG_HOME/.local/share/../bin/pynvim-python")
 
 if vim.fn.filereadable(python3_host_prog) then
 	vim.g.python3_host_prog = python3_host_prog
 else
-	vim.print("neovim python virtualenv is not configured")
+	vim.print("python3_host_prog not set - this is required for python deps in Neovim")
+	vim.print("see :help provider-python")
 end

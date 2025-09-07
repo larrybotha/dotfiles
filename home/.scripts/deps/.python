@@ -4,6 +4,7 @@ python3 -m pip install --upgrade pip
 
 packages=(
   vectorcode
+  "git+https://github.com/neovim/pynvim" # see https://github.com/neovim/pynvim/issues/595
   chromadb
 
 	# diagnostics, linting, lsp, formatters
