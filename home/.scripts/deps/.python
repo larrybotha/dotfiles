@@ -6,10 +6,10 @@ if ! command -v uv &> /dev/null; then
 fi
 
 packages=(
-  vectorcode
   "git+https://github.com/neovim/pynvim" # see https://github.com/neovim/pynvim/issues/595
   chromadb
   debugpy
+  vectorcode
 
 	# diagnostics, linting, lsp, formatters
 	autoimport  # formatter
