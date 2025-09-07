@@ -21,20 +21,16 @@ local setKeymap = vim.keymap.set
 
 dapui.setup()
 
-setKeymap("n", "<F5>", dap.continue, { desc = "DAP continue" })
 setKeymap("n", "<leader>dc", dap.continue, { desc = "DAP continue" })
-setKeymap("n", "<leader>dso", dap.step_over, { desc = "DAP step over" })
-setKeymap("n", "<F11>", dap.step_into, { desc = "DAP step into" })
-setKeymap("n", "<leader>dsi", dap.step_into, { desc = "DAP step into" })
-setKeymap("n", "<S-F11>", dap.step_out, { desc = "DAP step out" })
-setKeymap("n", "<leader>dsO", dap.step_out, { desc = "DAP step out" })
+setKeymap("n", "<leader>dj", dap.step_over, { desc = "DAP step over" })
+setKeymap("n", "<leader>dl", dap.step_into, { desc = "DAP step into" })
+setKeymap("n", "<leader>dk", dap.step_out, { desc = "DAP step out" })
 setKeymap("n", "<leader>db", dap.toggle_breakpoint, { desc = "DAP toggle breakpoint" })
-setKeymap("n", "<leader>dB", dap.set_breakpoint, { desc = "DAP set breakpoint" })
-setKeymap("n", "<leader>dlp", function()
+setKeymap("n", "<leader>dm", function()
 	dap.set_breakpoint(nil, nil, vim.fn.input("Log point message: "))
 end, { desc = "DAP set breakpoint with log message" })
-setKeymap("n", "<leader>dl", dap.run_last, { desc = "DAP run last" })
-setKeymap("n", "<leader>dk", dapui.eval, { desc = "DAP eval" })
+setKeymap("n", "<leader>dL", dap.run_last, { desc = "DAP run last" })
+setKeymap("n", "<leader>de", dapui.eval, { desc = "DAP eval" })
 
 -- open and close ui
 dap.listeners.before.attach.dapui_config = dapui.open
