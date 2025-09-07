@@ -1,28 +1,19 @@
-local function ensureDebugpyInstalled(envDir)
-	local envName = "debugpy-nvim-dap"
-	local debugpyPath = envDir .. "/" .. envName
-	local envPython = envName .. "/bin/python"
-
-	vim.fn.mkdir(envDir, "p")
-
-	if not vim.uv.fs_stat(debugpyPath) then
-		vim.print("creating virtualenv...")
-		vim.system({ "python", "-m", "venv", envName }, {
-			cwd = envDir,
-			text = true,
-		}):wait()
-
-		vim.print("installing debugpy...")
-
-		vim.system({ envPython, "-m", "pip", "install", "debugpy" }, {
-			cwd = envDir,
-			text = true,
-		}):wait()
-
-		vim.print("debugpy installed!")
+local function ensureDebugpyInstalled()
+	-- see https://github.com/mfussenegger/nvim-dap-python#usage
+	-- for why we return 'uv' here
+	if vim.fn.executable("uv") then
+		if vim.fn.executable("uv run debugy --version") then
+			return "uv"
+		else
+			vim.print("uv installed, but debugpy not installed")
+		end
+	elseif vim.fn.executable("debugpy-adapter") then
+		return "debugpy-adapter"
 	end
 
-	return envDir .. "/" .. envPython
+	vim.print("debugpy not installed")
+
+	return "python3"
 end
 
 local dap, dapui = require("dap"), require("dapui")
@@ -53,9 +44,7 @@ dap.listeners.before.event_exited.dapui_config = dapui.close
 
 require("dap-go").setup()
 
-local debugpyPython = ensureDebugpyInstalled(vim.fn.expand("$HOME/.local/share/virtualenvs"))
-
-require("dap-python").setup(debugpyPython)
+require("dap-python").setup(ensureDebugpyInstalled())
 
 table.insert(require("dap").configurations.python, {
 	type = "python",
