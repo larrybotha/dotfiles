@@ -22,6 +22,7 @@ local setKeymap = vim.keymap.set
 dapui.setup()
 
 setKeymap("n", "<leader>dc", dap.continue, { desc = "DAP continue" })
+setKeymap("n", "<leader>dd", dap.disconnect, { desc = "DAP disconnect" })
 setKeymap("n", "<leader>dj", dap.step_over, { desc = "DAP step over" })
 setKeymap("n", "<leader>dl", dap.step_into, { desc = "DAP step into" })
 setKeymap("n", "<leader>dk", dap.step_out, { desc = "DAP step out" })
