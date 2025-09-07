@@ -6,6 +6,7 @@ packages=(
   vectorcode
   "git+https://github.com/neovim/pynvim" # see https://github.com/neovim/pynvim/issues/595
   chromadb
+  debugpy
 
 	# diagnostics, linting, lsp, formatters
 	autoimport  # formatter
