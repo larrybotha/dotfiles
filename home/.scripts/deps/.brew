@@ -65,7 +65,6 @@ brews=(
   "peterldowns/tap/nix-search-cli"
   "pigz"
   "pinentry-mac" # dep for gpg to use Mac's keychain for pass-phrases
-  "pipenv"
   "poppler"
   "postgresql"
   "ptpython"
