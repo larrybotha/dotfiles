@@ -59,3 +59,5 @@ table.insert(dap.configurations.python, {
 		return { host = host, port = port }
 	end,
 })
+
+require("nvim-dap-virtual-text").setup()
