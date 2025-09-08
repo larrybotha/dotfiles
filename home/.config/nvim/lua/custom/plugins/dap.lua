@@ -40,8 +40,11 @@ setKeymap("n", "<leader>dL", dap.run_last, { desc = "DAP run last" })
 setKeymap("n", "<leader>de", dapui.eval, { desc = "DAP eval" })
 setKeymap("n", "<leader>dt", dapui.toggle, { desc = "DAP UI toggle" })
 
--- open and close ui
-dap.listeners.before.attach.dapui_config = dapui.open
+-- NOTE: open on attach is disabled because for some reason it's triggered
+-- when files are formatted after the first attach
+-- e.g. after attaching to a Python debug server, and then disconnecting,
+-- saving a file that autoformats will make DAP UI open again
+--dap.listeners.before.attach.dapui_config = dapui.open
 dap.listeners.before.launch.dapui_config = dapui.open
 dap.listeners.before.event_terminated.dapui_config = dapui.close
 dap.listeners.before.event_exited.dapui_config = dapui.close
