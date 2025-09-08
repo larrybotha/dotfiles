@@ -37,6 +37,7 @@ end, { desc = "DAP set breakpoint with log message" })
 setKeymap("n", "<leader>dL", dap.run_last, { desc = "DAP run last" })
 
 setKeymap("n", "<leader>de", dapui.eval, { desc = "DAP eval" })
+setKeymap("n", "<leader>dt", dapui.toggle, { desc = "DAP UI toggle" })
 
 -- open and close ui
 dap.listeners.before.attach.dapui_config = dapui.open
