@@ -1,4 +1,4 @@
-local function ensureDebugpyInstalled()
+local function getDapPythonPath()
 	-- see https://github.com/mfussenegger/nvim-dap-python#usage
 	-- for why we return 'uv' here
 	if vim.fn.executable("uv") then
@@ -32,6 +32,7 @@ setKeymap("n", "<leader>dm", function()
 	dap.set_breakpoint(nil, nil, vim.fn.input("Log point message: "))
 end, { desc = "DAP set breakpoint with log message" })
 setKeymap("n", "<leader>dL", dap.run_last, { desc = "DAP run last" })
+
 setKeymap("n", "<leader>de", dapui.eval, { desc = "DAP eval" })
 
 -- open and close ui
@@ -42,12 +43,19 @@ dap.listeners.before.event_exited.dapui_config = dapui.close
 
 require("dap-go").setup()
 
-require("dap-python").setup(ensureDebugpyInstalled())
+-- setup dap-python
+require("dap-python").setup(getDapPythonPath())
 
-table.insert(require("dap").configurations.python, {
+table.insert(dap.configurations.python, {
+	name = "Django attach",
+	django = "true", -- allows for debugging templates
 	type = "python",
-	request = "launch",
-	name = "Django",
-	program = vim.fn.getcwd() .. "/src/manage.py",
-	args = { "runserver", "--noreload" },
+	-- requires starting django with debugpy
+	request = "attach",
+	connect = function()
+		local host = vim.fn.input("Host [127.0.0.1]: ")
+		host = host ~= "" and host or "127.0.0.1"
+		local port = tonumber(vim.fn.input("Port [5678]: ")) or 5678
+		return { host = host, port = port }
+	end,
 })
