@@ -35,6 +35,7 @@ brews=(
   "editorconfig"
   "fd"
   "fluent-bit"
+  "fx" # jq alternative
   "fzf"
   "gemini-cli"
   "git"
