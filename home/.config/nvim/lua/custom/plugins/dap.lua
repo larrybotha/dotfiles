@@ -64,6 +64,7 @@ table.insert(dap.configurations.python, {
 	name = "Django attach",
 	django = "true", -- allows for debugging templates
 	type = "python",
+	justMyCode = false,
 	-- requires starting django with debugpy
 	request = "attach",
 	connect = function()
