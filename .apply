@@ -115,7 +115,7 @@ function symlink_configs() {
     "init|$HOME/init"
 
     # .config links
-    ".config/starship.toml|$HOME/.config/starship.toml"
+    ".config/aider|$HOME/.config/aider"
     ".config/asynctasks|$HOME/.config/asynctasks"
     ".config/atuin|$HOME/.config/atuin"
     ".config/bat|$HOME/.config/bat"
@@ -133,13 +133,13 @@ function symlink_configs() {
     ".config/prettierd|$HOME/.config/prettierd"
     ".config/ptpython|$HOME/.config/ptpython"
     ".config/skhd|$HOME/.config/skhd"
+    ".config/starship.toml|$HOME/.config/starship.toml"
     ".config/tealdeer|$HOME/.config/tealdeer"
-    ".config/tmux|$HOME/.config/tmux"
     ".config/tmux-powerline|$HOME/.config/tmux-powerline"
     ".config/tmuxinator|$HOME/.config/tmuxinator"
+    ".config/tmux|$HOME/.config/tmux"
     ".config/yabai|$HOME/.config/yabai"
     ".config/zsh|$HOME/.config/zsh"
-    ".config/aider|$HOME/.config/aider"
 
     # Application Support
     "Library/Application Support/xbar|$HOME/Library/Application Support/xbar"
