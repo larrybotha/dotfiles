@@ -102,6 +102,7 @@ function symlink_configs() {
     ".bashrc|$HOME/.bashrc"
     ".cbfmt.toml|$HOME/.cbfmt.toml"
     ".cursor|$HOME/.cursor"
+    ".claude|$HOME/.claude"
     ".gnupg|$HOME/.gnupg"
     ".hushlogin|$HOME/.hushlogin"
     ".ignore|$HOME/.ignore"
