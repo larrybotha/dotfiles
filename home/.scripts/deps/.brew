@@ -68,6 +68,7 @@ brews=(
   "pinentry-mac" # dep for gpg to use Mac's keychain for pass-phrases
   "poppler"
   "postgresql"
+  "posting"
   "ptpython"
   "pyenv"
   "pyenv-virtualenv"

@@ -129,6 +129,7 @@ function symlink_configs() {
     ".config/nix|$HOME/.config/nix"
     ".config/nnn|$HOME/.config/nnn"
     ".config/nvim|$HOME/.config/nvim"
+    ".config/posting|$HOME/.config/posting"
     ".config/prettierd|$HOME/.config/prettierd"
     ".config/ptpython|$HOME/.config/ptpython"
     ".config/skhd|$HOME/.config/skhd"
