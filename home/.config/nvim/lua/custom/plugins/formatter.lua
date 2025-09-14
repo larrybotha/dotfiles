@@ -230,6 +230,7 @@ formatter.setup({
 	log_level = vim.log.levels.WARN,
 
 	filetype = {
+		c = { filetypes.c.clangformat },
 		graphql = { customFormatters.prettierd("graphql") },
 		go = { customFormatters.golines },
 		gohtmltmpl = { customFormatters.golines },

@@ -27,6 +27,7 @@ brews=(
   "checkmake"
   "checkov"
   "chezmoi"
+  "clang-format"
   "codespell"
   "ctop"
   "difftastic"

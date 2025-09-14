@@ -88,6 +88,7 @@ local function configureLsp()
 
 		ansiblels = true,
 		bashls = true,
+		clangd = true,
 		cmake = true,
 		css_variables = true,
 		cssls = true,
