@@ -22,13 +22,20 @@ PROJECT_ID = os.getenv("PROJECT_ID", "")
 REVIEWER_ID = os.getenv("REVIEWER_ID", "")
 API_BASE = os.getenv("GITLAB_API_BASE", "https://gitlab.com/api/v4").rstrip("/")
 
+ACCESS_TOKEN = "glpat-XroT4nAuE2CGWVsiluRO5286MQp1OmkxN2d5Cw.01.121lmhqf4"
+PROJECT_ID = 28549821
+REVIEWER_ID = 3395269
+
+
 MENU_SEPARATOR = "---"
 
 
 class _Icon(Enum):
-    GREEN = "🟢"
-    YELLOW = "🟡"
-    WHITE = "⚪"
+    EMPTY_GRAY = "○ | color=gray"
+    EMPTY_RED = "○ | color=red"
+    FILLED_GREEN = "● | color=green"
+    FILLED_YELLOW = "● | color=yellow"
+    PARTIAL_YELLOW = "◐ | color=yellow"
 
 
 def print_menu_icon(icon: _Icon, /):
@@ -45,7 +52,7 @@ def build_url():
     base = f"{API_BASE}/projects/{PROJECT_ID}/merge_requests"
     params = {
         "order_by": "updated_at",
-        "per_page": "50",
+        "per_page": "10",
         "reviewer_id": REVIEWER_ID,
         "sort": "desc",
         "state": "opened",
@@ -53,7 +60,7 @@ def build_url():
     return base + "?" + urllib.parse.urlencode(params)
 
 
-def get_approval_status(project_id, mr_iid, token):
+def get_approval(project_id, mr_iid, token):
     url = f"{API_BASE}/projects/{PROJECT_ID}/merge_requests/{mr_iid}/approvals"
     headers = {
         "PRIVATE-TOKEN": ACCESS_TOKEN,
@@ -64,9 +71,9 @@ def get_approval_status(project_id, mr_iid, token):
         raw = api_get(url, headers)
         data = json.loads(raw.decode("utf-8"))
 
-        return data.get("user_has_approvd", False)
+        return data
     except Exception:
-        return False
+        return {}
 
 
 def main():
@@ -79,11 +86,13 @@ def main():
     if not REVIEWER_ID:
         missing.append("REVIEWER_ID")
     if missing:
-        print_menu_icon(_Icon.WHITE)
+        print_menu_icon(_Icon.EMPTY_RED)
         print(MENU_SEPARATOR)
         print("Configuration required:")
+
         for key in missing:
             print(f"• Missing {key}")
+
         return
 
     url = build_url()
@@ -98,28 +107,44 @@ def main():
         if not isinstance(data, list):
             raise ValueError("Unexpected response shape")
     except Exception as e:
-        print_menu_icon(_Icon.WHITE)
+        print_menu_icon(_Icon.EMPTY_RED)
         print(MENU_SEPARATOR)
         print("Error fetching merge requests")
         print(f"{e}")
 
         return
 
-    approvals = []
+    if not data:
+        print_menu_icon(_Icon.EMPTY_GRAY)
+        print(MENU_SEPARATOR)
+        print("No merge pending merge requests")
+
+        return
+
+    approvals_by_mr_id = {}
 
     for mr in data:
-        approvals.append(
-            get_approval_status(
-                mr.get("project_id"),
-                mr.get("iid"),
-                ACCESS_TOKEN,
-            )
+        approvals_by_mr_id[mr.get("iid")] = get_approval(
+            mr.get("project_id"),
+            mr.get("iid"),
+            ACCESS_TOKEN,
         )
 
-    print_menu_icon(_Icon.GREEN if all(approvals) else _Icon.YELLOW)
+    num_unapproved = len(
+        [v for v in approvals_by_mr_id.values() if len(v.get("approved_by", [])) == 0]
+    )
+
+    if num_unapproved == len(data):
+        print_menu_icon(_Icon.FILLED_YELLOW)
+    elif num_unapproved > 0:
+        print_menu_icon(_Icon.PARTIAL_YELLOW)
+    else:
+        print_menu_icon(_Icon.FILLED_GREEN)
+
     print(MENU_SEPARATOR)
 
     for mr in data:
+        approval = approvals_by_mr_id.get(mr.get("iid"))
         title = mr.get("title", "(no title)").replace("\n", " ")
         ref = (mr.get("references", {}) or {}).get("short") or f"!{mr.get('iid', '')}"
         url = mr.get("web_url") or "https://gitlab.com"
@@ -135,8 +160,9 @@ def main():
         ]
         details = [(k, mr.get(k)) for k in keys]
         link_text = " - ".join([x for x in [ref, assignees] if x])
+        color = "green" if len(approval.get("approved_by") or []) > 0 else "yellow"
 
-        print(title)
+        print(f"{title} | color={color}")
 
         for k, v in details:
             if isinstance(v, str) and "\n" in v:
