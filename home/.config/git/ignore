@@ -35,3 +35,5 @@ Thumbs.db
 
 # ignore php cs fixer generated files
 .php_cs.cache
+
+**/.claude/settings.local.json
