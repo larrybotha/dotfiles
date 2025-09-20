@@ -29,6 +29,7 @@ brews=(
   "chezmoi"
   "clang-format"
   "codespell"
+  "cppcheck"
   "ctop"
   "difftastic"
   "dive"

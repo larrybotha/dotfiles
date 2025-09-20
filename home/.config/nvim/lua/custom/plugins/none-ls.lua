@@ -19,6 +19,9 @@ M.setup = function()
 			diagnostics.tfsec,
 			diagnostics.vint,
 
+			-- c/c++
+			diagnostics.cppcheck,
+
 			-- english
 			diagnostics.alex,
 			diagnostics.codespell,
