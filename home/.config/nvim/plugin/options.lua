@@ -55,8 +55,9 @@ opt.expandtab = true
 -- virtualenv python binary
 --
 -- see :help provider-python for virtualenv config instructions
--- The path below is the pynvim path once installed via uv
-local python3_host_prog = vim.fn.expand("$XDG_HOME/.local/share/../bin/pynvim-python")
+-- The path below is the pynvim path once installed via uv, which installs
+-- packages to $XDG_DATA_HOME/../bin
+local python3_host_prog = vim.fn.expand("$XDG_DATA_HOME/../bin/pynvim-python")
 
 if vim.fn.filereadable(python3_host_prog) then
 	vim.g.python3_host_prog = python3_host_prog
