@@ -1,5 +1,4 @@
 local function configureLsp()
-	local lspconfig = require("lspconfig")
 	local capabilities = require("blink.cmp").get_lsp_capabilities()
 	local servers = {
 		biome = {
@@ -131,7 +130,7 @@ local function configureLsp()
 			capabilities = capabilities,
 		}, config)
 
-		lspconfig[name].setup(config)
+		vim.lsp.config(name, config)
 	end
 end
 
