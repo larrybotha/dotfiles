@@ -6,7 +6,7 @@ if ! command -v uv &> /dev/null; then
 fi
 
 packages=(
-  "git+https://github.com/neovim/pynvim" # see https://github.com/neovim/pynvim/issues/595
+  pynvim # add python support for neovim
   chromadb
   debugpy
   vectorcode

@@ -8,9 +8,6 @@ fi
 
 brew reinstall neovim
 
-# add python support for neovim
-pip3 install --upgrade --break-system-packages pynvim
-
 commands=(
  "+Lazy! sync" # update plugins
  "+TSUpdate" # update treesitter parsers
