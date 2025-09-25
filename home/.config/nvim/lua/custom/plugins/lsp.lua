@@ -131,6 +131,7 @@ local function configureLsp()
 		}, config)
 
 		vim.lsp.config(name, config)
+		vim.lsp.enable(name)
 	end
 end
 
