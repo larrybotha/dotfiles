@@ -97,7 +97,7 @@ local function configureLsp()
 		gitlab_ci_ls = true,
 		marksman = true,
 		nil_ls = true,
-		ruff = true,
+		ruff = true, -- linting Python, not type-checking
 		somesass_ls = true,
 		sqlls = true,
 		svelte = true,
