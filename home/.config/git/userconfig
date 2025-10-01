@@ -1,8 +1,0 @@
-[user]
-  email = lawrenceguy@gmail.com
-
-[maintenance]
-	repo = /Users/larrybotha/projects/practice-manager-orthodontics
-	repo = /Users/larrybotha/projects/obsidian-vaults/everything
-
-# vim: set filetype=gitconfig:
