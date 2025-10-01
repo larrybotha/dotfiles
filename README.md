@@ -10,7 +10,7 @@ git clone https://github.com/larrybotha/dotfiles.git
 cd dotfiles
 ./.install-deps
 ./.apply
-./.osx
+./.macos
 cp ~/.config/git/userconfig.example ~/.config/git/userconfig
 vim ~/.config/git/userconfig
 ```
