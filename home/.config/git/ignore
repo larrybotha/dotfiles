@@ -1,6 +1,6 @@
 tmp
-git/userconfig
-!git/userconfig.example
+**/.config/git/userconfig
+!**/.config/git/userconfig.example
 
 # aider
 .aider.tags.*
