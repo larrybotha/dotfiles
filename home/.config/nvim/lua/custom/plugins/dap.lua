@@ -75,4 +75,4 @@ table.insert(dap.configurations.python, {
 	end,
 })
 
-require("nvim-dap-virtual-text").setup()
+require("nvim-dap-virtual-text").setup({})
