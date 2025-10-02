@@ -2,7 +2,7 @@
   email = test@example.com
 
 [maintenance]
-	repo = /Users/larrybotha/projects/practice-manager-orthodontics
-	repo = /Users/larrybotha/projects/obsidian-vaults/everything
+	repo = /path/to/repo/1
+	repo = /path/to/repo/2
 
 # vim: set filetype=gitconfig:
