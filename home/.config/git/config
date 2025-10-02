@@ -93,7 +93,7 @@
   cmd = difft "$LOCAL" "$REMOTE"
 
 [include]
-  # Add user-specific details to ~/.gitconfig-local - useful for adding global
+  # Add user-specific details to ~/.config/git/config - useful for adding global
   # user.name and user.email configs
   #
   # If the file doesn't exist, this include is ignored
