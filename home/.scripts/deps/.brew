@@ -154,7 +154,6 @@ casks=(
   "firefox"
   "flameshot"
   "flux"
-  "folx"
   "font-roboto-mono-nerd-font"
   "ghostty"
   "hammerspoon"                                      # Yabai dependency
@@ -180,6 +179,7 @@ casks=(
   "skim"
   "suspicious-package"
   "the-unarchiver"
+  "transmission"
   "virtualbox"
   "visual-studio-code"
   "vlc"
