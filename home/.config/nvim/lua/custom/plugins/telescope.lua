@@ -6,8 +6,6 @@ local function select_to_quickfix(prompt_bufnr)
 	local source_buf_nr = picker.original_win_id and vim.api.nvim_win_get_buf(picker.original_win_id)
 	local src_buf_type = vim.api.nvim_buf_get_option(source_buf_nr, "filetype")
 
-	vim.print(src_buf_type)
-
 	-- Fallback to default Telescope behaviour when the buffer that Telescope was
 	-- opened from has an excluded filetype
 	if vim.tbl_contains(excluded_fts, src_buf_type) then
