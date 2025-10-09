@@ -55,7 +55,7 @@ vim.keymap.set({ "n", "v" }, "<leader>a", "<cmd>CodeCompanionChat Toggle<cr>", {
 vim.keymap.set("v", "ga", "<cmd>CodeCompanionChat Add<cr>", { noremap = true, silent = true })
 
 -- Expand 'cc' into 'CodeCompanion' in the command line
-vim.cmd([[cab cc CodeCompanion]])
+vim.cmd([[cabbrev CC CodeCompanion]])
 
 vim.api.nvim_create_autocmd("User", {
 	pattern = {
