@@ -26,5 +26,8 @@ return {
 				return pre_condition and buf_condition
 			end,
 		})
+
+		-- Expand 'at' into 'AerialToggle' in the command line
+		vim.cmd([[cabbrev AT AerialToggle]])
 	end,
 }
