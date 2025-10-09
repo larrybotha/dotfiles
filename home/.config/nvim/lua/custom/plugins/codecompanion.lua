@@ -3,6 +3,11 @@ local spinner = require("custom.plugins.custom-spinner")
 
 cc.setup({
 	adapters = {
+		http = {
+			opts = {
+				show_defaults = false,
+			},
+		},
 		acp = {
 			claude_code = function()
 				return require("codecompanion.adapters").extend("claude_code", {
