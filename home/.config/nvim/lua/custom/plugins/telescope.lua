@@ -2,14 +2,26 @@ local function select_to_quickfix(prompt_bufnr)
 	local actions = require("telescope.actions")
 	local action_state = require("telescope.actions.state")
 	local picker = action_state.get_current_picker(prompt_bufnr)
+	local excluded_fts = { "codecompanion" }
+	local source_buf_nr = picker.original_win_id and vim.api.nvim_win_get_buf(picker.original_win_id)
+	local src_buf_type = vim.api.nvim_buf_get_option(source_buf_nr, "filetype")
+
+	vim.print(src_buf_type)
+
+	-- Fallback to default Telescope behaviour when the buffer that Telescope was
+	-- opened from has an excluded filetype
+	if vim.tbl_contains(excluded_fts, src_buf_type) then
+		return actions.select_default(prompt_bufnr)
+	end
+
 	local num_selections = #picker:get_multi_selection()
 
 	if num_selections > 1 then
+		actions.send_selected_to_qflist(prompt_bufnr)
+		actions.open_qflist(prompt_bufnr)
 		-- actions.file_edit throws
 		-- see https://github.com/nvim-telescope/telescope.nvim/issues/416#issuecomment-841692272
 		--actions.file_edit(prompt_bufnr)
-		actions.send_selected_to_qflist(prompt_bufnr)
-		actions.open_qflist(prompt_bufnr)
 	else
 		actions.file_edit(prompt_bufnr)
 	end
@@ -24,6 +36,8 @@ telescope.setup({
 		mappings = {
 			i = { ["<cr>"] = select_to_quickfix },
 			n = { ["<cr>"] = select_to_quickfix },
+			--i = { ["<c-q>"] = require("telescope.actions").smart_send_to_qflist },
+			--n = { ["<c-q>"] = require("telescope.actions").smart_send_to_qflist },
 		},
 		path_display = { "truncate" },
 		vimgrep_arguments = {
