@@ -11,14 +11,17 @@ cc.setup({
 					},
 				})
 			end,
+			gemini_cli = function()
+				return require("codecompanion.adapters").extend("gemini_cli", {
+					env = {
+						api_key = "cmd:pass gemini/token/neovim",
+					},
+				})
+			end,
+			opts = {
+				show_defaults = false,
+			},
 		},
-		gemini_cli = function()
-			return require("codecompanion.adapters").extend("gemini_cli", {
-				env = {
-					api_key = "cmd:pass gemini/token/neovim",
-				},
-			})
-		end,
 	},
 	strategies = {
 		chat = {
