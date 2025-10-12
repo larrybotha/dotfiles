@@ -30,13 +30,13 @@ cc.setup({
 	},
 	strategies = {
 		chat = {
-			adapter = "claude_code",
+			adapter = "gemini_cli",
 			opts = {
 				completion_provider = "blink",
 			},
 		},
-		inline = { adapter = "claude_code" },
-		agent = { adapter = "claude_code" },
+		inline = { adapter = "gemini_cli" },
+		agent = { adapter = "gemini_cli" },
 	},
 	display = {
 		chat = {
