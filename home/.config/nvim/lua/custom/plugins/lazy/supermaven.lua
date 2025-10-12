@@ -8,6 +8,8 @@ return {
 				--accept_word = "<C-j>",
 			},
 			disable_keymaps = false,
+
+			vim.cmd([[cabbr st SupermavenToggle]]),
 		})
 	end,
 }
