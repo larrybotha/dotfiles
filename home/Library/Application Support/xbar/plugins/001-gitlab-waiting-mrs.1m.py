@@ -22,11 +22,6 @@ PROJECT_ID = os.getenv("PROJECT_ID", "")
 REVIEWER_ID = os.getenv("REVIEWER_ID", "")
 API_BASE = os.getenv("GITLAB_API_BASE", "https://gitlab.com/api/v4").rstrip("/")
 
-ACCESS_TOKEN = "glpat-XroT4nAuE2CGWVsiluRO5286MQp1OmkxN2d5Cw.01.121lmhqf4"
-PROJECT_ID = 28549821
-REVIEWER_ID = 3395269
-
-
 MENU_SEPARATOR = "---"
 
 
