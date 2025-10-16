@@ -9,7 +9,7 @@ packages=(
   pynvim # add python support for neovim
   chromadb
   debugpy
-  vectorcode
+  "vectorcode[lsp,mcp]"
 
 	# diagnostics, linting, lsp, formatters
 	autoimport  # formatter
