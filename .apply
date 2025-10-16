@@ -103,6 +103,7 @@ function symlink_configs() {
     ".cbfmt.toml|$HOME/.cbfmt.toml"
     ".cursor|$HOME/.cursor"
     ".claude|$HOME/.claude"
+    ".gemini|$HOME/.gemini"
     ".gnupg|$HOME/.gnupg"
     ".hushlogin|$HOME/.hushlogin"
     ".ignore|$HOME/.ignore"
