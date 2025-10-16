@@ -173,40 +173,6 @@ function symlink_configs() {
   done
 }
 
-function symlink_files() {
-  make_heading "symlinking files"
-
-  function link_file() {
-    local file_name=$1
-    local source_path=$2
-    local dest_path=$3
-    local source_file="$source_path/$file_name"
-    local dest_file="$dest_path/$file_name"
-
-    mkdir -p "$dest_path"
-
-    if [ ! -e "$dest_file" ]; then
-      log_info "linking: $source_file -> $dest_file"
-      ln -s "$source_file" "$dest_file"
-    elif [ -L "$dest_file" ]; then
-      log_info "linked: $source_file\n\t-> $dest_file"
-    else
-      log_warn "not linked: $source_file -> $dest_file\n\t=> consider removing $dest_file"
-    fi
-  }
-
-  local script_dir
-  script_dir="$(realpath "$(dirname "${BASH_SOURCE[0]}")")"
-
-  local vimspector_config=(
-    "vimspector-global-config.json"
-    "${script_dir}/.vim/local/plugins/vimspector"
-    "${HOME}/.vim/plugged/vimspector/configurations/macos/_all"
-  )
-
-  link_file "${vimspector_config[@]}"
-}
-
 function do_it() {
   log_info "Starting dotfiles application process"
 
@@ -239,7 +205,9 @@ else
 fi
 
 unset do_it \
+  log log_info log_warn log_error \
+  make_heading \
   remove_files \
   replace_configs \
-  symlink_configs \
-  log heading
+  source_shell \
+  symlink_configs
