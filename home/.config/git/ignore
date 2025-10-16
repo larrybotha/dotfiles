@@ -18,6 +18,9 @@ tmp
 # Compiled Python files
 *.pyc
 
+# Python type checkers
+.dmypy.json
+
 # lua
 .luarc.json
 
