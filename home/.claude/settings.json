@@ -1,3 +1,4 @@
 {
-	"enableAllProjectMcpServers": false
+  "enableAllProjectMcpServers": false,
+  "alwaysThinkingEnabled": false
 }
