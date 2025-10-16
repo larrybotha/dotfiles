@@ -1,0 +1,10 @@
+---
+services:
+  vectorcode_chromadb:
+    image: chromadb/chroma:0.6.3
+    ports:
+      - "9898:8000"
+    volumes:
+      # use vectorcode's chromadb directory as per
+      # https://github.com/Davidyz/VectorCode/blob/main/docs/cli.md#configuring-vectorcode
+      - ~/.local/share/vectorcode/chromadb:/data
