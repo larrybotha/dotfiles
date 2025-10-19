@@ -6,6 +6,6 @@ return {
 		config = function()
 			require("custom.plugins.conform").setup()
 		end,
-		enabled = false,
+		enabled = true,
 	},
 }

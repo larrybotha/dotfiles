@@ -6,7 +6,7 @@ local function formatOnSave(bufnr)
 		return
 	end
 
-	return { timeout_ms = 500, lsp_fallback = true }
+	return { timeout_ms = 1000 }
 end
 
 local function disableFormatting(args)
@@ -25,6 +25,36 @@ end
 
 local function extendFormatters(conform)
 	local formatters = conform.formatters
+	local util = require("conform.util")
+
+	formatters.custom_biome = function()
+		return {
+			command = util.from_node_modules("biome"),
+			args = {
+				"check",
+				"--write",
+				"--formatter-enabled=true",
+				"--skip-parse-errors",
+				"--stdin-file-path",
+				"$FILENAME",
+			},
+			stdin = true,
+		}
+	end
+
+	formatters.custom_golines = function()
+		return {
+			command = "golines",
+			args = {
+				"--base-formatter",
+				"gofumpt",
+				"--max-len",
+				"80",
+				"$FILENAME",
+			},
+			stdin = true,
+		}
+	end
 
 	-- https://github.com/thlorenz/doctoc
 	formatters.custom_doctoc = function()
@@ -56,26 +86,15 @@ local function extendFormatters(conform)
 		}
 	end
 
-	formatters.prettierd = function()
+	formatters.custom_packer = function()
 		return {
-			args = function(_, context)
-				local extension = string.match(context.filename, "%.([^%.]+)$")
-				local parser_by_ext = {
-					svg = "html",
-					svelte = "svelte",
-				}
-				local parser = parser_by_ext[extension]
-				local args = { "$FILENAME" }
-
-				if parser then
-					table.insert(args, "--parser=" .. parser)
-				end
-
-				return args
+			condition = function(self, ctx)
+				-- only if ends in .pkr.hcl
+				return ctx.filename:match("%.pkr%.hcl$") == ".pkr.hcl"
 			end,
-			inherit = false,
+			command = "packer",
+			args = { "fmt", "-" },
 			stdin = true,
-			command = "prettierd",
 		}
 	end
 
@@ -130,18 +149,23 @@ M.setup = function()
 		format_on_save = formatOnSave,
 
 		formatters_by_ft = {
-			hcl = { "terraform_fmt" },
+			c = { "clang_format" },
+			go = { "custom_golines" },
+			gohtmltmpl = { "custom_golines" },
+			gotmpl = { "custom_golines" },
+			hcl = { "custom_packer", lsp_format = "prefer" },
 			html = { "prettierd" },
 			htmldjango = { "djlint" },
-			javascript = { "prettierd", "eslint_d" },
-			javascriptreact = { "prettierd", "eslint_d" },
-			json = { "prettierd", "fixjson" },
-			just = { "justfile" },
+			javascript = { "custom_biome" },
+			javascriptreact = { "custom_biome" },
+			json = { "custom_biome" },
+			jsonc = { "custom_biome" },
+			just = { "just" },
 			lua = { "stylua" },
-			markdown = { "cbfmt" },
+			markdown = { "cbfmt", "custom_doctoc" },
 			nginx = { "custom_nginxbeautifier" },
 			org = { "cbfmt", "custom_doctoc", "prettierd" }, -- format code within markdown code fence blocks
-			packer = { "packer_fmt" },
+			packer = { "custom_packer" },
 			python = {
 				"custom_python_autoimport",
 				"custom_ruff_lint",
@@ -149,14 +173,15 @@ M.setup = function()
 			}, -- ruff_lint must be run before formatter
 			rust = { "rustfmt" },
 			sh = { "shfmt", "shellharden" },
+			scss = { lsp_format = "never" },
 			sql = { "custom_sleek" },
 			svelte = { "prettierd", "eslint_d" },
 			svg = { "prettierd" },
 			svx = { "prettierd" },
 			terraform = { "terraform_fmt" },
 			toml = { "taplo" },
-			typescript = { "prettierd", "eslint_d" },
-			typescriptreact = { "prettierd", "eslint_d" },
+			typescript = { "custom_biome" },
+			typescriptreact = { "custom_biome" },
 			yaml = { "prettierd" },
 			zig = { "zigfmt" },
 		},
