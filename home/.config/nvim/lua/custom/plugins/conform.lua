@@ -27,21 +27,6 @@ local function extendFormatters(conform)
 	local formatters = conform.formatters
 	local util = require("conform.util")
 
-	formatters.custom_biome = function()
-		return {
-			command = util.from_node_modules("biome"),
-			args = {
-				"check",
-				"--write",
-				"--formatter-enabled=true",
-				"--skip-parse-errors",
-				"--stdin-file-path",
-				"$FILENAME",
-			},
-			stdin = true,
-		}
-	end
-
 	formatters.custom_golines = function()
 		return {
 			command = "golines",
@@ -147,10 +132,13 @@ M.setup = function()
 			hcl = { "custom_packer", lsp_format = "prefer" },
 			html = { "prettierd" },
 			htmldjango = { "djlint" },
-			javascript = { "custom_biome" },
-			javascriptreact = { "custom_biome" },
-			json = { "custom_biome" },
-			jsonc = { "custom_biome" },
+			javascript = {
+				"biome-organize-imports",
+				"biome",
+			},
+			javascriptreact = { "biome-organize-imports", "biome" },
+			json = { "biome" },
+			jsonc = { "biome" },
 			just = { "just" },
 			lua = { "stylua" },
 			markdown = { "cbfmt", "custom_doctoc" },
@@ -171,8 +159,8 @@ M.setup = function()
 			svx = { "prettierd" },
 			terraform = { "terraform_fmt" },
 			toml = { "taplo" },
-			typescript = { "custom_biome" },
-			typescriptreact = { "custom_biome" },
+			typescript = { "biome-organize-imports", "biome" },
+			typescriptreact = { "biome-organize-imports", "biome" },
 			yaml = { "prettierd" },
 			zig = { "zigfmt" },
 		},
