@@ -133,6 +133,7 @@ M.setup = function()
 			html = { "prettierd" },
 			htmldjango = { "djlint" },
 			javascript = {
+				"prettierd",
 				"biome-organize-imports",
 				"biome",
 			},
