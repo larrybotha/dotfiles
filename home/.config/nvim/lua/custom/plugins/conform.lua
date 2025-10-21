@@ -77,15 +77,6 @@ local function extendFormatters(conform)
 		}
 	end
 
-	-- https://github.com/nrempel/sleek
-	formatters.custom_sleek = function()
-		return {
-			command = "sleek",
-			args = {},
-			stdin = false,
-		}
-	end
-
 	formatters.custom_packer = function()
 		return {
 			condition = function(self, ctx)
@@ -174,7 +165,7 @@ M.setup = function()
 			rust = { "rustfmt" },
 			sh = { "shfmt", "shellharden" },
 			scss = { lsp_format = "never" },
-			sql = { "custom_sleek" },
+			sql = { "sleek" },
 			svelte = { "prettierd", "eslint_d" },
 			svg = { "prettierd" },
 			svx = { "prettierd" },
