@@ -43,6 +43,7 @@ brews=(
   "git-flow"
   "gitlab-runner"
   "go"
+  "go-task"
   "gofumpt"
   "golines"
   "gopls"
@@ -81,7 +82,7 @@ brews=(
   "sevenzip"
   "starship"
   "tealdeer"
-  "tfenv" # nvm for Terraform
+  "tfenv"  # nvm for Terraform
   "tflint" # linter for Terraform
   "tmux"
   "tmuxinator"
@@ -122,8 +123,8 @@ brews=(
   "stylua"
 
   # Diagnostics
-  "alejandra"               # nix formatter. TODO: install using flakes
-  "codeclimate"             # requires tapping codeclimate/formulae
+  "alejandra"   # nix formatter. TODO: install using flakes
+  "codeclimate" # requires tapping codeclimate/formulae
   "codespell"
   "djlint"
   "dotenv-linter"
@@ -131,7 +132,7 @@ brews=(
   "markdownlint-cli2"
   "rust-analyzer"
   "shellcheck"
-  "sleek"                   # diagnostics for sql
+  "sleek" # diagnostics for sql
   "vint"
   "yamllint"
 )
@@ -156,12 +157,12 @@ casks=(
   "flux"
   "font-roboto-mono-nerd-font"
   "ghostty"
-  "hammerspoon"                                      # Yabai dependency
+  "hammerspoon" # Yabai dependency
   "homebrew/cask-versions/firefox-developer-edition"
   "karabiner-elements"
   "keycastr"
   "keymapp"
-  "kitty"                                            # required for image previews in ghostty
+  "kitty" # required for image previews in ghostty
   "libreoffice"
   "lihaoyun6/tap/quickrecorder"
   "lulu"
