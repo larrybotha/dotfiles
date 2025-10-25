@@ -35,9 +35,7 @@ local function extendFormatters(conform)
 				"gofumpt",
 				"--max-len",
 				"80",
-				"$FILENAME",
 			},
-			stdin = true,
 		}
 	end
 
