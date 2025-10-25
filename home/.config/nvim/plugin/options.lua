@@ -30,6 +30,7 @@ opt.wildmode = "list:longest,full" -- command <Tab> completion, list matches, th
 opt.winbar = "%=%m %f" -- add filename to winbar aligned to end
 opt.winminheight = 0 -- windows can be 0 line high
 opt.wrap = false -- don't wrap lines
+opt.winborder = "double" -- don't wrap lines
 
 -- a: Suppress "hit-enter" prompt that appears when a command has completed
 -- t: Suppress "Terminal" message that appears when you enter a terminal buffer
