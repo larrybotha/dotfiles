@@ -93,6 +93,7 @@ local function configureLsp()
 		cssls = true,
 		docker_compose_language_service = true,
 		dockerls = true,
+		elmls = true,
 		emmet_ls = true,
 		gitlab_ci_ls = true,
 		marksman = true,

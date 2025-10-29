@@ -15,22 +15,23 @@ common_modules=(
   @zed-industries/claude-code-acp # codecompanion + claude code dep
 
   # diagnostics, linting, lsp, formatters
-  alex                    # diagnostics
-  eslint_d                # formatter / diagnostics
-  fixjson                 # formatter
-  jsonlint                # diagnostics
-  nginxbeautifier         # formatter
-  prettier                # formatter
-  prettier-plugin-svelte  # formatter
-  stylelint               # diagnostics
+  alex                   # diagnostics
+  eslint_d               # formatter / diagnostics
+  fixjson                # formatter
+  jsonlint               # diagnostics
+  nginxbeautifier        # formatter
+  prettier               # formatter
+  prettier-plugin-svelte # formatter
+  stylelint              # diagnostics
 
   # language servers
+  @elm-tooling/elm-language-server
   ansible-language-server
   bash-language-server
   dockerfile-language-server-nodejs
   eslint-language-server
   svelte-language-server
-  typescript-language-server   # ts_ls in lspconfig
+  typescript-language-server # ts_ls in lspconfig
   vim-language-server
   vscode-langservers-extracted # css, html, json
   yaml-language-server
