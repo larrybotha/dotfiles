@@ -13,6 +13,7 @@ common_modules=(
   typescript
   yo
   @zed-industries/claude-code-acp # codecompanion + claude code dep
+  @zed-industries/codex-acp       # codecompanion + codex cli
 
   # diagnostics, linting, lsp, formatters
   alex                   # diagnostics

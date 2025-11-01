@@ -3,19 +3,6 @@
 local cc = require("codecompanion")
 local spinner = require("custom.plugins.custom-spinner")
 
-local function get_gemini_config(token_path)
-	return function()
-		return require("codecompanion.adapters").extend("gemini_cli", {
-			defaults = {
-				auth_method = "gemini-api-key",
-			},
-			env = {
-				GEMINI_API_KEY = "cmd:pass " .. token_path,
-			},
-		})
-	end
-end
-
 cc.setup({
 	adapters = {
 		http = {
@@ -31,6 +18,15 @@ cc.setup({
 					},
 				})
 			end,
+			-- requires npm dep: @zed-industries/codex-acp
+			codex = function()
+				return require("codecompanion.adapters").extend("codex", {
+					defaults = {
+						auth_method = "chatgpt",
+					},
+				})
+			end,
+			-- requires npm dep: @zed-industries/claude-code-acp
 			gemini_cli = function()
 				return require("codecompanion.adapters").extend("gemini_cli", {
 					defaults = {
