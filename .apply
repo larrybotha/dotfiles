@@ -65,7 +65,7 @@ function replace_configs() {
 
   # TODO: diff files, and confirm overwrite if there are changes
   for config in "${configs[@]}"; do
-    IFS='|' read -r -a config <<< "$config"
+    IFS='|' read -r -a config <<<"$config"
     local source_path
     source_path=$(realpath "${src_dir}/${config[0]}")
     local dest_path="${config[1]}"
@@ -149,7 +149,7 @@ function symlink_configs() {
   )
 
   for config in "${configs[@]}"; do
-    IFS='|' read -r -a config <<< "$config"
+    IFS='|' read -r -a config <<<"$config"
     local source_path
     source_path=$(realpath "${src_dir}/${config[0]}")
     local dest_path="${config[1]}"
