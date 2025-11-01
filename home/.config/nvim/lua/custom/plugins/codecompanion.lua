@@ -3,6 +3,19 @@
 local cc = require("codecompanion")
 local spinner = require("custom.plugins.custom-spinner")
 
+local function get_gemini_config(token_path)
+	return function()
+		return require("codecompanion.adapters").extend("gemini_cli", {
+			defaults = {
+				auth_method = "gemini-api-key",
+			},
+			env = {
+				GEMINI_API_KEY = "cmd:pass " .. token_path,
+			},
+		})
+	end
+end
+
 cc.setup({
 	adapters = {
 		http = {
@@ -20,8 +33,11 @@ cc.setup({
 			end,
 			gemini_cli = function()
 				return require("codecompanion.adapters").extend("gemini_cli", {
+					defaults = {
+						auth_method = "gemini-api-key",
+					},
 					env = {
-						api_key = "cmd:pass gemini/token/neovim",
+						GEMINI_API_KEY = "cmd:pass gemini/token/neovim",
 					},
 				})
 			end,
