@@ -84,7 +84,7 @@ function source_shell() {
   make_heading "sourcing ${SHELL}"
 
   if [ "${ZSH_VERSION:-}" != "" ]; then
-    zsh "$ZDOTDIR"/.zshrc
+    zsh "${ZDOTDIR:-$HOME}"/.zshrc
   elif [ "${BASH_VERSION:-}" != "" ]; then
     source "$HOME/.bash_profile"
   fi
