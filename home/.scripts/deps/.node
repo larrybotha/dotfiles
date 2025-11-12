@@ -26,8 +26,8 @@ common_modules=(
   stylelint              # diagnostics
 
   # language servers
+  @ansible/ansible-language-server
   @elm-tooling/elm-language-server
-  ansible-language-server
   bash-language-server
   dockerfile-language-server-nodejs
   eslint-language-server
