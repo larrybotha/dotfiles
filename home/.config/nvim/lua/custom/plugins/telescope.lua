@@ -4,7 +4,7 @@ local function select_to_quickfix(prompt_bufnr)
 	local picker = action_state.get_current_picker(prompt_bufnr)
 	local excluded_fts = { "codecompanion" }
 	local source_buf_nr = picker.original_win_id and vim.api.nvim_win_get_buf(picker.original_win_id)
-	local src_buf_type = vim.api.nvim_buf_get_option(source_buf_nr, "filetype")
+	local src_buf_type = vim.api.nvim_get_option_value("filetype", { buf = source_buf_nr })
 
 	-- Fallback to default Telescope behaviour when the buffer that Telescope was
 	-- opened from has an excluded filetype
