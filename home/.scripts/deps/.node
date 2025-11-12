@@ -49,80 +49,89 @@ mac_modules=(
   alfred-fkill
 )
 
-function ensure_has_nvm() {
+function _ensure_has_nvm() {
   # install Node Version Manager and node
-  if type -p nvm &>/dev/null; then
+  export NVM_DIR="$HOME/.nvm"
+  # shellcheck source=/dev/null
+  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
+
+  if command -v nvm &>/dev/null; then
     echo "nvm already installed"
   else
     echo "installing nvm"
-
-    curl https://raw.githubusercontent.com/creationix/nvm/v0.24.0/install.sh | bash
+    curl -o- curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    # shellcheck source=/dev/null
+    . "$NVM_DIR/nvm.sh"
   fi
 }
 
-function ensure_has_node() {
-  if type -p node &>/dev/null; then
+function _ensure_has_node() {
+  if command -v node &>/dev/null; then
     echo "node already installed"
   else
     echo "installing node"
-
     nvm install node
+    nvm alias default node
   fi
 }
 
-ensure_has_nvm
-ensure_has_node
+function _is_installed() {
+  npm list -g --depth=0 "$1" &>/dev/null
+}
 
-update_existing=false
+function _conditional_install() {
+  local module="$1"
+  local update_existing="$2"
+  local message
 
-if [ "$1" == --update-existing ] || [ "$1" == '-u' ]; then
-  update_existing=true
-fi
-
-function is_installed() {
-  if npm list -g "${@}" | grep "empty" >/dev/null; then
-    echo false
+  if _is_installed "$module"; then
+    if [[ "$update_existing" != "true" ]]; then
+      echo "$module already installed - skipping"
+      return
+    fi
+    message="updating"
   else
-    echo true
-  fi
-}
-
-function install_module() {
-  installed=$(is_installed "${@}")
-  message="updating"
-
-  if test "$installed" != true; then
     message="installing"
   fi
 
   echo '-----------------------------------------------'
-  echo -e "  ${*}: $message..."
+  echo "  $module: $message..."
   echo '-----------------------------------------------'
 
-  npm install -g "${@}"
+  npm install -g "$module"
 
   echo ""
 }
 
-function conditional_install() {
-  local module="$1"
-  local update_existing="$2"
-  local installed
-  installed=$(is_installed "$module")
+function _main() {
+  _ensure_has_nvm
+  _ensure_has_node
 
-  if test "$installed" == 'true' && test "$update_existing" != 'true'; then
-    echo "$module already installed - skipping"
+  local update_existing=false
+  case "$1" in
+  -u | --update-existing)
+    update_existing=true
+    shift
+    ;;
+  esac
+
+  local all_modules
+  all_modules=("${common_modules[@]}")
+  if [[ "$(uname -s)" == "Darwin" ]]; then
+    all_modules+=("${mac_modules[@]}")
+  fi
+
+  if command -v parallel &>/dev/null; then
+    echo "Using GNU parallel to install modules."
+    export -f _is_installed
+    export -f _conditional_install
+    printf "%s\n" "${all_modules[@]}" | parallel --bar _conditional_install {} "$update_existing"
   else
-    install_module "$module"
+    echo "GNU parallel not found, installing sequentially."
+    for module in "${all_modules[@]}"; do
+      _conditional_install "$module" "$update_existing"
+    done
   fi
 }
 
-for module in "${common_modules[@]}"; do
-  conditional_install "$module" "$update_existing"
-done
-
-if [[ "$(uname -s)" == "Darwin" ]]; then
-  for module in "${mac_modules[@]}"; do
-    conditional_install "$module" "$update_existing"
-  done
-fi
+_main "$@"
