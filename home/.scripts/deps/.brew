@@ -66,6 +66,7 @@ brews=(
   "ollama"
   "oven-sh/bun/bun"
   "packer"
+  "paralell"
   "pass"
   "peterldowns/tap/nix-search-cli"
   "pigz"
