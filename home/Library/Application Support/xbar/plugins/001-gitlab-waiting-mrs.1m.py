@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+#!/opt/homebrew/bin/python3
 # <xbar.title>GitLab: My Review MRs</xbar.title>
 # <xbar.version>1.0.1</xbar.version>
 # <xbar.author>Larry Botha</xbar.author>
@@ -228,19 +228,23 @@ def format_mr_details(mr, approval):
     color = "green" if approved_count > 0 else "yellow"
 
     logger.debug(f"Displaying MR {mr_iid}: approved={approved_count}, color={color}")
+    updated_at = mr.get("updated_at", "")
 
     return {
-        "title": title,
         "color": color,
         "details": details,
         "link_text": link_text,
-        "url": url,
         "mr_iid": mr_iid,
+        "title": title,
+        "updated_at": updated_at.strip(),
+        "url": url,
     }
 
 
 def display_merge_request(mr_data):
     """Display a single merge request in xbar format."""
+    updated_at = mr_data["updated_at"]
+
     print(f"{mr_data['title']} | color={mr_data['color']}")
 
     for k, v in mr_data["details"]:
@@ -253,6 +257,13 @@ def display_merge_request(mr_data):
         print(f"--{k}: {v} | trim=false")
 
     print(f"\t{mr_data['link_text']} | trim=false | href={mr_data['url']} | color=gray")
+
+    if updated_at:
+        dt = datetime.fromisoformat(updated_at)
+
+        print(
+            f"\tupdated at {dt.strftime('%Y-%m-%d %H:%M:%S')} | trim=false | color=gray",
+        )
 
 
 def display_merge_requests(merge_requests, approvals_by_mr_id):
