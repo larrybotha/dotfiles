@@ -3,6 +3,37 @@
 local cc = require("codecompanion")
 local spinner = require("custom.plugins.custom-spinner")
 
+local function claude_code_acp()
+	-- requires @zed-industries/claude-code-acp
+	return require("codecompanion.adapters").extend("claude_code", {
+		env = {
+			CLAUDE_CODE_OAUTH_TOKEN = "cmd:pass claude-code/token/neovim",
+		},
+	})
+end
+
+local function gemini_cli_acp()
+	-- requires gemini-cli
+	return require("codecompanion.adapters").extend("gemini_cli", {
+		defaults = {
+			auth_method = "gemini-api-key",
+		},
+		env = {
+			GEMINI_API_KEY = "cmd:pass gemini/token/neovim",
+		},
+	})
+end
+
+local function codex_cli_acp()
+	-- requires npm dep: @zed-industries/codex-acp
+	return require("codecompanion.adapters").extend("codex", {
+		env = {
+			-- https://platform.openai.com/api-keys
+			OPENAI_API_KEY = "cmd:pass openai/codex/token/neovim",
+		},
+	})
+end
+
 cc.setup({
 	adapters = {
 		http = {
@@ -11,35 +42,10 @@ cc.setup({
 			},
 		},
 		acp = {
-			claude_code = function()
-				return require("codecompanion.adapters").extend("claude_code", {
-					env = {
-						CLAUDE_CODE_OAUTH_TOKEN = "cmd:pass claude-code/token/neovim",
-					},
-				})
-			end,
-			-- requires npm dep: @zed-industries/codex-acp
-			codex = function()
-				return require("codecompanion.adapters").extend("codex", {
-					defaults = {
-						auth_method = "chatgpt",
-					},
-				})
-			end,
-			-- requires npm dep: @zed-industries/claude-code-acp
-			gemini_cli = function()
-				return require("codecompanion.adapters").extend("gemini_cli", {
-					defaults = {
-						auth_method = "gemini-api-key",
-					},
-					env = {
-						GEMINI_API_KEY = "cmd:pass gemini/token/neovim",
-					},
-				})
-			end,
-			opts = {
-				show_defaults = false,
-			},
+			claude_code = claude_code_acp,
+			codex = codex_cli_acp,
+			gemini_cli = gemini_cli_acp,
+			opts = { show_defaults = false },
 		},
 	},
 	strategies = {
