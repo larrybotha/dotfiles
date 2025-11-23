@@ -1,7 +1,8 @@
 {
   "general": {
     "preferredEditor": "neovim",
-    "vimMode": true
+    "vimMode": true,
+    "previewFeatures": true
   },
   "security": {
     "auth": {
