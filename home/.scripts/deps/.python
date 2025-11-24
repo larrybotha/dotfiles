@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if ! command -v uv &> /dev/null; then
+if ! command -v uv &>/dev/null; then
   echo "uv not installed"
   exit 1
 fi
@@ -11,10 +11,10 @@ packages=(
   debugpy
   "vectorcode[lsp,mcp]"
 
-	# diagnostics, linting, lsp, formatters
-	autoimport  # formatter
+  # diagnostics, linting, lsp, formatters
+  autoimport # formatter
 
-	epy-reader # reading epubs
+  epy-reader # reading epubs
 )
 
 for package in "${packages[@]}"; do
