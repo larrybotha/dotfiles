@@ -124,6 +124,7 @@ M.setup = function()
 
 		formatters_by_ft = {
 			c = { "clang_format" },
+			cpp = { "clang_format" },
 			elm = { "elm_format" },
 			go = { "custom_golines" },
 			gohtmltmpl = { "custom_golines" },
