@@ -64,6 +64,7 @@ brews=(
   "neovim"
   "nvm"
   "ollama"
+  "opencode"
   "oven-sh/bun/bun"
   "packer"
   "parallel"
