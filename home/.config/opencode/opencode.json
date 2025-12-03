@@ -1,5 +1,17 @@
 {
   "$schema": "https://opencode.ai/config.json",
   "autoupdate": true,
-  "theme": "aura"
+  "theme": "aura",
+  "mcp": {
+    "dash-api": {
+      "type": "local",
+      "command": [
+        "uvx",
+        "--from",
+        "git+https://github.com/Kapeli/dash-mcp-server.git",
+        "dash-mcp-server"
+      ],
+      "enabled": true
+    }
+  }
 }
