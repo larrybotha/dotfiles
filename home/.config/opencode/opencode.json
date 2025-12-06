@@ -13,5 +13,8 @@
       ],
       "enabled": true
     }
+  },
+  "keybinds": {
+    "input_newline": "shift+enter"
   }
 }
