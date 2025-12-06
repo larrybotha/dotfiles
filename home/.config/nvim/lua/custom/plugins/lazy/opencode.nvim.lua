@@ -27,10 +27,7 @@ return {
 		vim.keymap.set({ "n", "x" }, "<leader>op", function()
 			opencode.prompt("@this")
 		end, { desc = "Add to opencode" })
-		vim.keymap.set({ "n", "t" }, "<leader>ot",
-      opencode.toggle,
-      { desc = "Toggle opencode" },
-    )
+		vim.keymap.set({ "n", "t" }, "<leader>ot", opencode.toggle, { desc = "Toggle opencode" })
 		vim.keymap.set("n", "<leader>ou", function()
 			opencode.command("session.half.page.up")
 		end, { desc = "opencode half page up" })
