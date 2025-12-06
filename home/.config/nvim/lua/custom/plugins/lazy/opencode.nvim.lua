@@ -1,37 +1,51 @@
 return {
 	"NickvanDyke/opencode.nvim",
 	dependencies = {
-		-- Recommended for `ask()` and `select()`.
-		-- Required for `snacks` provider.
-		---@module 'snacks' <- Loads `snacks.nvim` types for configuration intellisense.
-		{ "folke/snacks.nvim", opts = { input = {}, picker = {}, terminal = {} } },
+		{
+			-- snacks is the recommended provider for `ask()` and `select()`
+			"folke/snacks.nvim",
+			---@type snacks.Config
+			opts = { input = {}, picker = {}, terminal = {} },
+		},
 	},
 	config = function()
 		local opencode = require("opencode")
+		local set_keymap = vim.keymap.set
+		local keymap_modes = { "n", "x" }
 
 		---@type opencode.Opts
-		vim.g.opencode_opts = {
-			-- Your configuration, if any — see `lua/opencode/config.lua`, or "goto definition".
-		}
+		vim.g.opencode_opts = {}
+		vim.o.autoread = true -- allow reloading buffers when updated by opencode
 
-		-- Required for `opts.events.reload`.
-		vim.o.autoread = true
+		set_keymap({ "n", "t" }, "<leader>ot", opencode.toggle, { desc = "Toggle opencode" }) -- codespell:ignore
 
-		-- Recommended/example keymaps.
-		vim.keymap.set({ "n", "x" }, "<leader>oa", function()
+		set_keymap(keymap_modes, "<leader>oa", function()
 			opencode.ask("@this: ", { submit = true })
 		end, { desc = "Ask opencode" })
-		vim.keymap.set({ "n", "x" }, "<leader>os", function()
-			opencode.select()
-		end, { desc = "Execute opencode action…" })
-		vim.keymap.set({ "n", "x" }, "<leader>op", function()
+
+		set_keymap(keymap_modes, "<leader>os", opencode.select, { desc = "Execute opencode action…" })
+
+		set_keymap(keymap_modes, "<leader>op", function()
 			opencode.prompt("@this")
 		end, { desc = "Add to opencode" })
-		vim.keymap.set({ "n", "t" }, "<leader>ot", opencode.toggle, { desc = "Toggle opencode" })
-		vim.keymap.set("n", "<leader>ou", function()
+
+		set_keymap("n", "<leader>ogg", function()
+			opencode.command("session.first")
+		end, { desc = "Go to beginning of opencode session" })
+
+		set_keymap("n", "<leader>oG", function()
+			opencode.command("session.last")
+		end, { desc = "Go to end of opencode session" })
+
+		set_keymap("n", "<leader>oi", function()
+			opencode.command("session.interrupt")
+		end, { desc = "Interrupt opencode" })
+
+		set_keymap("n", "<leader>ou", function()
 			opencode.command("session.half.page.up")
 		end, { desc = "opencode half page up" })
-		vim.keymap.set("n", "<leader>od", function()
+
+		set_keymap("n", "<leader>od", function()
 			opencode.command("session.half.page.down")
 		end, { desc = "opencode half page down" })
 	end,
