@@ -37,6 +37,20 @@ return {
 			end
 
 			set_keymaps()
+
+			local enabled_for_process = { opencode = false }
+
+			vim.api.nvim_create_autocmd({ "TermEnter" }, {
+				callback = function(args)
+					for proc_name, enabled in pairs(enabled_for_process) do
+						if not enabled and args.match:match(proc_name) then
+							set_keymaps()
+							enabled_for_process[proc_name] = true
+							break
+						end
+					end
+				end,
+			})
 		end,
 	},
 }
