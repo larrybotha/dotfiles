@@ -29,6 +29,10 @@ return {
 			opencode.prompt("@this")
 		end, { desc = "Add to opencode" })
 
+		set_keymap("n", "<leader>oc", function()
+			opencode.command("agent.cycle")
+		end, { desc = "Cycle opencode agent" })
+
 		set_keymap("n", "<leader>ogg", function()
 			opencode.command("session.first")
 		end, { desc = "Go to beginning of opencode session" })
