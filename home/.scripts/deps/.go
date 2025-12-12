@@ -2,6 +2,7 @@
 
 packages=(
   github.com/x-motemen/gore/cmd/gore@latest # repl
+  github.com/isaacphi/mcp-language-server@latest # mcp server
 )
 
 function ensure_has_go() {
