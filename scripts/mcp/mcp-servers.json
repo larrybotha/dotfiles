@@ -2,11 +2,35 @@
   "mcpServers": {
     "lsp-mcp-server": {
       "command": "mcp-language-server",
-      "args": []
+      "args": [],
+      "metadata": {
+        "opencode": {
+          "type": "local",
+          "enabled": false
+        },
+        "claude": {
+          "enabled": true
+        },
+        "gemini": {
+          "enabled": true
+        }
+      }
     },
     "vectorcode-mcp-server": {
       "command": "vectorcode-mcp-server",
-      "args": []
+      "args": [],
+      "metadata": {
+        "opencode": {
+          "type": "local",
+          "enabled": false
+        },
+        "claude": {
+          "enabled": false
+        },
+        "gemini": {
+          "enabled": false
+        }
+      }
     },
     "dash-api": {
       "command": "uvx",
@@ -14,7 +38,33 @@
         "--from",
         "git+https://github.com/Kapeli/dash-mcp-server.git",
         "dash-mcp-server"
-      ]
+      ],
+      "metadata": {
+        "opencode": {
+          "type": "local",
+          "enabled": true
+        },
+        "claude": {
+          "enabled": true
+        },
+        "gemini": {
+          "enabled": true
+        }
+      }
+    }
+  },
+  "defaults": {
+    "metadata": {
+      "opencode": {
+        "type": "local",
+        "enabled": true
+      },
+      "claude": {
+        "enabled": true
+      },
+      "gemini": {
+        "enabled": true
+      }
     }
   }
 }
