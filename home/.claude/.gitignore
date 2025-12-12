@@ -6,3 +6,4 @@ shell-snapshots/
 statsig/
 todos/
 history.jsonl
+stats-cache.json
