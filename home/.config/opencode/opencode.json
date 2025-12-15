@@ -15,7 +15,7 @@
       "command": [
         "vectorcode-mcp-server"
       ],
-      "enabled": false
+      "enabled": true
     },
     "dash-api": {
       "type": "local",

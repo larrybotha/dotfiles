@@ -9,10 +9,10 @@
           "enabled": false
         },
         "claude": {
-          "enabled": true
+          "enabled": false
         },
         "gemini": {
-          "enabled": true
+          "enabled": false
         }
       }
     },
@@ -22,13 +22,13 @@
       "metadata": {
         "opencode": {
           "type": "local",
-          "enabled": false
+          "enabled": true
         },
         "claude": {
-          "enabled": false
+          "enabled": true
         },
         "gemini": {
-          "enabled": false
+          "enabled": true
         }
       }
     },
