@@ -1,0 +1,3 @@
+home/.config/nvim/**/*.lua
+scripts/**/*
+.apply

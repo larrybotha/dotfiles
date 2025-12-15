@@ -1,0 +1,4 @@
+# respects .gitignore
+.vectorcode/
+.home/.config/tmux/plugins/
+.git
