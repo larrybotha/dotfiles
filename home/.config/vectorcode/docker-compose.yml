@@ -4,7 +4,11 @@ services:
     image: chromadb/chroma:0.6.3
     ports:
       - "9898:8000"
+    environment:
+      - PERSIST_DIRECTORY=/lekkerlocation
     volumes:
-      # use vectorcode's chromadb directory as per
+      # Use vectorcode's chromadb directory as per
       # https://github.com/Davidyz/VectorCode/blob/main/docs/cli.md#configuring-vectorcode
-      - ~/.local/share/vectorcode/chromadb:/data
+      # If this container is not started when running vectorcode, vectorcode
+      # will read from the same db, but with startup overhead
+      - ~/.local/share/vectorcode/chromadb:/lekkerlocation
