@@ -25,14 +25,14 @@ return {
 					-- Use `:VectorCode register` to register specific files for indexing
 					run_on_register = false,
 				},
-				async_backend = "default", -- Backend to use for async operations (default or lsp)
+				async_backend = "lsp", -- Backend to use for async operations (default or lsp)
 				exclude_this = true, -- Exclude current buffer from operations
 				n_query = 1, -- Number of queries to send for each operation
 				notify = true, -- Show notifications for operations
 				timeout_ms = 5000, -- Timeout in milliseconds for operations
 				on_setup = {
 					update = true, -- Update VectorCode on setup
-					lsp = false, -- Don't enable LSP integration
+					lsp = true, -- LSP integration
 				},
 				sync_log_env_var = false, -- Don't sync environment variables for logging
 			}
