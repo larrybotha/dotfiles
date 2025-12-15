@@ -1,0 +1,12 @@
+# VECTORCODE_HOOK_START
+# Get list of files that were just committed (staged changes)
+diff_files=$(git diff --cached --name-only)
+# If vectorcode directory exists and we have committed files, vectorise them in background
+if [ -d ".vectorcode" ] && [ ! -z "$diff_files" ]; then
+  # vectorise as background job
+  # see https://github.com/Davidyz/VectorCode/issues/171
+  vectorcode vectorise "$diff_files" >/dev/null 2>/dev/null &
+fi
+# VECTORCODE_HOOK_END
+
+# vim: set ft=sh :

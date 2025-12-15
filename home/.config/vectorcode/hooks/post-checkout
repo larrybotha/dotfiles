@@ -1,0 +1,23 @@
+# VECTORCODE_HOOK_START
+# Check if this is a new branch checkout (first argument is empty or all zeros)
+if [ "$(echo "$1" | grep "[^0]")" = "" ]; then
+  # New branch: start with empty files list
+  files=""
+  # If vectorcode include files exist, vectorise the entire codebase
+  {
+    [ -f .vectorcode/vectorcode.include ] ||
+      [ -f ~/.config/vectorcode/vectorcode.include ]
+  } && vectorcode vectorise || true
+else
+  # Branch switch: get list of changed files between old and new commits
+  files=$(git diff --name-only "$1" "$2")
+fi
+# If vectorcode directory exists and we have files to process, vectorise them in background
+if [ -d ".vectorcode" ] && [ ! -z "$files" ]; then
+  # vectorise as background job
+  # see https://github.com/Davidyz/VectorCode/issues/171
+  vectorcode vectorise "$files" >/dev/null 2>/dev/null &
+fi
+# VECTORCODE_HOOK_END
+
+# vim: set ft=sh :
