@@ -21,6 +21,8 @@ return {
 					n_query = 1,
 					notify = false,
 					query_cb = require("vectorcode.utils").make_surrounding_lines_cb(-1),
+					-- use `:VectorCode register` to register specific files for indexing
+					-- base on the events in this config
 					run_on_register = false,
 				},
 				async_backend = "default", -- default|lsp

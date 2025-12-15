@@ -51,10 +51,11 @@ just -g vectorcode-db-stop
 
 ### Neovim Integration
 
-VectorCode automatically indexes files when:
+VectorCode automatically indexes files when a file is registered using
+`:VectorCode register` on these events:
 
 - Files are written (`BufWritePost`)
-- Entering insert mode (`InsertEnter`)
+- Leaving insert mode (`InsertLeave`)
 - Files are read (`BufReadPost`)
 
 Configuration includes:
