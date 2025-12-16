@@ -2,7 +2,151 @@
 
 The `./agent` directory contains specialized development agents for OpenCode, including Go, Python, and Brainstorming agents.
 
+## Commands Overview
+
+- `research_codebase` - Research coordinator
+- `debug` - Issue investigation
+- `create_plan` - Interactive plan creation
+- `oneshot_plan` - Quick planning session
+- `iterate_plan` - Plan refinement
+- `validate_plan` - Plan review
+- `implement_plan` - Follow through on approved plans
+- `commit` - Git commit creation
+- `describe_pr` - PR documentation
+- `resume_handoff` / `create_handoff` - Session management
+
+### Agent-Command Relationships
+
+### Research & Analysis Agents
+
+- **codebase-locator** → Used by: `research_codebase`, `create_plan`, `ralph_research`
+- **codebase-analyzer** → Used by: `research_codebase`, `create_plan`, `debug`
+- **codebase-pattern-finder** → Used by: `create_plan`, `research_codebase`
+- **thoughts-locator** → Used by: `research_codebase`, `create_plan`
+- **thoughts-analyzer** → Used by: `research_codebase`, `create_plan`
+- **web-search-researcher** → Used by: `research_codebase` (when external info needed)
+
+### Core Workflow Patterns
+
+#### Research → Plan → Implement Workflow
+
+See [HumanLayer Workshop](https://github.com/humanlayer/humanlayer/blob/afadcd6032b4238b3ef3462450354f1ae24fd32b/docs/workshop.mdx)
+
+```text
+/research_codebase → /create_plan → /implement_plan
+     ↓                ↓               ↓
+Multiple agents   Interactive     Single agent
+in parallel       planning       execution
+```
+
+1. Research the codebase
+
+   ```text
+   /g/research_codebase
+   ```
+
+   then
+
+   ```text
+   we are working on the issue in the issue.txt file,
+   please read the issue and research the codebase to understand how the system
+   works and what files+line numbers are relevant to the issue.
+
+   Do not make an implementation plan or explain how to fix.
+   ```
+
+   _The last line deliberately duplicates instruction in the command_
+
+   Reject the research if it's incorrect and refine inputs until it corroborates
+   the work to be done
+
+2. Create a plan
+
+   ```text
+   /g/create_plan
+   ```
+
+   then
+
+   ```text
+    we are working on the issue in the issue.txt file,
+    we've done the following research: PATH_TO_RESEARCH_OUTPUT.md
+
+    create a plan to [perform task]. [YOUR ADDITIONAL INSTRUCTIONS HERE]
+
+    work back and forth with me, sharing your open questions and phases outline
+    before writing the plan
+   ```
+
+   _The last line deliberately duplicates instruction in the command_
+
+   Iterate on the plan until happy
+
+3. Implement the plan
+
+   ```text
+   /g/implement_plan
+   ```
+
+   then
+
+   ```text
+    please implement the plan. [YOUR ADDITIONAL INSTRUCTIONS HERE]
+
+    just do phase 1, then update the plan with your progress and await
+    further instructions and confirmation of the manual verification steps
+   ```
+
+   iterate with new sessions until complete
+
+4. Validate the plan
+
+   once changes are committed, validate the plan
+
+   ```text
+   /g/validate_plan
+   ```
+
+#### Debugging Workflow
+
+**TODO**: rewrite to be agnostic of humanlayer deps
+
+```text
+/debug → (investigation) → /implement_plan (fixes) → /commit
+   ↓           ↓                  ↓              ↓
+Problem    Parallel agents    Targeted     Commit fixes
+analysis   (logs, DB, git)    fixes
+```
+
 ## Agents Overview
+
+### Research Agents
+
+```text
+User: "How does Y work in our codebase?"
+→ /research_codebase
+  ↳ codebase-locator (find files)
+  ↳ codebase-analyzer (understand implementation)
+  ↳ thoughts-locator (historical context)
+→ Generates research document
+```
+
+#### Parallel Research Pattern
+
+`research_codebase` spawns multiple agents simultaneously:
+
+- `codebase-locator` + `codebase-analyzer` + `thoughts-locator`
+- Waits for all to complete
+- Synthesizes findings into coherent document
+
+#### Sequential Planning Pattern
+
+`create_plan` uses agents sequentially:
+
+1. `codebase-locator` → Find relevant files
+2. `codebase-analyzer` → Understand current implementation
+3. `thoughts-locator` → Find historical context
+4. Interactive refinement with user
 
 ### Brainstorming Agents
 
@@ -54,20 +198,6 @@ The workflow follows the Socratic method of iterative questioning and refinement
 - **Access**: Read-only filesystem (no write/edit/bash)
 - **Focus**: Expert-level Go guidance, code review, and best practices
 
-#### planner-subagent (Subagent)
-
-- **Purpose**: Go project planning and architecture
-- **Model**: opencode/big-pickle (temperature 0.1)
-- **Access**: Read-only filesystem
-- **Focus**: Standard library-based architecture planning
-
-#### researcher-subagent (Subagent)
-
-- **Purpose**: Go documentation and research
-- **Model**: opencode/big-pickle (temperature 0.2)
-- **Access**: Web fetch capabilities
-- **Focus**: Official Go documentation and best practices
-
 ### Python Agents
 
 #### developer (Primary Agent)
@@ -96,7 +226,6 @@ The workflow follows the Socratic method of iterative questioning and refinement
 ### Switching Between Primary Agents
 
 - Use **Tab** key to cycle through primary agents
-- Current primary agents: build, plan, go/developer, python/developer, socratic, go/pair-programmer
 
 ### Invoking Subagents
 
@@ -239,3 +368,4 @@ prompt: |
 - [https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/](https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/)
 - [https://www.penguinrandomhouse.com/books/741805/co-intelligence-by-ethan-mollick/](https://www.penguinrandomhouse.com/books/741805/co-intelligence-by-ethan-mollick/)
 - [https://princeton-nlp.github.io/SocraticAI/](https://princeton-nlp.github.io/SocraticAI/)
+- [humanlayer](https://github.com/humanlayer/humanlayer)
