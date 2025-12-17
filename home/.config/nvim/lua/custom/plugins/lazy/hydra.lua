@@ -1,27 +1,40 @@
+local function bind_diag_jump(n)
+	return function()
+		vim.diagnostic.jump({ count = n, float = true })
+	end
+end
+local next_diagnostic = bind_diag_jump(1)
+local prev_diagnostic = bind_diag_jump(-1)
 return {
 	"nvimtools/hydra.nvim",
 	event = "VeryLazy",
 	config = function()
 		local Hydra = require("hydra")
-		local diagnostic = vim.diagnostic
 
 		Hydra.setup({ timeout = 2000, hint = false })
 
-		-- TODO: determine why heads are not working for diagnostics
 		Hydra({
 			body = "]d",
-			config = { buffer = true, invoke_on_body = false, on_enter = diagnostic.goto_next },
-			heads = { { "d", diagnostic.goto_next } },
+			config = {
+				buffer = true,
+				invoke_on_body = true,
+				on_enter = next_diagnostic,
+			},
+			heads = { { "d", next_diagnostic } },
 			mode = "n",
-			name = "go to next diagnostic",
+			name = "Hydra: go to next diagnostic",
 		})
 
 		Hydra({
 			body = "[d",
-			config = { buffer = true, invoke_on_body = true, on_enter = diagnostic.goto_prev },
-			heads = { { "d", diagnostic.goto_prev } },
+			config = {
+				buffer = true,
+				invoke_on_body = true,
+				on_enter = prev_diagnostic,
+			},
+			heads = { { "d", prev_diagnostic } },
 			mode = "n",
-			name = "go to next diagnostic",
+			name = "Hydra: go to previous diagnostic",
 		})
 
 		-- TODO: determine how to silence errors if at ends of quickfix list
