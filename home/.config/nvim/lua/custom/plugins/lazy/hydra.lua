@@ -87,7 +87,5 @@ return {
 			mode = "n",
 			name = "tabprevious",
 		})
-
-		vim.notify("hydra.nvim")
 	end,
 }
