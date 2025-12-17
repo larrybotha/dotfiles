@@ -168,7 +168,7 @@ vim.api.nvim_create_autocmd("LspAttach", {
 		setKeymap("n", "<leader>lss", lspBuf.signature_help, getOpts("LSP show signature help"))
 		setKeymap("n", "<leader>lsr", lspBuf.rename, getOpts("LSP rename symbol"))
 		setKeymap("n", "<leader>lsh", lspBuf.hover, getOpts("LSP show hover information"))
-		-- amanaged by Hydra
+		-- managed by Hydra
 		-- TODO: determine how to allow these while ensuring Hydra overrides them
 		--setKeymap("n", "[d", function()
 		--  vim.diagnostic.jump({ count = -1, float = true })
