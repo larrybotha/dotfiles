@@ -1,6 +1,8 @@
 local function bind_diag_jump(n)
 	return function()
 		vim.diagnostic.jump({ count = n, float = true })
+		-- TODO: determine why 'float' above is not opening the float
+		vim.diagnostic.open_float()
 	end
 end
 local next_diagnostic = bind_diag_jump(1)
