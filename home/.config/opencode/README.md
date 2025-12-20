@@ -91,9 +91,9 @@ in parallel       planning       execution
    then
 
    ```text
-    please implement the plan. [YOUR ADDITIONAL INSTRUCTIONS HERE]
+    please implement the next phase of the plan. [YOUR ADDITIONAL INSTRUCTIONS HERE]
 
-    just do phase 1, then update the plan with your progress and await
+    only work on that phase, then update the plan with your progress and await
     further instructions and confirmation of the manual verification steps
    ```
 
