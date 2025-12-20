@@ -1,19 +1,7 @@
-local function bind_diag_jump(n)
+local function bind_diag_jump(n, x)
 	return function()
 		vim.diagnostic.jump({ count = n })
-
-		local pos = vim.api.nvim_win_get_cursor(0)
-		local diagnostics = vim.diagnostic.get(0, { lnum = pos[1] - 1 })
-
-		if #diagnostics > 0 then
-			-- using jump.on_jump doesn't appear to work inside Hydra - manually open
-			-- the float window
-			vim.diagnostic.open_float({
-				bufnr = 0,
-				scope = "cursor",
-				focus = false,
-			})
-		end
+		vim.diagnostic.open_float()
 	end
 end
 local next_diagnostic = bind_diag_jump(1)
@@ -47,11 +35,7 @@ return {
 
 		Hydra({
 			body = "]d",
-			config = {
-				buffer = true,
-				invoke_on_body = true,
-				on_enter = next_diagnostic,
-			},
+			config = { invoke_on_body = true, on_enter = next_diagnostic },
 			heads = { { "d", next_diagnostic } },
 			mode = "n",
 			name = "Hydra: go to next diagnostic",
@@ -59,11 +43,7 @@ return {
 
 		Hydra({
 			body = "[d",
-			config = {
-				buffer = true,
-				invoke_on_body = true,
-				on_enter = prev_diagnostic,
-			},
+			config = { invoke_on_body = true, on_enter = prev_diagnostic },
 			heads = { { "d", prev_diagnostic } },
 			mode = "n",
 			name = "Hydra: go to previous diagnostic",
@@ -101,4 +81,5 @@ return {
 			name = "tabprevious",
 		})
 	end,
+	--enabled = false,
 }
