@@ -140,16 +140,21 @@ require("fidget").setup({})
 
 configureLsp()
 
-vim.diagnostic.config({
-	float = {
-		focusable = false,
-		style = "minimal",
-		border = "rounded",
-		source = true,
-		header = "",
-		prefix = "",
-	},
-})
+vim.diagnostic.config(
+	---@type vim.diagnostic.Opts
+	{
+		float = {
+			focusable = false,
+			border = "rounded",
+			source = true,
+			header = "",
+			prefix = "",
+		},
+		jump = {
+			float = true, -- open float window when jumping
+		},
+	}
+)
 
 vim.api.nvim_create_autocmd("LspAttach", {
 	group = vim.api.nvim_create_augroup("CustomLspConfig", {}),
