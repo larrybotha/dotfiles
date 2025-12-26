@@ -1,7 +1,7 @@
 ---
 description: Socratic questioning agent for software specification development
 mode: primary
-model: opencode/big-pickle
+model: anthropic/sonnet
 temperature: 0.3
 permission:
   bash:

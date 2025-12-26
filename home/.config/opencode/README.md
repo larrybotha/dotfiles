@@ -155,21 +155,21 @@ The brainstorming agents follow a Socratic methodology for software specificatio
 #### socratic (Primary Agent)
 
 - **Purpose**: Socratic questioning agent for software specification development
-- **Model**: opencode/big-pickle (temperature 0.3)
+- **Model**: anthropic/sonnet (temperature 0.3)
 - **Access**: Full filesystem and bash capabilities
 - **Focus**: Asks targeted questions to gather detailed requirements for software ideas
 
 #### critic-subagent (Subagent)
 
 - **Purpose**: Critically analyzes brainstorming results to identify flaws, challenges, and improvement areas
-- **Model**: opencode/big-pickle (temperature 0.3)
+- **Model**: anthropic/sonnet (temperature 0.3)
 - **Access**: Full filesystem and bash capabilities
 - **Focus**: Technical feasibility, scalability, security, and market fit analysis
 
 #### spec-writer-subagent (Subagent)
 
 - **Purpose**: Compiles brainstorming findings into comprehensive developer-ready specifications
-- **Model**: opencode/big-pickle (temperature 0.3)
+- **Model**: anthropic/sonnet (temperature 0.3)
 - **Access**: Full filesystem and bash capabilities
 - **Focus**: Creates RFC-like specification documents for immediate implementation
 
@@ -187,14 +187,14 @@ The workflow follows the Socratic method of iterative questioning and refinement
 #### developer (Primary Agent)
 
 - **Purpose**: Main Go development agent for coding, debugging, and optimization
-- **Model**: opencode/big-pickle (temperature 0.3)
+- **Model**: anthropic/sonnet (temperature 0.3)
 - **Access**: Full filesystem, restricted bash (go commands and git read-only)
 - **Focus**: Standard library solutions, Go best practices
 
 #### pair-programmer (Primary Agent)
 
 - **Purpose**: Go pair programmer focused on best practices and code review
-- **Model**: opencode/big-pickle (temperature 0.3)
+- **Model**: anthropic/sonnet (temperature 0.3)
 - **Access**: Read-only filesystem (no write/edit/bash)
 - **Focus**: Expert-level Go guidance, code review, and best practices
 
@@ -203,21 +203,21 @@ The workflow follows the Socratic method of iterative questioning and refinement
 #### developer (Primary Agent)
 
 - **Purpose**: Main Python development agent for coding, debugging, and optimization
-- **Model**: opencode/big-pickle (temperature 0.3)
+- **Model**: anthropic/sonnet (temperature 0.3)
 - **Access**: Full filesystem, restricted bash (python, pip, poetry commands and git read-only)
 - **Focus**: Standard library solutions, PEP 8 compliance, Python best practices
 
 #### planner-subagent (Subagent)
 
 - **Purpose**: Python project planning and architecture
-- **Model**: opencode/big-pickle (temperature 0.1)
+- **Model**: anthropic/sonnet (temperature 0.1)
 - **Access**: Read-only filesystem
 - **Focus**: Python-based architecture planning and best practices
 
 #### researcher-subagent (Subagent)
 
 - **Purpose**: Python documentation and research
-- **Model**: opencode/big-pickle (temperature 0.2)
+- **Model**: anthropic/sonnet (temperature 0.2)
 - **Access**: Web fetch capabilities
 - **Focus**: Official Python documentation, PEPs, and best practices
 
@@ -315,7 +315,7 @@ To extend these agents for specific projects, create project-specific agents in 
 ---
 description: Socratic specification development for [project-name]
 mode: primary
-model: opencode/big-pickle
+model: anthropic/sonnet
 temperature: 0.3
 prompt: |
   You are working on the [project-name] project using Socratic methodology.

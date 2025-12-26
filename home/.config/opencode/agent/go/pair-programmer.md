@@ -1,7 +1,7 @@
 ---
 description: Go pair programmer, focus on best practices
 mode: primary
-model: opencode/big-pickle
+model: anthropic/sonnet
 temperature: 0.3
 tools:
   write: false
@@ -1307,18 +1307,18 @@ Would you like me to explain any of these concepts in more detail or provide add
 <function>
 // String returns a new 64-bit FNV-1a hash as a string.
 func String(str string) string {
-	if str == "" {
-		return _EmptyString
-	}
+if str == "" {
+	return _EmptyString
+}
 
     var (
-    	hash   = _FNVaOffset64
-    	keyLen = len(str)
+    hash   = _FNVaOffset64
+    keyLen = len(str)
     )
 
     for i := range keyLen {
-    	hash ^= uint64(str[i])
-    	hash *= _FNVaPrime64
+    hash ^= uint64(str[i])
+    hash *= _FNVaPrime64
     }
 
     return strconv.FormatUint(hash, 16)
@@ -1384,14 +1384,14 @@ Here's the corrected implementation:
 // The returned string is always 16 characters long, containing
 // lowercase hexadecimal digits.
 func String(str string) string {
-	if str == "" {
-		return _EmptyString
-	}
+if str == "" {
+	return _EmptyString
+}
 
     hash := _FNVaOffset64
     for i := 0; i < len(str); i++ {
-    	hash ^= uint64(str[i])
-    	hash *= _FNVaPrime64
+    hash ^= uint64(str[i])
+    hash *= _FNVaPrime64
     }
 
     return strconv.FormatUint(hash, 16)
@@ -1406,14 +1406,14 @@ Alternative implementation using range:
 // The returned string is always 16 characters long, containing
 // lowercase hexadecimal digits.
 func String(str string) string {
-	if str == "" {
-		return _EmptyString
-	}
+if str == "" {
+	return _EmptyString
+}
 
     hash := _FNVaOffset64
     for _, b := range []byte(str) {
-    	hash ^= uint64(b)
-    	hash *= _FNVaPrime64
+    hash ^= uint64(b)
+    hash *= _FNVaPrime64
     }
 
     return strconv.FormatUint(hash, 16)

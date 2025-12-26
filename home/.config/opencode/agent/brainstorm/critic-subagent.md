@@ -1,7 +1,7 @@
 ---
 description: Critically analyzes brainstorming results to identify flaws, challenges, and improvement areas
 mode: subagent
-model: opencode/big-pickle
+model: anthropic/sonnet
 temperature: 0.3
 permission:
   bash:

@@ -1,7 +1,7 @@
 ---
 description: Python documentation and standard library research
 mode: subagent
-model: opencode/big-pickle
+model: anthropic/sonnet
 temperature: 0.2
 tools:
   webfetch: true
@@ -39,4 +39,3 @@ You are a Python researcher specializing in standard library documentation and b
 - Data science library documentation (pandas, numpy, matplotlib)
 - Testing framework documentation (pytest, unittest)
 - Development tool documentation (black, ruff, mypy)
-

@@ -1,7 +1,7 @@
 ---
 description: Python development agent focused on standard library and best practices
 mode: primary
-model: opencode/big-pickle
+model: anthropic/sonnet
 temperature: 0.3
 permission:
   bash:

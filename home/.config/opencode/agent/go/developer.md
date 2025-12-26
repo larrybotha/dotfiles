@@ -1,7 +1,7 @@
 ---
 description: Go development agent focused on standard library solutions
 mode: primary
-model: opencode/big-pickle
+model: anthropic/sonnet
 temperature: 0.3
 permission:
   bash:
@@ -251,14 +251,14 @@ go mod edit -replace github.com/user/localpkg=../localpkg
 ```go
 // Benchmark testing patterns
 func BenchmarkProcess(b *testing.B) {
-    data := generateTestData(1000)
+	data := generateTestData(1000)
 
-    b.ResetTimer()
-    b.ReportAllocs()
+	b.ResetTimer()
+	b.ReportAllocs()
 
-    for i := 0; i < b.N; i++ {
-        Process(data)
-    }
+	for i := 0; i < b.N; i++ {
+		Process(data)
+	}
 }
 ```
 
@@ -314,24 +314,24 @@ go test -bench=. -benchmem ./...
 
 ```go
 func TestAdd(t *testing.T) {
-  tests := []struct {
-    name string
-    a, b int
-    want int
-  }{
-    {"positive", 2, 3, 5},
-    {"negative", -1, -2, -3},
-    {"zero", 0, 0, 0},
-  }
+	tests := []struct {
+		name string
+		a, b int
+		want int
+	}{
+		{"positive", 2, 3, 5},
+		{"negative", -1, -2, -3},
+		{"zero", 0, 0, 0},
+	}
 
-  for _, tt := range tests {
-    t.Run(tt.name, func(t *testing.T) {
-      got := Add(tt.a, tt.b)
-      if got != tt.want {
-        t.Errorf("Add(%d, %d) = %d, want %d", tt.a, tt.b, got, tt.want)
-      }
-    })
-  }
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			got := Add(tt.a, tt.b)
+			if got != tt.want {
+				t.Errorf("Add(%d, %d) = %d, want %d", tt.a, tt.b, got, tt.want)
+			}
+		})
+	}
 }
 ```
 
@@ -339,19 +339,19 @@ func TestAdd(t *testing.T) {
 
 ```go
 func TestUserService(t *testing.T) {
-  service := NewUserService()
+	service := NewUserService()
 
-  t.Run("valid registration", func(t *testing.T) {
-    user := &User{Name: "Alice", Email: "alice@example.com"}
-    err := service.Register(user)
-    if err != nil {
-      t.Fatalf("Register() error = %v", err)
-    }
-  })
+	t.Run("valid registration", func(t *testing.T) {
+		user := &User{Name: "Alice", Email: "alice@example.com"}
+		err := service.Register(user)
+		if err != nil {
+			t.Fatalf("Register() error = %v", err)
+		}
+	})
 
-  t.Run("duplicate email", func(t *testing.T) {
-    // Test duplicate email scenario
-  })
+	t.Run("duplicate email", func(t *testing.T) {
+		// Test duplicate email scenario
+	})
 }
 ```
 
@@ -359,24 +359,24 @@ func TestUserService(t *testing.T) {
 
 ```go
 func TestDatabaseOperations(t *testing.T) {
-  db := setupTestDB(t)
-  defer cleanupTestDB(t, db)
+	db := setupTestDB(t)
+	defer cleanupTestDB(t, db)
 
-  // Test database operations
+	// Test database operations
 }
 
 func setupTestDB(t *testing.T) *sql.DB {
-  db, err := sql.Open("sqlite3", ":memory:")
-  if err != nil {
-    t.Fatalf("Failed to open test database: %v", err)
-  }
+	db, err := sql.Open("sqlite3", ":memory:")
+	if err != nil {
+		t.Fatalf("Failed to open test database: %v", err)
+	}
 
-  // Run migrations
-  if err := runMigrations(db); err != nil {
-    t.Fatalf("Failed to run migrations: %v", err)
-  }
+	// Run migrations
+	if err := runMigrations(db); err != nil {
+		t.Fatalf("Failed to run migrations: %v", err)
+	}
 
-  return db
+	return db
 }
 ```
 

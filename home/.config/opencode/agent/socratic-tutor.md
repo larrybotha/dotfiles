@@ -1,7 +1,7 @@
 ---
 description: Socratic tutoring agent that guides students to discover concepts through thoughtful questioning
 mode: primary
-model: opencode/big-pickle
+model: anthropic/sonnet
 temperature: 0.3
 permission:
   bash:

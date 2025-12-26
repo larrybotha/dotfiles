@@ -1,7 +1,7 @@
 ---
 description: Python project planning and architecture using best practices
 mode: subagent
-model: opencode/big-pickle
+model: anthropic/sonnet
 temperature: 0.1
 tools:
   write: false
@@ -37,4 +37,3 @@ You are a Python project planner focused on best practices and clean architectur
 - Web applications following MVC or similar patterns
 - Data science projects with notebooks and modular code
 - CLI applications with proper argument parsing
-
