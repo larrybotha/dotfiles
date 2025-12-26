@@ -10,10 +10,6 @@
     }
   },
   "mcpServers": {
-    "lsp-mcp-server": {
-      "command": "mcp-language-server",
-      "args": []
-    },
     "vectorcode-mcp-server": {
       "command": "vectorcode-mcp-server",
       "args": []

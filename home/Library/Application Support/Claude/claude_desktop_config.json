@@ -1,15 +1,4 @@
 {
-  "mcpServers": {
-    "GitLab": {
-      "command": "npx",
-      "args": [
-        "-y",
-        "mcp-remote",
-        "https://GitLab.com/api/v4/mcp",
-        "--static-oauth-client-metadata",
-        "{\"scope\": \"mcp\"}"
-      ]
-    }
-  },
-  "globalShortcut": "Cmd+Space"
+  "globalShortcut": "Cmd+Space",
+  "mcpServers": {}
 }

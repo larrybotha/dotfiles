@@ -3,13 +3,6 @@
   "autoupdate": true,
   "theme": "aura",
   "mcp": {
-    "lsp-mcp-server": {
-      "type": "local",
-      "command": [
-        "mcp-language-server"
-      ],
-      "enabled": false
-    },
     "vectorcode-mcp-server": {
       "type": "local",
       "command": [

@@ -1,21 +1,5 @@
 {
   "mcpServers": {
-    "lsp-mcp-server": {
-      "command": "mcp-language-server",
-      "args": [],
-      "metadata": {
-        "opencode": {
-          "type": "local",
-          "enabled": false
-        },
-        "claude": {
-          "enabled": false
-        },
-        "gemini": {
-          "enabled": false
-        }
-      }
-    },
     "vectorcode-mcp-server": {
       "command": "vectorcode-mcp-server",
       "args": [],
