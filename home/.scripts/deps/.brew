@@ -132,6 +132,7 @@ brews=(
   "codespell"
   "djlint"
   "dotenv-linter"
+  "golangci-lint"
   "hadolint"
   "markdownlint-cli2"
   "rust-analyzer"
