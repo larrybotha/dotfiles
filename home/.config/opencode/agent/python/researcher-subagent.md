@@ -1,7 +1,7 @@
 ---
 description: Python documentation and standard library research
 mode: subagent
-model: anthropic/claude-sonnet-4-5/g
+model: anthropic/claude-sonnet-4-5
 temperature: 0.2
 tools:
   webfetch: true

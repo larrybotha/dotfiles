@@ -30,7 +30,7 @@ The `./agent` directory contains specialized development agents for OpenCode, in
 
 #### Research → Plan → Implement Workflow
 
-See [HumanLayer Workshop](https://github.com/humanlayer/humanlayer/blob/afadcd6032b4238b3ef3462450354f1ae24fd32b/docs/workshop.mdx)
+See [HumanLayer Workshop](https:/ithub.com/humanlayer/humanlayer/blob/afadcd6032b4238b3ef3462450354f1ae24fd32b/docs/workshop.mdx)
 
 ```text
 /research_codebase → /create_plan → /implement_plan
@@ -42,7 +42,7 @@ in parallel       planning       execution
 1. Research the codebase
 
    ```text
-   /g/research_codebase
+   /research_codebase
    ```
 
    then
@@ -63,7 +63,7 @@ in parallel       planning       execution
 2. Create a plan
 
    ```text
-   /g/create_plan
+   /create_plan
    ```
 
    then
@@ -85,7 +85,7 @@ in parallel       planning       execution
 3. Implement the plan
 
    ```text
-   /g/implement_plan
+   /implement_plan
    ```
 
    then
@@ -104,7 +104,7 @@ in parallel       planning       execution
    once changes are committed, validate the plan
 
    ```text
-   /g/validate_plan
+   /validate_plan
    ```
 
 #### Debugging Workflow
@@ -150,26 +150,23 @@ User: "How does Y work in our codebase?"
 
 ### Brainstorming Agents
 
-The brainstorming agents follow a Socratic methodology for software specification development. Based on the [Socratic Coder](https://github.com/0xVar/llm-prompts-socratic/blob/trunk/data/socratic-coder.md) approach, these agents help develop thorough specifications through guided questioning and critical analysis.
+The brainstorming agents follow a Socratic methodology for software specification development. Based on the [Socratic Coder](https:/ithub.com/0xVar/llm-prompts-socratic/blob/trunk/data/socratic-coder.md) approach, these agents help develop thorough specifications through guided questioning and critical analysis.
 
 #### socratic (Primary Agent)
 
 - **Purpose**: Socratic questioning agent for software specification development
-- **Model**: anthropic/claude-sonnet-4-5/g (temperature 0.3)
 - **Access**: Full filesystem and bash capabilities
 - **Focus**: Asks targeted questions to gather detailed requirements for software ideas
 
 #### critic-subagent (Subagent)
 
 - **Purpose**: Critically analyzes brainstorming results to identify flaws, challenges, and improvement areas
-- **Model**: anthropic/claude-sonnet-4-5/g (temperature 0.3)
 - **Access**: Full filesystem and bash capabilities
 - **Focus**: Technical feasibility, scalability, security, and market fit analysis
 
 #### spec-writer-subagent (Subagent)
 
 - **Purpose**: Compiles brainstorming findings into comprehensive developer-ready specifications
-- **Model**: anthropic/claude-sonnet-4-5/g (temperature 0.3)
 - **Access**: Full filesystem and bash capabilities
 - **Focus**: Creates RFC-like specification documents for immediate implementation
 
@@ -187,14 +184,12 @@ The workflow follows the Socratic method of iterative questioning and refinement
 #### developer (Primary Agent)
 
 - **Purpose**: Main Go development agent for coding, debugging, and optimization
-- **Model**: anthropic/claude-sonnet-4-5/g (temperature 0.3)
 - **Access**: Full filesystem, restricted bash (go commands and git read-only)
 - **Focus**: Standard library solutions, Go best practices
 
 #### pair-programmer (Primary Agent)
 
 - **Purpose**: Go pair programmer focused on best practices and code review
-- **Model**: anthropic/claude-sonnet-4-5/g (temperature 0.3)
 - **Access**: Read-only filesystem (no write/edit/bash)
 - **Focus**: Expert-level Go guidance, code review, and best practices
 
@@ -203,21 +198,18 @@ The workflow follows the Socratic method of iterative questioning and refinement
 #### developer (Primary Agent)
 
 - **Purpose**: Main Python development agent for coding, debugging, and optimization
-- **Model**: anthropic/claude-sonnet-4-5/g (temperature 0.3)
 - **Access**: Full filesystem, restricted bash (python, pip, poetry commands and git read-only)
 - **Focus**: Standard library solutions, PEP 8 compliance, Python best practices
 
 #### planner-subagent (Subagent)
 
 - **Purpose**: Python project planning and architecture
-- **Model**: anthropic/claude-sonnet-4-5/g (temperature 0.1)
 - **Access**: Read-only filesystem
 - **Focus**: Python-based architecture planning and best practices
 
 #### researcher-subagent (Subagent)
 
 - **Purpose**: Python documentation and research
-- **Model**: anthropic/claude-sonnet-4-5/g (temperature 0.2)
 - **Access**: Web fetch capabilities
 - **Focus**: Official Python documentation, PEPs, and best practices
 
@@ -315,7 +307,7 @@ To extend these agents for specific projects, create project-specific agents in 
 ---
 description: Socratic specification development for [project-name]
 mode: primary
-model: anthropic/claude-sonnet-4-5/g
+model: anthropic/claude-sonnet-4-5
 temperature: 0.3
 prompt: |
   You are working on the [project-name] project using Socratic methodology.
@@ -368,4 +360,4 @@ prompt: |
 - [https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/](https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/)
 - [https://www.penguinrandomhouse.com/books/741805/co-intelligence-by-ethan-mollick/](https://www.penguinrandomhouse.com/books/741805/co-intelligence-by-ethan-mollick/)
 - [https://princeton-nlp.github.io/SocraticAI/](https://princeton-nlp.github.io/SocraticAI/)
-- [humanlayer](https://github.com/humanlayer/humanlayer)
+- [humanlayer](https:/ithub.com/humanlayer/humanlayer)

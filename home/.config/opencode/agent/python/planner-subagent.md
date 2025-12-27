@@ -1,7 +1,7 @@
 ---
 description: Python project planning and architecture using best practices
 mode: subagent
-model: anthropic/claude-sonnet-4-5/g
+model: anthropic/claude-sonnet-4-5
 temperature: 0.1
 tools:
   write: false

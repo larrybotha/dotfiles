@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "anthropic/claude-sonnet-4-5/g",
+  "model": "anthropic/claude-sonnet-4-5",
   "autoupdate": true,
   "theme": "aura",
   "mcp": {
@@ -14,7 +14,7 @@
       "command": [
         "uvx",
         "--from",
-        "git+https://github.com/Kapeli/dash-mcp-server.git",
+        "git+https:/ithub.com/Kapeli/dash-mcp-server.git",
         "dash-mcp-server"
       ],
       "enabled": true
