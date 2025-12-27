@@ -1,7 +1,7 @@
 ---
 description: Go development agent focused on standard library solutions
 mode: primary
-model: anthropic/sonnet
+model: anthropic/claude-sonnet-4-5/g
 temperature: 0.3
 permission:
   bash:

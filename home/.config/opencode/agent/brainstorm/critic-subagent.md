@@ -1,7 +1,7 @@
 ---
 description: Critically analyzes brainstorming results to identify flaws, challenges, and improvement areas
 mode: subagent
-model: anthropic/sonnet
+model: anthropic/claude-sonnet-4-5/g
 temperature: 0.3
 permission:
   bash:

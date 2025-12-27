@@ -1,7 +1,7 @@
 ---
 description: Python development agent focused on standard library and best practices
 mode: primary
-model: anthropic/sonnet
+model: anthropic/claude-sonnet-4-5/g
 temperature: 0.3
 permission:
   bash:
