@@ -5,7 +5,6 @@
 source ~/.scripts/.exports
 source ~/.scripts/.aliases
 source ~/.scripts/.functions
-source ~/.scripts/.sh_prompt
 
 # tmux only sources .bashrc, so we need to source .bash_profile manually
 [[ -n "$PS1" && -z $TMUX ]] && source "$HOME"/.bash_profile

@@ -7,7 +7,6 @@ source "$ZDOTDIR"/completions
 
 source ~/.scripts/.aliases
 source ~/.scripts/.functions
-source ~/.scripts/.sh_prompt
 
 source "$HOME/.scripts/.common_shrc"
 
