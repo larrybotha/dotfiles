@@ -104,6 +104,7 @@ brews=(
 
   # Lua
   "lua"
+  "luarocks" # required for neorg
   "lua-language-server"
 
   # Rust
