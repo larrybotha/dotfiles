@@ -9,6 +9,7 @@ return {
 			-- one of "all", or a list of languages
 			ensure_installed = {
 				"bash",
+				"c",
 				"comment",
 				"css",
 				"diff",
