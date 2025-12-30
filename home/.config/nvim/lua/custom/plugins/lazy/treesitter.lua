@@ -45,14 +45,16 @@ return {
 			indent = {
 				enable = true,
 			},
-			-- List of parsers to ignore installing
-			--ignore_install = { "javascript" },
 			highlight = {
 				-- false will disable the whole extension
 				enable = true,
 				-- list of languages that will be disabled
 				disable = {},
 			},
+			modules = {},
+			auto_install = false,
+			sync_install = false,
+			ignore_install = {},
 		})
 	end,
 }
