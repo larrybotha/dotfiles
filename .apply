@@ -127,9 +127,11 @@ function symlink_configs() {
     ".config/kitty|$HOME/.config/kitty"
     ".config/kmonad|$HOME/.config/kmonad"
     ".config/lazygit|$HOME/.config/lazygit"
+    ".config/neorg|$HOME/.config/neorg"
     ".config/nix|$HOME/.config/nix"
     ".config/nnn|$HOME/.config/nnn"
     ".config/nvim|$HOME/.config/nvim"
+    ".config/opencode|$HOME/.config/opencode"
     ".config/posting|$HOME/.config/posting"
     ".config/prettierd|$HOME/.config/prettierd"
     ".config/ptpython|$HOME/.config/ptpython"
@@ -141,7 +143,6 @@ function symlink_configs() {
     ".config/tmux|$HOME/.config/tmux"
     ".config/vectorcode|$HOME/.config/vectorcode"
     ".config/yabai|$HOME/.config/yabai"
-    ".config/opencode|$HOME/.config/opencode"
     ".config/zsh|$HOME/.config/zsh"
 
     # Application Support
