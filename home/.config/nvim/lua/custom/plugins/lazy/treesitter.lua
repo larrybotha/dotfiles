@@ -28,6 +28,7 @@ return {
 				"make",
 				"markdown",
 				"nginx",
+				"norg",
 				"python",
 				"regex",
 				"rst",
