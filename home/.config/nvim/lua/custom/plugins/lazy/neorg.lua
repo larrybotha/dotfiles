@@ -19,5 +19,10 @@ return {
 				},
 			},
 		})
+
+		-- Expand 'norw' to 'Neorg workspace'
+		vim.cmd([[cabbrev norw Neorg workspace]])
+		-- Expand 'nori' to 'Neorg index'
+		vim.cmd([[cabbrev nori Neorg index]])
 	end,
 }
