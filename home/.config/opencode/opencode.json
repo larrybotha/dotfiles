@@ -21,6 +21,12 @@
     }
   },
   "keybinds": {
-    "input_newline": "shift+enter"
+    "input_newline": "shift+enter",
+    "messages_half_page_down": "<leader>j",
+    "messages_half_page_up": "<leader>k",
+    "messages_last": "<leader>shift+g",
+    "session_child_cycle": "<leader>right",
+    "session_child_cycle_reverse": "<leader>left",
+    "session_parent": "<leader>p"
   }
 }
