@@ -51,8 +51,8 @@ Then wait for the user's input.
 2. **Spawn initial research tasks to gather context**:
    Before asking the user any questions, use specialized agents to research in parallel:
 
-   - Use the **codebase-locator** agent to find all files related to the ticket/task
-   - Use the **codebase-analyzer** agent to understand how the current implementation works
+   - Use the **research/codebase-locator** agent to find all files related to the ticket/task
+   - Use the **research/codebase-analyzer** agent to understand how the current implementation works
    - If relevant, use the **thoughts-locator** agent to find any existing thoughts documents about this feature
 
    These agents will:
@@ -119,8 +119,8 @@ After getting initial clarifications:
 
    **For historical context:**
 
-   - **thoughts-locator** - To find any research, plans, or decisions about this area
-   - **thoughts-analyzer** - To extract key insights from the most relevant documents
+   - **research/thoughts-locator** - To find any research, plans, or decisions about this area
+   - **research/thoughts-analyzer** - To extract key insights from the most relevant documents
 
    Each agent knows how to:
 

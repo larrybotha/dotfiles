@@ -76,14 +76,14 @@ If the user's feedback requires understanding new code patterns or validating as
 
    **For code investigation:**
 
-   - **codebase-locator** - To find relevant files
-   - **codebase-analyzer** - To understand implementation details
-   - **codebase-pattern-finder** - To find similar patterns
+   - **research/codebase-locator** - To find relevant files
+   - **research/codebase-analyzer** - To understand implementation details
+   - **research/codebase-pattern-finder** - To find similar patterns
 
    **For historical context:**
 
-   - **thoughts-locator** - To find related research or decisions
-   - **thoughts-analyzer** - To extract insights from documents
+   - **research/thoughts-locator** - To find related research or decisions
+   - **research/thoughts-analyzer** - To extract insights from documents
 
    **Be EXTREMELY specific about directories**:
 
