@@ -1,4 +1,6 @@
 debug/
+cache/
+telemetry/
 file-history/
 plugins/
 projects/
