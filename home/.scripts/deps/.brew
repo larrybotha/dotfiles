@@ -17,6 +17,7 @@ brews=(
   "wget"
 
   "aider"
+  "anomalyco/tap/opencode" # up-to-date version of opencode
   "ansible"
   "ansible-lint"
   "ariga/tap/atlas" # Terraform-like orchestration for db schemas
@@ -64,7 +65,6 @@ brews=(
   "neovim"
   "nvm"
   "ollama"
-  "opencode"
   "oven-sh/bun/bun"
   "packer"
   "parallel"
