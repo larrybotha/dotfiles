@@ -156,11 +156,11 @@ casks=(
   "claude"
   "claude-code"
   "dash"
-  "docker"
+  "docker-desktop"
   "figma"
   "firefox"
   "flameshot"
-  "flux"
+  "flux-app"
   "font-roboto-mono-nerd-font"
   "ghostty"
   "hammerspoon" # Yabai dependency
