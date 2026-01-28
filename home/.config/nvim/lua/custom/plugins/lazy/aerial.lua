@@ -1,5 +1,8 @@
 return {
 	"stevearc/aerial.nvim",
+	-- TODO: remove this pinned commit once
+	-- https://github.com/stevearc/aerial.nvim/issues/506 is resolved
+	commit = "da0ceef62eb58b9bec1975017beb2f28c3b1e72c",
 	dependencies = {
 		"nvim-treesitter/nvim-treesitter",
 		"nvim-tree/nvim-web-devicons",
