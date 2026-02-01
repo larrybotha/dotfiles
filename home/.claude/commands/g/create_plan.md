@@ -12,27 +12,22 @@ When this command is invoked:
 
 1. **Check if parameters were provided**:
 
-   - If a file path or ticket reference was provided as a parameter, skip the default message
+   - If a file path or ticket reference was provided, skip the default message
    - Immediately read any provided files FULLY
    - Begin the research process
 
 2. **If no parameters provided**, respond with:
 
 ```
-I'll help you create a detailed implementation plan. Let me start by understanding what we're building.
+I'll help create a detailed implementation plan. Please provide:
+1. Task/ticket description or reference
+2. Relevant context/constraints
+3. Related research/implementations
 
-Please provide:
-1. The task/ticket description (or reference to a ticket file)
-2. Any relevant context, constraints, or specific requirements
-3. Links to related research or previous implementations
-
-I'll analyze this information and work with you to create a comprehensive plan.
-
-Tip: You can also invoke this command with a ticket file directly: `/create_plan thoughts/allison/tickets/eng_1234.md`
-For deeper analysis, try: `/create_plan think deeply about thoughts/allison/tickets/eng_1234.md`
+You can invoke with a file: `/create_plan thoughts/allison/tickets/eng_1234.md`
 ```
 
-Then wait for the user's input.
+Wait for user input.
 
 ## Process Steps
 
@@ -104,23 +99,17 @@ After getting initial clarifications:
    - Read the specific files/directories they mention
    - Only proceed once you've verified the facts yourself
 
-2. **Create a research todo list** using TodoWrite to track exploration tasks
+2. **Create research todo list** (TodoWrite)
 
-3. **Spawn parallel sub-tasks for comprehensive research**:
+3. **Spawn parallel research tasks**:
 
-   - Create multiple Task agents to research different aspects concurrently
-   - Use the right agent for each type of research:
-
-   **For deeper investigation:**
-
-   - **codebase-locator** - To find more specific files (e.g., "find all files that handle [specific component]")
-   - **codebase-analyzer** - To understand implementation details (e.g., "analyze how [system] works")
-   - **codebase-pattern-finder** - To find similar features we can model after
-
-   **For historical context:**
-
-   - **thoughts-locator** - To find any research, plans, or decisions about this area
-   - **thoughts-analyzer** - To extract key insights from the most relevant documents
+   | Agent                   | Use For                        |
+   | ----------------------- | ------------------------------ |
+   | codebase-locator        | Find specific files/components |
+   | codebase-analyzer       | Implementation details         |
+   | codebase-pattern-finder | Similar features to model      |
+   | thoughts-locator        | Research/plans/decisions       |
+   | thoughts-analyzer       | Extract key insights           |
 
    Each agent knows how to:
 
@@ -130,7 +119,7 @@ After getting initial clarifications:
    - Return specific file:line references
    - Find tests and examples
 
-4. **Wait for ALL sub-tasks to complete** before proceeding
+4. **Wait for ALL sub-tasks** before proceeding
 
 5. **Present findings and design options**:
 
@@ -227,22 +216,35 @@ After structure approval:
 
 #### 1. [Component/File Group]
 
-**File**: `path/to/file.ext`
-**Changes**: [Summary of changes]
+**Goal:** [One sentence - what you want to achieve and why]
 
-```[language]
-// Specific code to add/modify
+**Location:** `path/to/file.ext:FunctionName` or `path/to/file.ext:TypeName`
+
+**Approach:**
+
+- [Key decision or implementation point]
+- [Another key point]
+
+**Changes:**
+
+```diff
+ existing code for context
++new code to add
+-code to remove
+ more existing context
 ```
+
+**Verification:** [How to verify it works - test command or manual step]
 
 ### Success Criteria:
 
 #### Automated Verification:
 
-- [ ] Migration applies cleanly: `make migrate`
-- [ ] Unit tests pass: `make test-component`
+- [ ] Migration applies cleanly: `just migrate`
+- [ ] Unit tests pass: `just test internal/domain`
 - [ ] Type checking passes: `npm run typecheck`
-- [ ] Linting passes: `make lint`
-- [ ] Integration tests pass: `make test-integration`
+- [ ] Linting passes: `just lint`
+- [ ] Integration tests pass: `just test-integration`
 
 #### Manual Verification:
 
@@ -251,7 +253,7 @@ After structure approval:
 - [ ] Edge case handling verified manually
 - [ ] No regressions in related features
 
-**Implementation Note**: After completing this phase and all automated verification passes, pause here for manual confirmation from the human that the manual testing was successful before proceeding to the next phase.
+**Implementation Note**: After automated verification passes, pause for manual confirmation before proceeding to next phase.
 
 ---
 
@@ -298,7 +300,7 @@ After structure approval:
 1. **Present the draft plan location**:
 
    ```
-   I've created the initial implementation plan at:
+   Initial implementation plan created:
    `thoughts/shared/plans/YYYY-MM-DD-ENG-XXXX-description.md`
 
    Please review it and let me know:
@@ -358,6 +360,98 @@ After structure approval:
    - Do NOT write the plan with unresolved questions
    - The implementation plan must be complete and actionable
    - Every decision must be made before finalizing the plan
+
+## Code Examples in Plans
+
+When including code examples in implementation plans, follow these token-efficient guidelines:
+
+### Decision Tree: When to Use What Format
+
+```
+Is this a new file?
+├─ YES → Use full code block with file path
+└─ NO → Is >50% of file changing?
+    ├─ YES → Use full code block with clear sections
+    └─ NO → Use hierarchical diff format
+```
+
+### Hierarchical Diff Format (Preferred for Modifications)
+
+Use this format for **existing file modifications** to save tokens while maintaining clarity:
+
+**Goal:** [One sentence - what and why]
+
+**Location:** `path/to/file.go:FunctionName` (prefer function names over line numbers)
+
+**Approach:**
+
+- [Key decision 1]
+- [Key decision 2]
+
+**Changes:**
+
+```diff
+ existing code for context
++new code to add
+-code to remove
+ more existing context
+```
+
+**Verification:** [How to test]
+
+### Location Reference Priority
+
+Use the most specific, stable reference available:
+
+1. **Function/method name** (best): `path/to/file.go:FunctionName`
+   - Survives line number changes
+   - Unambiguous scope
+2. **Type/struct name**: `path/to/file.go:TypeName`
+   - Good for adding methods or fields
+3. **Line ranges** (last resort): `path/to/file.go:45-67`
+   - Will drift as code changes
+   - Use only when no better reference exists
+
+### When to Use Full Code Blocks
+
+Use complete code blocks for:
+
+1. **Creating new files** - Show entire structure
+2. **Complex refactoring** - More than 50% of code changes
+3. **Teaching patterns** - Demonstrating complete implementation
+4. **Small functions** - Entire function is <15 lines
+
+### Example
+
+````markdown
+**Goal:** Add pipeline existence check before execution
+
+**Location:** `pipeline/executor.go:Execute`
+
+**Approach:**
+
+- Lock for read, check existence, return error if not found
+- Keep existing execution logic
+
+**Changes:**
+
+```diff
+ func (e *Executor) Execute(ctx context.Context, id string) error {
++    e.mu.RLock()
++    p, exists := e.pipelines[id]
++    e.mu.RUnlock()
++
++    if !exists {
++        return fmt.Errorf("pipeline not found: %s", id)
++    }
++
+-    return e.pipelines[id].Run(ctx)
++    return p.Run(ctx)
+ }
+```
+
+**Verification:** `go test ./pipeline -run TestExecute_NotFound`
+````
 
 ## Success Criteria Guidelines
 
