@@ -76,6 +76,10 @@ return {
 			opencode.command("session.half.page.down")
 		end, { desc = "Scroll opencode half page down" })
 
+		set_keymap("n", "<leader>oN", function()
+			opencode.command("session.new")
+		end, { desc = "New opencode session" })
+
 		set_keymap("n", "<leader>oU", function()
 			opencode.command("session.undo")
 		end, { desc = "Undo opencode action" })
