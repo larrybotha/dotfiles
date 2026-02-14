@@ -28,7 +28,7 @@
     "messages_last": "<leader>shift+g",
     "session_child_cycle": "<leader>n",
     "session_child_cycle_reverse": "<leader>p",
-    "session_new": "<leader>N",
-    "session_parent": "<leader>P"
+    "session_new": "<leader>shift+n",
+    "session_parent": "<leader>shift+p"
   }
 }
