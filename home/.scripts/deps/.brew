@@ -16,7 +16,6 @@ brews=(
   "openldap"  # Mojave deps (TODO: determine if this is still needed)
   "wget"
 
-  "aider"
   "anomalyco/tap/opencode" # up-to-date version of opencode
   "ansible"
   "ansible-lint"

@@ -23,7 +23,7 @@ This is Larry Botha's personal dotfiles repository that manages configuration fi
 
 ### Daily Usage
 
-```bash
+````bash
 # Apply/sync dotfiles changes
 ./.apply
 
@@ -36,16 +36,13 @@ just -g update-all
 # Update specific dependency file
 just -g update-only <file>
 
-# Start configured Aider with specific models
-just -g start-aider
-```
 
 ### Build Commands
 
 ```bash
 # Apply dotfiles via Makefile
 make apply
-```
+````
 
 ## Architecture
 

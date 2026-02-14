@@ -116,7 +116,6 @@ function symlink_configs() {
     "init|$HOME/init"
 
     # .config links
-    ".config/aider|$HOME/.config/aider"
     ".config/asynctasks|$HOME/.config/asynctasks"
     ".config/atuin|$HOME/.config/atuin"
     ".config/bat|$HOME/.config/bat"

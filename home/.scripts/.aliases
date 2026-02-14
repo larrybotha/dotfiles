@@ -30,17 +30,6 @@ alias tml='tmux ls'
 alias tmr='tmux rename-session -t'
 alias tmk='tmux kill-session -t'
 
-# aider
-if type "aider" >/dev/null; then
-  alias aider='aider \
-    --chat-history-file ~/.config/aider/.aider.chat.history.md \
-    --config ~/.config/aider/.aider.conf.yml \
-    --env-file ~/.config/aider/.env \
-    --input-history-file ~/.config/aider/.aider.input.history \
-    --no-gitignore
-  '
-fi
-
 # evcxr
 if type "evcxr" >/dev/null; then
   alias evcxr='evcxr --edit-mode vi'
