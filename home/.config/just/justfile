@@ -1,62 +1,62 @@
 default:
-  @just --list
+    @just --list
 
 update:
-  ~/.scripts/deps/.brew
-  ~/.scripts/deps/.nvim
-  ~/.scripts/deps/.python
-  just -g update-nnn-plugins
+    ~/.scripts/deps/.brew
+    ~/.scripts/deps/.nvim
+    ~/.scripts/deps/.python
+    just -g update-nnn-plugins
 
 update-all:
-  ~/.scripts/deps/.all
+    ~/.scripts/deps/.all
 
 update-only file:
-  ~/.scripts/deps/.{{ file }}
+    ~/.scripts/deps/.{{ file }}
 
 _configged-aider *args='':
-  aider \
-    --chat-history-file ~/.config/aider/.aider.chat.history.md \
-    --config ~/.config/aider/.aider.conf.yml \
-    --env-file ~/.config/aider/.env \
-    --input-history-file ~/.config/aider/.aider.input.history \
-    --no-gitignore \
-    {{ args }}
+    aider \
+      --chat-history-file ~/.config/aider/.aider.chat.history.md \
+      --config ~/.config/aider/.aider.conf.yml \
+      --env-file ~/.config/aider/.env \
+      --input-history-file ~/.config/aider/.aider.input.history \
+      --no-gitignore \
+      {{ args }}
 
 start-aider:
-  @just -g _configged-aider --architect \
-    --model openrouter/deepseek/deepseek-r1 \
-    --editor-model openrouter/anthropic/claude-3.7-sonnet \
-    --watch-files
+    @just -g _configged-aider --architect \
+      --model openrouter/deepseek/deepseek-r1 \
+      --editor-model openrouter/anthropic/claude-3.7-sonnet \
+      --watch-files
 
 vectorcode-db-start:
-  #!/usr/bin/env bash
+    #!/usr/bin/env bash
 
-  cd ~/.config/vectorcode
+    cd ~/.config/vectorcode
 
-  # if container running, indicate so, otherwise start it
-  if test [[ docker ps -q --filter "name=vectorcode_chromadb" ]]; then
-    echo "ChromaDB container already running"
-  else
-    echo "Starting vector code ChromaDB container..."
-    docker compose up -d
-    echo "vectorcode ChromaDB container started successfully"
-  fi
+    # if container running, indicate so, otherwise start it
+    if test [[ docker ps -q --filter "name=vectorcode_chromadb" ]]; then
+      echo "ChromaDB container already running"
+    else
+      echo "Starting vector code ChromaDB container..."
+      docker compose up -d
+      echo "vectorcode ChromaDB container started successfully"
+    fi
 
 vectorcode-db-stop:
-  #!/usr/bin/env bash
-  cd ~/.config/vectorcode
+    #!/usr/bin/env bash
+    cd ~/.config/vectorcode
 
-  docker compose down
+    docker compose down
 
 update-nnn-plugins:
-  #!/usr/bin/env bash
+    #!/usr/bin/env bash
 
-  if ping -c 1 -q example.com >&/dev/null; then
-    echo "internet available to update nnn plugins..."
-  else
-    echo "internet is unavailable to update nnn plugins..."
-    exit 1
-  fi
+    if ping -c 1 -q example.com >&/dev/null; then
+      echo "internet available to update nnn plugins..."
+    else
+      echo "internet is unavailable to update nnn plugins..."
+      exit 1
+    fi
 
-  rm -rf "$HOME/.config/nnn/plugins"
-  curl -Ls https://raw.githubusercontent.com/jarun/nnn/master/plugins/getplugs | sh
+    rm -rf "$HOME/.config/nnn/plugins"
+    curl -Ls https://raw.githubusercontent.com/jarun/nnn/master/plugins/getplugs | sh

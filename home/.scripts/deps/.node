@@ -1,6 +1,5 @@
 #!/usr/bin/env bash
 
-# TODO: use GNU parallel to speed up installation of these deps
 common_modules=(
   fast-cli
   imageoptim-cli
