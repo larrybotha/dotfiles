@@ -1,8 +1,10 @@
 return {
-	"NickvanDyke/opencode.nvim",
+	"nickjvandyke/opencode.nvim",
 	dependencies = {
 		{
-			-- snacks is the recommended provider for `ask()` and `select()`
+			-- Recommended for `ask()` and `select()`.
+			-- Required for `snacks` provider.
+			---@module 'snacks'
 			"folke/snacks.nvim",
 			---@type snacks.Config
 			opts = { input = {}, picker = {}, terminal = {} },
@@ -11,23 +13,38 @@ return {
 	config = function()
 		local opencode = require("opencode")
 		local set_keymap = vim.keymap.set
-		local keymap_modes = { "n", "x" }
 
 		---@type opencode.Opts
 		vim.g.opencode_opts = {}
-		vim.o.autoread = true -- allow reloading buffers when updated by opencode
 
-		set_keymap({ "n", "t" }, "<leader>ot", opencode.toggle, { desc = "Toggle opencode" }) -- codespell:ignore
+		-- Required for `opts.events.reload`.
+		vim.o.autoread = true
 
-		set_keymap(keymap_modes, "<leader>oa", function()
+		-- Toggle opencode
+		set_keymap(
+			{ "n", "t" },
+			"<leader>ot", -- codespell:ignore
+			opencode.toggle,
+			{ desc = "Toggle opencode" }
+		)
+
+		set_keymap({ "n", "x" }, "<leader>oa", function()
 			opencode.ask("@this: ", { submit = true })
 		end, { desc = "Ask opencode" })
 
-		set_keymap(keymap_modes, "<leader>os", opencode.select, { desc = "Execute opencode action…" })
+		set_keymap({ "n", "x" }, "<leader>os", opencode.select, { desc = "Select opencode action" })
 
-		set_keymap(keymap_modes, "<leader>op", function()
-			opencode.prompt("@this")
-		end, { desc = "Add to opencode" })
+		set_keymap({ "n" }, "<leader>ob", function()
+			return opencode.prompt("@buffer \n")
+		end, { desc = "Add buffer to opencode" })
+
+		set_keymap({ "x" }, "<leader>ol", function()
+			return opencode.operator("@this ")
+		end, { desc = "Add range to opencode", expr = true })
+
+		set_keymap("n", "<leader>ol", function()
+			return opencode.operator("@this ") .. "_"
+		end, { desc = "Add line to opencode", expr = true })
 
 		set_keymap("n", "<leader>oc", function()
 			opencode.command("agent.cycle")
@@ -45,12 +62,26 @@ return {
 			opencode.command("session.interrupt")
 		end, { desc = "Interrupt opencode" })
 
-		set_keymap("n", "<leader>ou", function()
+		-- TODO: determine how to get Hydra-like navigation working
+		-- Currently doesn't work because:
+		--  - Hydra is synchronous, blocking the event loop until it times out or is
+		--    cancelled
+		--  - opencode.nvim is asynchronous, so no updates appear in opencode until
+		--    the Hydra exits
+		set_keymap("n", "<leader>o{", function()
 			opencode.command("session.half.page.up")
-		end, { desc = "opencode half page up" })
+		end, { desc = "Scroll opencode half page up" })
 
-		set_keymap("n", "<leader>od", function()
+		set_keymap("n", "<leader>o}", function()
 			opencode.command("session.half.page.down")
-		end, { desc = "opencode half page down" })
+		end, { desc = "Scroll opencode half page down" })
+
+		set_keymap("n", "<leader>oU", function()
+			opencode.command("session.undo")
+		end, { desc = "Undo opencode action" })
+
+		set_keymap("n", "<leader>oR", function()
+			opencode.command("session.redo")
+		end, { desc = "Redo opencode action" })
 	end,
 }

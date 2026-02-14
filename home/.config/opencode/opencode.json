@@ -26,8 +26,9 @@
     "messages_half_page_down": "<leader>j",
     "messages_half_page_up": "<leader>k",
     "messages_last": "<leader>shift+g",
-    "session_child_cycle": "<leader>right",
-    "session_child_cycle_reverse": "<leader>left",
-    "session_parent": "<leader>p"
+    "session_child_cycle": "<leader>n",
+    "session_child_cycle_reverse": "<leader>p",
+    "session_new": "<leader>N",
+    "session_parent": "<leader>P"
   }
 }
