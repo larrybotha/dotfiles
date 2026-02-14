@@ -13,21 +13,6 @@ update-all:
 update-only file:
     ~/.scripts/deps/.{{ file }}
 
-_configged-aider *args='':
-    aider \
-      --chat-history-file ~/.config/aider/.aider.chat.history.md \
-      --config ~/.config/aider/.aider.conf.yml \
-      --env-file ~/.config/aider/.env \
-      --input-history-file ~/.config/aider/.aider.input.history \
-      --no-gitignore \
-      {{ args }}
-
-start-aider:
-    @just -g _configged-aider --architect \
-      --model openrouter/deepseek/deepseek-r1 \
-      --editor-model openrouter/anthropic/claude-3.7-sonnet \
-      --watch-files
-
 vectorcode-db-start:
     #!/usr/bin/env bash
 
