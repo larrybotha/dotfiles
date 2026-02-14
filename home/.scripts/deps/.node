@@ -125,7 +125,15 @@ function _main() {
     echo "Using GNU parallel to install modules."
     export -f _is_installed
     export -f _conditional_install
-    printf "%s\n" "${all_modules[@]}" | parallel --bar _conditional_install {} "$update_existing"
+
+    # Check if we have a TTY available for progress bar
+    if [ -t 1 ] && [ -t 2 ] && [ -w /dev/tty ] 2>/dev/null; then
+      # TTY available, use progress bar
+      printf "%s\n" "${all_modules[@]}" | parallel --bar _conditional_install {} "$update_existing"
+    else
+      # No TTY available, use line-buffered output instead
+      printf "%s\n" "${all_modules[@]}" | parallel --line-buffer --tagstring '[{#}]' _conditional_install {} "$update_existing"
+    fi
   else
     echo "GNU parallel not found, installing sequentially."
     for module in "${all_modules[@]}"; do
