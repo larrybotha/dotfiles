@@ -59,7 +59,7 @@ function _ensure_has_nvm() {
     echo "nvm already installed"
   else
     echo "installing nvm"
-    curl -o- curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
+    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
     # shellcheck source=/dev/null
     . "$NVM_DIR/nvm.sh"
   fi
