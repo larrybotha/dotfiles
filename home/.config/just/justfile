@@ -51,12 +51,17 @@ vectorcode-db-stop:
 update-nnn-plugins:
     #!/usr/bin/env bash
 
-    if ping -c 1 -q example.com >&/dev/null; then
+    set -euo pipefail
+
+    url="https://raw.githubusercontent.com/jarun/nnn/master/plugins/getplugs"
+
+    if curl -fsSL --connect-timeout 5 --max-time 10 "$url" \
+        -o /dev/null 2>&1; then
       echo "internet available to update nnn plugins..."
     else
-      echo "internet is unavailable to update nnn plugins..."
+      echo "cannot reach GitHub - check internet connection"
       exit 1
     fi
 
     rm -rf "$HOME/.config/nnn/plugins"
-    curl -Ls https://raw.githubusercontent.com/jarun/nnn/master/plugins/getplugs | sh
+    curl -Ls "$url" | sh
