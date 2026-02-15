@@ -55,4 +55,5 @@ return {
 			desc = "Register buffer for VectorCode",
 		})
 	end,
+	enabled = false,
 }

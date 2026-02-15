@@ -9,4 +9,5 @@ return {
 		require("custom.plugins.codecompanion")
 	end,
 	event = "VeryLazy",
+	enabled = false,
 }
