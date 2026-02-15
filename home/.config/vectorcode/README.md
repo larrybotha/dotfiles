@@ -88,5 +88,4 @@ Embeddings are stored persistently in `~/.local/share/vectorcode/chromadb/` thro
 
 ## Configuration Management
 
-MCP server configurations are centrally managed in `scripts/mcp/mcp-servers.json` and automatically distributed to all agent configs via `scripts/mcp/set-mcp-servers.py`.
-
+MCP server configurations are centrally managed in `scripts/agents/mcp-servers.json` and automatically distributed to all agent configs via `scripts/mcp/set-mcp-servers.py`.
