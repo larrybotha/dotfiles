@@ -9,3 +9,7 @@ statsig/
 todos/
 history.jsonl
 stats-cache.json
+
+# Generated from templates by sync-agents.py
+agents/
+commands/
