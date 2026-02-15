@@ -10,6 +10,13 @@ update:
 update-all:
     ~/.scripts/deps/.all
 
+# Sync agent and command configurations from templates
+sync-agents:
+    #!/usr/bin/env bash
+    cd ~/.scripts/agents
+    echo "Synchronizing agent configurations..."
+    uv run python sync-agents.py
+
 update-only file:
     ~/.scripts/deps/.{{ file }}
 
