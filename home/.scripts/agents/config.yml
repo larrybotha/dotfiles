@@ -1,0 +1,4 @@
+# Provider base output directories
+providers:
+  claude: ~/.claude
+  opencode: ~/.config/opencode
