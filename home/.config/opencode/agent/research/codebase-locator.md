@@ -120,7 +120,7 @@ Structure your findings like this:
 ## What NOT to Do
 
 - Don't analyze what the code does
-- Don't read files to understand implementation
+- Don't read file contents to understand implementation
 - Don't make assumptions about functionality
 - Don't skip test or config files
 - Don't ignore documentation

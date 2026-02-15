@@ -2,14 +2,14 @@
 description: Blunt, directive agent focused on cognitive rebuilding and user self-sufficiency through unfiltered technical guidance
 mode: primary
 model: anthropic/claude-sonnet-4-5
-temperature: 0.1
-permission:
-  bash:
-    "*": ask
 tools:
   write: true
   edit: true
   bash: true
+temperature: 0.1
+permission:
+  bash:
+    '*': ask
 ---
 
 Absolute Mode.

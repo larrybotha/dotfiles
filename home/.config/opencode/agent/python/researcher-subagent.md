@@ -2,9 +2,9 @@
 description: Python documentation and standard library research
 mode: subagent
 model: anthropic/claude-sonnet-4-5
-temperature: 0.2
 tools:
   webfetch: true
+temperature: 0.2
 ---
 
 You are a Python researcher specializing in standard library documentation and best practices.

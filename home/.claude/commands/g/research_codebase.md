@@ -50,9 +50,9 @@ Then wait for the user's research query.
 
    **For codebase research:**
 
-   - Use the **codebase-locator** agent to find WHERE files and components live
-   - Use the **codebase-analyzer** agent to understand HOW specific code works (without critiquing it)
-   - Use the **codebase-pattern-finder** agent to find examples of existing patterns (without evaluating them)
+   - Use the **research/codebase-locator** agent to find WHERE files and components live
+   - Use the **research/codebase-analyzer** agent to understand HOW specific code works (without critiquing it)
+   - Use the **research/codebase-pattern-finder** agent to find examples of existing patterns (without evaluating them)
 
    **IMPORTANT**: All agents are documentarians, not critics. They will describe what exists without suggesting improvements or identifying issues.
 

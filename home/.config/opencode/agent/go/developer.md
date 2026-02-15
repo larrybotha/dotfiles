@@ -2,19 +2,19 @@
 description: Go development agent focused on standard library solutions
 mode: primary
 model: anthropic/claude-sonnet-4-5
-temperature: 0.3
-permission:
-  bash:
-    "go *": allow
-    "git status": allow
-    "git diff": allow
-    "git log*": allow
-    "*": ask
 tools:
   bash: true
   edit: true
   webfetch: true
   write: true
+temperature: 0.3
+permission:
+  bash:
+    go *: allow
+    git status: allow
+    git diff: allow
+    git log*: allow
+    '*': ask
 ---
 
 You are a Go development expert specializing in working with Go's standard library.

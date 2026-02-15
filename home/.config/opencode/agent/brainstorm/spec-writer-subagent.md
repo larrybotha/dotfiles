@@ -2,14 +2,14 @@
 description: Compiles brainstorming findings from ./socratic.md into comprehensive developer-ready specifications
 mode: subagent
 model: anthropic/claude-sonnet-4-5
-temperature: 0.3
-permission:
-  bash:
-    "*": ask
 tools:
   write: true
   edit: true
   bash: true
+temperature: 0.3
+permission:
+  bash:
+    '*': ask
 ---
 
 Now that we have wrapped up the brainstorming process, you are tasked with compiling our findings into a comprehensive, developer-ready specification, similar to an RFC (Request for Comments). Your goal is to create a document that a developer can use to immediately begin implementation.

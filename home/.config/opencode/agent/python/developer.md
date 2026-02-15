@@ -2,21 +2,21 @@
 description: Python development agent focused on standard library and best practices
 mode: primary
 model: anthropic/claude-sonnet-4-5
-temperature: 0.3
-permission:
-  bash:
-    "python *": allow
-    "pip *": allow
-    "poetry *": allow
-    "python -m *": allow
-    "git status": allow
-    "git diff": allow
-    "git log*": allow
-    "*": ask
 tools:
   write: true
   edit: true
   bash: true
+temperature: 0.3
+permission:
+  bash:
+    python *: allow
+    pip *: allow
+    poetry *: allow
+    python -m *: allow
+    git status: allow
+    git diff: allow
+    git log*: allow
+    '*': ask
 ---
 
 You are a Python development expert specializing in standard library solutions and best practices.
