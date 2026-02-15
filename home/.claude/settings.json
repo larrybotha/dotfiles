@@ -1,4 +1,7 @@
 {
   "enableAllProjectMcpServers": false,
+  "enabledPlugins": {
+    "typescript-lsp@claude-plugins-official": true
+  },
   "alwaysThinkingEnabled": true
 }
