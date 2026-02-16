@@ -145,20 +145,19 @@ class MCPServerConfig:
     Attributes
     ----------
     name : str
-        Server name
-    command : str
-        Command to run the server
-    args : List[str]
-        Command-line arguments for the server
-    providers : Dict[str, Dict[str, Any]]
+        Server name (derived from config key, not from values)
+    values : dict[str, Any]
+        Arbitrary MCP server configuration values
+        (command, args, env, type, url, or any custom fields)
+    providers : dict[str, dict[str, Any]]
         Provider-specific configuration mapping provider name to metadata
-        containing at minimum {enabled: bool, ...other metadata}
+        containing at minimum {enabled: bool}
+        Can include 'extra' key for provider-specific value overrides
     """
 
     name: str
-    command: str
-    args: List[str]
-    providers: Dict[str, Dict[str, Any]]
+    values: dict[str, Any]
+    providers: dict[str, dict[str, Any]]
 
 
 class FrontmatterParser:
@@ -218,14 +217,14 @@ class FrontmatterParser:
 class MCPGenerator:
     """Generates MCP configuration files for different providers."""
 
-    @staticmethod
-    def generate_claude_format(servers: List[MCPServerConfig]) -> Dict[str, Any]:
+    @classmethod
+    def generate_claude_format(cls, servers: list[MCPServerConfig]) -> dict[str, Any]:
         """Generate Claude format configuration.
 
         Parameters
         ----------
-        servers : List[MCPServerConfig]
-            List of MCP server configurations
+        servers : list[MCPServerConfig]
+            list of MCP server configurations
 
         Returns
         -------
@@ -239,10 +238,10 @@ class MCPGenerator:
             provider_config = server.providers.get(provider.name, {})
 
             if provider_config.get("enabled", False):
-                mcp_servers[server.name] = {
-                    "command": server.command,
-                    "args": server.args,
-                }
+                # Merge extra config into values for provider-specific overrides
+                extra = provider_config.get("extra", {})
+                server_config = server.values | extra
+                mcp_servers[server.name] = server_config
 
         return {provider.mcp_key: mcp_servers}
 
@@ -267,10 +266,10 @@ class MCPGenerator:
             provider_config = server.providers.get(provider.name, {})
 
             if provider_config.get("enabled", False):
-                mcp_servers[server.name] = {
-                    "command": server.command,
-                    "args": server.args,
-                }
+                # Merge extra config into values for provider-specific overrides
+                extra = provider_config.get("extra", {})
+                server_config = server.values | extra
+                mcp_servers[server.name] = server_config
 
         return {provider.mcp_key: mcp_servers}
 
@@ -289,19 +288,40 @@ class MCPGenerator:
             Configuration dictionary in OpenCode format: {"mcp": {...}}
         """
         provider = get_provider_config("opencode")
-        mcp = {}
+        mcp_servers = {}
 
         for server in servers:
             provider_config = server.providers.get(provider.name, {})
 
             if provider_config.get("enabled", False):
-                mcp[server.name] = {
-                    "type": provider_config.get("type", "local"),
-                    "command": [server.command] + server.args,
-                    "enabled": True,
-                }
+                # Merge extra config into values for provider-specific overrides
+                extra = provider_config.get("extra", {})
+                server_config = server.values | extra
 
-        return {provider.mcp_key: mcp}
+                # OpenCode-specific transformations
+                # Handle command + args combination for local servers
+                if (
+                    "command" in server_config
+                    and server_config.get("type", "local") == "local"
+                ):
+                    command = server_config["command"]
+                    args = server_config.get("args", [])
+                    # Combine into single array
+                    server_config["command"] = [command] + args
+                    # Remove args field
+                    if "args" in server_config:
+                        del server_config["args"]
+
+                # Convert env -> environment
+                if "env" in server_config:
+                    server_config["environment"] = server_config.pop("env")
+
+                # Add enabled flag
+                server_config["enabled"] = True
+
+                mcp_servers[server.name] = server_config
+
+        return {provider.mcp_key: mcp_servers}
 
 
 class TemplateGenerator:
@@ -918,12 +938,34 @@ class AgentSyncManager:
         servers = []
 
         for name, server_data in servers_dict.items():
+            # Extract values and providers from server config
+            values = server_data.get("values", {})
+            providers = server_data.get("providers", {})
+
+            # Validation warnings
+            if "name" in values:
+                print(
+                    f"Warning: MCP server '{name}' has 'name' in values. "
+                    f"Server name should be the config key, not in values.",
+                    file=sys.stderr,
+                )
+
+            # Warn if command is empty for local servers (best effort check)
+            if not values.get("command") and values.get("type", "local") == "local":
+                print(
+                    f"Warning: MCP server '{name}' has empty 'command' for local server",
+                    file=sys.stderr,
+                )
+
+            # Default args to empty list if missing
+            if "args" not in values:
+                values["args"] = []
+
             servers.append(
                 MCPServerConfig(
                     name=name,
-                    command=server_data["command"],
-                    args=server_data.get("args", []),
-                    providers=server_data.get("providers", {}),
+                    values=values,
+                    providers=providers,
                 )
             )
 

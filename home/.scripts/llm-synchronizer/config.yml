@@ -10,28 +10,32 @@ providers:
 
 mcp_servers:
   vectorcode-mcp-server:
-    command: vectorcode-mcp-server
-    args: []
+    values:
+      command: vectorcode-mcp-server
+      args: []
     providers:
       claude:
-        enabled: true
+        enabled: false
       opencode:
-        enabled: true
-        type: local
+        enabled: false
+        extra:
+          type: local
       gemini:
-        enabled: true
+        enabled: false
 
   dash-api:
-    command: uvx
-    args:
-      - --from
-      - git+https://github.com/Kapeli/dash-mcp-server.git
-      - dash-mcp-server
+    values:
+      command: uvx
+      args:
+        - --from
+        - git+https://github.com/Kapeli/dash-mcp-server.git
+        - dash-mcp-server
     providers:
       claude:
         enabled: true
       opencode:
         enabled: true
-        type: local
+        extra:
+          type: local
       gemini:
         enabled: true
