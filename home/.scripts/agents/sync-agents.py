@@ -345,7 +345,7 @@ class AgentSyncManager:
         return result
 
     def merge_json_file(
-        self, target_path: Path, new_data: Dict[str, Any], provider: str
+        self, target_path: Path, new_data: Dict[str, Any], mcp_key: str
     ) -> tuple[bool, Path | None]:
         """
         Merge new configuration data into existing JSON file.
@@ -387,18 +387,22 @@ class AgentSyncManager:
                 print(f"Warning: Could not parse {target_path}: {e}", file=sys.stderr)
                 print(f"Creating new file at {target_path}", file=sys.stderr)
 
-        # Get the MCP key for this provider
-        provider_config = get_provider_config(provider)
-        mcp_key = provider_config.mcp_key
+        # Get all possible MCP keys from provider configs
+        all_mcp_keys = {cfg.mcp_key for cfg in PROVIDERS.values()}
+        other_mcp_keys = all_mcp_keys - {mcp_key}
 
-        # Normalize existing config to use provider's expected key (prevent
-        # dual-key configs)
-        # Determine the "other" MCP key that might exist in legacy configs
-        other_mcp_key = "mcp" if mcp_key == "mcpServers" else "mcpServers"
-
-        if existing_config and other_mcp_key in existing_config:
-            # Migrate from other key format to provider's expected key format
-            existing_config[mcp_key] = existing_config.pop(other_mcp_key)
+        # Normalize existing config by migrating from any other MCP key format
+        for other_key in other_mcp_keys:
+            if other_key in existing_config:
+                if mcp_key in existing_config:
+                    # Both keys exist - warn and prefer provider's key
+                    print(
+                        f"Warning: {target_path} has both '{mcp_key}' and '{other_key}'. "
+                        f"Using '{mcp_key}' and discarding '{other_key}'.",
+                        file=sys.stderr,
+                    )
+                # Migrate from other key format to provider's expected key format
+                existing_config[mcp_key] = existing_config.pop(other_key)
 
         # Deep merge MCP servers to preserve existing servers
         merged_config = self._deep_merge_mcp_servers(existing_config, new_data, mcp_key)
