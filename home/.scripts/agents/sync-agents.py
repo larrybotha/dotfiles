@@ -548,9 +548,12 @@ class AgentSyncManager:
             print(f"Generated: {output_path}")
 
             return True
-        except Exception as e:
+        except PermissionError as e:
+            print(f"Permission denied writing {output_path}: {e}", file=sys.stderr)
+            return False
+        except OSError as e:
+            # Covers: disk full, I/O errors, IsADirectoryError, etc.
             print(f"Error writing {output_path}: {e}", file=sys.stderr)
-
             return False
 
     def copy_skill_directory(
@@ -654,7 +657,13 @@ class AgentSyncManager:
                     )
                     error_count += 1
 
-        except Exception as e:
+        except PermissionError as e:
+            print(
+                f"Error: Permission denied traversing directory {skill_dir}: {e}",
+                file=sys.stderr,
+            )
+            return (copied_count, error_count + 1)
+        except OSError as e:
             print(
                 f"Error: Failed to traverse directory {skill_dir}: {e}",
                 file=sys.stderr,
@@ -731,10 +740,9 @@ class AgentSyncManager:
             try:
                 shutil.copy2(target_path, backup_path)
                 print(f"Created backup: {backup_path}")
-            except Exception as e:
-                print(
-                    f"Warning: Could not create backup: {e}", file=sys.stderr
-                )  # Backup is optional
+            except (OSError, PermissionError) as e:
+                # Backup is optional - log warning but continue
+                print(f"Warning: Could not create backup: {e}", file=sys.stderr)
                 backup_path = None  # Reset if backup failed
 
         # Load existing config or start with empty dict
@@ -776,12 +784,16 @@ class AgentSyncManager:
             print(f"Updated MCP config: {target_path}")
 
             return (True, backup_path)
-        except Exception as e:
-            print(f"Error writing {target_path}: {e}", file=sys.stderr)
-
+        except (TypeError, ValueError) as e:
+            # JSON serialization errors indicate programming bugs
+            print(f"Error serializing config data: {e}", file=sys.stderr)
             if temp_path.exists():
                 temp_path.unlink()
-
+            raise  # Re-raise to expose programming errors
+        except (OSError, PermissionError) as e:
+            print(f"Error writing {target_path}: {e}", file=sys.stderr)
+            if temp_path.exists():
+                temp_path.unlink()
             return (False, None)
 
     def _validate_skill_template(self, template_path: Path) -> None:
@@ -887,7 +899,7 @@ class AgentSyncManager:
                 if backup_path.exists():
                     backup_path.unlink()
                     print(f"Deleted backup: {backup_path}")
-            except Exception as e:
+            except (OSError, PermissionError) as e:
                 # Log error but don't fail the sync
                 print(
                     f"Warning: Could not delete backup {backup_path}: {e}",
@@ -1078,7 +1090,10 @@ class AgentSyncManager:
                         target_dict[provider].add(output_path)
 
             except Exception:
-                # Ignore errors during tracking - they'll be reported during generation
+                # All errors will be properly reported during actual generation
+                # in sync_all().
+                # Silently ignoring errors here allows discovery to continue for
+                # valid templates.
                 pass
 
         return {"enabled": enabled_files, "disabled": disabled_files}
@@ -1134,7 +1149,13 @@ class AgentSyncManager:
                                 stop_dir = provider_base
                             self._cleanup_empty_directories(path.parent, stop_dir)
 
-                except Exception as e:
+                except PermissionError as e:
+                    print(
+                        f"Warning: Permission denied removing {path}: {e}",
+                        file=sys.stderr,
+                    )
+                except OSError as e:
+                    # Covers: FileNotFoundError, IsADirectoryError, etc.
                     print(
                         f"Warning: Failed to remove {path}: {e}",
                         file=sys.stderr,
@@ -1169,7 +1190,9 @@ class AgentSyncManager:
                 self._cleanup_empty_directories(directory.parent, stop_at)
 
         except Exception:
-            # Silently ignore errors during directory cleanup
+            # This is best-effort cleanup that should never fail the main
+            # operation. Possible errors include PermissionError, OSError
+            # (directory not empty), and filesystem errors.
             pass
 
     def sync_all(self) -> int:
@@ -1236,6 +1259,11 @@ class AgentSyncManager:
                                 )
 
             except Exception as e:
+                # This is a batch processing loop where one bad template should
+                # not stop processing of other templates. Errors are logged with the
+                # specific template path to aid debugging. Possible errors
+                # include YAML parsing, validation failures, file I/O errors,
+                # and more.
                 print(f"Error processing {template_path}: {e}", file=sys.stderr)
 
         # Clean up disabled templates (not manually created files)
@@ -1311,19 +1339,22 @@ def main():
 
     try:
         manager = AgentSyncManager(config_file)
-
         template_count = manager.sync_all()
-        print(f"Successfully generated {template_count} template files")
-
         mcp_count = manager.sync_mcp_servers()
+
+        print(f"Successfully generated {template_count} template files")
         print(f"Successfully updated {mcp_count} MCP configuration files")
 
         return 0 if (template_count > 0 or mcp_count > 0) else 1
     except FileNotFoundError as e:
         print(f"Error: {e}", file=sys.stderr)
+
         return 1
     except Exception as e:
+        # Final fallback for any unexpected errors. Ensures graceful exit
+        # with error message rather than traceback.
         print(f"Error: {e}", file=sys.stderr)
+
         return 1
 
 
