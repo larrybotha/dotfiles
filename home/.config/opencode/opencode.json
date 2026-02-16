@@ -7,21 +7,14 @@
   "autoupdate": true,
   "theme": "aura",
   "mcp": {
-    "vectorcode-mcp-server": {
-      "type": "local",
-      "command": [
-        "vectorcode-mcp-server"
-      ],
-      "enabled": true
-    },
     "dash-api": {
-      "type": "local",
       "command": [
         "uvx",
         "--from",
         "git+https://github.com/Kapeli/dash-mcp-server.git",
         "dash-mcp-server"
       ],
+      "type": "local",
       "enabled": true
     }
   },

@@ -10,10 +10,6 @@
     }
   },
   "mcpServers": {
-    "vectorcode-mcp-server": {
-      "command": "vectorcode-mcp-server",
-      "args": []
-    },
     "dash-api": {
       "command": "uvx",
       "args": [
