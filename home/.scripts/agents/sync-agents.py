@@ -378,7 +378,6 @@ class AgentSyncManager:
                 providers=server_data.get("providers", {}),
             )
 
-        # Merge/override with project servers
         for name, server_data in project_servers.items():
             merged[name] = MCPServerConfig(
                 name=name,
@@ -400,10 +399,7 @@ class AgentSyncManager:
         Returns:
             Number of successfully updated files
         """
-        # Determine project config path (current directory)
         project_config_path = Path.cwd() / "config.yml"
-
-        # Load and merge servers
         servers = self.load_mcp_servers(global_config_path, project_config_path)
 
         if not servers:
@@ -442,7 +438,6 @@ class AgentSyncManager:
                                 f"(current value: {repr(mcp_config)})"
                             )
 
-        # Raise error if validation failed
         if validation_errors:
             error_message = (
                 "MCP server configuration validation failed:\n\n"
@@ -450,7 +445,6 @@ class AgentSyncManager:
             )
             raise ValueError(error_message)
 
-        # Generate and write configs for each provider
         success_count = 0
         generators = {
             "claude": MCPGenerator.generate_claude_format,
@@ -459,8 +453,8 @@ class AgentSyncManager:
         }
 
         for provider, generator_func in generators.items():
-            # Get provider config and check for mcp_config path
             provider_config = self.config.get("providers", {}).get(provider, {})
+
             if not provider_config or "mcp_config" not in provider_config:
                 continue
 
@@ -488,17 +482,16 @@ class AgentSyncManager:
         print(f"Found {len(templates)} templates")
 
         success_count = 0
+
         for template_path in templates:
             try:
                 # Skip README files
                 if template_path.name == "README.md":
                     continue
 
-                # Parse template
                 template = FrontmatterParser.parse_file(template_path)
-
-                # Validate and show warnings
                 warnings = self.validate_template(template, template_path)
+
                 for warning in warnings:
                     print(f"Warning: {warning}")
 
@@ -506,9 +499,9 @@ class AgentSyncManager:
                 for provider in template.provider_metadata.keys():
                     provider_config = template.provider_metadata.get(provider, {})
 
-                    # Check if provider is enabled
+                    # skip if provider is not enabled
                     if not provider_config.get("enabled", False):
-                        continue  # Skip disabled/missing providers
+                        continue
 
                     content = self.generator.generate_file_content(template, provider)
                     output_path = self.get_output_path(
@@ -554,19 +547,12 @@ Examples:
 
 def main():
     """Main execution function."""
-    # Parse command-line arguments
     args = parse_arguments()
-
-    # Determine script directory
     script_dir = Path(__file__).parent
+    config_file = (
+        args.config.expanduser().resolve() if args.config else script_dir / "config.yml"
+    )
 
-    # Determine config file path: use provided path or default to script directory
-    if args.config:
-        config_file = args.config.expanduser().resolve()
-    else:
-        config_file = script_dir / "config.yml"
-
-    # Validate that config file exists
     if not config_file.exists():
         print(
             f"Error: Config file not found at {config_file}",
@@ -581,7 +567,6 @@ def main():
     # Determine templates directory (relative to config file location)
     templates_dir = config_file.parent / "templates"
 
-    # Validation
     if not templates_dir.exists():
         print(
             f"Error: Templates directory not found at {templates_dir}",
@@ -594,14 +579,11 @@ def main():
         return 1
 
     try:
-        # Use specified config for manager initialization
         manager = AgentSyncManager(templates_dir, config_file)
 
-        # Sync templates
         template_count = manager.sync_all()
         print(f"Successfully generated {template_count} template files")
 
-        # Sync MCP servers (using the same config file)
         mcp_count = manager.sync_mcp_servers(config_file)
         print(f"Successfully updated {mcp_count} MCP configuration files")
 
