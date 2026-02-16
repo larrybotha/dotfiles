@@ -7,7 +7,7 @@ Generates provider-specific configurations from unified templates.
 
 Requirements
 ------------
-- PyYAML (managed via uv: uv add pyyaml)
+- PyYAML
 
 Usage
 -----
@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Dict, List, Literal, NamedTuple, Optional, Union
+from typing import Any, Literal, NamedTuple, Union
 
 import yaml
 
@@ -47,13 +47,13 @@ class ProviderConfig(NamedTuple):
 
     name: str
     mcp_key: str
-    agent_dir: Optional[str]
-    command_dir: Optional[str]
-    skill_dir: Optional[str]
+    agent_dir: str | None
+    command_dir: str | None
+    skill_dir: str | None
 
 
 # Provider configurations
-PROVIDERS: Dict[str, ProviderConfig] = {
+PROVIDERS: dict[str, ProviderConfig] = {
     "claude": ProviderConfig(
         name="claude",
         mcp_key="mcpServers",
@@ -105,13 +105,13 @@ def get_provider_config(provider: str) -> ProviderConfig:
     return PROVIDERS[provider]
 
 
-def get_template_providers() -> List[str]:
+def get_template_providers() -> list[str]:
     """Get list of providers that support templates.
 
     Returns
     -------
-    List[str]
-        List of provider names that support template generation
+    list[str]
+        list of provider names that support template generation
     """
     return [name for name, config in PROVIDERS.items() if config.agent_dir is not None]
 
@@ -126,16 +126,16 @@ class TemplateConfig:
         Type of template
     body : str
         Template body content
-    shared_config : Dict[str, Any]
+    shared_config : dict[str, Any]
         Configuration shared across all providers
-    provider_metadata : Dict[str, Dict[str, Any]]
+    provider_metadata : dict[str, dict[str, Any]]
         Provider-specific metadata keyed by provider name
     """
 
     type: Literal["agent", "command", "skill"]
     body: str
-    shared_config: Dict[str, Any]
-    provider_metadata: Dict[str, Dict[str, Any]]
+    shared_config: dict[str, Any]
+    provider_metadata: dict[str, dict[str, Any]]
 
 
 @dataclass
@@ -228,7 +228,7 @@ class MCPGenerator:
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             Configuration dictionary in Claude format: {"mcpServers": {...}}
         """
         provider = get_provider_config("claude")
@@ -245,18 +245,18 @@ class MCPGenerator:
 
         return {provider.mcp_key: mcp_servers}
 
-    @staticmethod
-    def generate_gemini_format(servers: List[MCPServerConfig]) -> Dict[str, Any]:
+    @classmethod
+    def generate_gemini_format(cls, servers: list[MCPServerConfig]) -> dict[str, Any]:
         """Generate Gemini format configuration.
 
         Parameters
         ----------
-        servers : List[MCPServerConfig]
-            List of MCP server configurations
+        servers : list[MCPServerConfig]
+            list of MCP server configurations
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             Configuration dictionary in Gemini format (same as Claude)
         """
         provider = get_provider_config("gemini")
@@ -273,18 +273,18 @@ class MCPGenerator:
 
         return {provider.mcp_key: mcp_servers}
 
-    @staticmethod
-    def generate_opencode_format(servers: List[MCPServerConfig]) -> Dict[str, Any]:
+    @classmethod
+    def generate_opencode_format(cls, servers: list[MCPServerConfig]) -> dict[str, Any]:
         """Generate OpenCode format configuration.
 
         Parameters
         ----------
-        servers : List[MCPServerConfig]
-            List of MCP server configurations
+        servers : list[MCPServerConfig]
+            list of MCP server configurations
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             Configuration dictionary in OpenCode format: {"mcp": {...}}
         """
         provider = get_provider_config("opencode")
@@ -428,7 +428,7 @@ class AgentSyncManager:
                 f"Config file: {self._config_file}"
             )
 
-    def _load_config(self, config_file: Path) -> Dict[str, Any]:
+    def _load_config(self, config_file: Path) -> dict[str, Any]:
         """Load provider configuration from YAML file.
 
         Parameters
@@ -438,7 +438,7 @@ class AgentSyncManager:
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             Loaded configuration dictionary
 
         Raises
@@ -452,7 +452,7 @@ class AgentSyncManager:
         with open(config_file, "r") as f:
             return yaml.safe_load(f)
 
-    def discover_templates(self) -> List[Path]:
+    def discover_templates(self) -> list[Path]:
         """Find all template markdown files.
 
         Supports patterns:
@@ -462,7 +462,7 @@ class AgentSyncManager:
 
         Returns
         -------
-        List[Path]
+        list[Path]
             Deduplicated sorted list of template file paths
         """
         templates = set()
@@ -476,7 +476,7 @@ class AgentSyncManager:
     def get_output_path(
         self,
         *,
-        config: Dict,
+        config: dict,
         provider: str,
         template_path: Path,
         template_type: str,
@@ -485,7 +485,7 @@ class AgentSyncManager:
 
         Parameters
         ----------
-        config : Dict
+        config :dict
             Configuration dictionary
         provider : str
             Provider name
@@ -577,7 +577,7 @@ class AgentSyncManager:
             return False
 
     def copy_skill_directory(
-        self, skill_dir: Path, output_dir: Path, skip_files: Optional[List[str]] = None
+        self, skill_dir: Path, output_dir: Path, skip_files: list[str] | None = None
     ) -> tuple[int, int]:
         """Copy all files from skill directory to output, excluding specified files.
 
@@ -587,8 +587,8 @@ class AgentSyncManager:
             Source skill directory
         output_dir : Path
             Destination directory
-        skip_files : Optional[List[str]], optional
-            List of filenames to skip (defaults to template files)
+        skip_files : Optional[list[str]], optional
+            list of filenames to skip (defaults to template files)
 
         Returns
         -------
@@ -693,8 +693,8 @@ class AgentSyncManager:
         return (copied_count, error_count)
 
     def _deep_merge_mcp_servers(
-        self, existing: Dict[str, Any], new: Dict[str, Any], mcp_key: str
-    ) -> Dict[str, Any]:
+        self, existing: dict[str, Any], new: dict[str, Any], mcp_key: str
+    ) -> dict[str, Any]:
         """Merge MCP server configurations, replacing the entire MCP servers section.
 
         This method treats config.yml as the source of truth for MCP servers.
@@ -703,16 +703,16 @@ class AgentSyncManager:
 
         Parameters
         ----------
-        existing : Dict[str, Any]
+        existing : dict[str, Any]
             Existing configuration dictionary
-        new : Dict[str, Any]
+        new : dict[str, Any]
             New configuration dictionary
         mcp_key : str
             Key for MCP servers ("mcpServers" or "mcp")
 
         Returns
         -------
-        Dict[str, Any]
+        dict[str, Any]
             Merged configuration dictionary
         """
         result = existing.copy()
@@ -730,7 +730,7 @@ class AgentSyncManager:
         return result
 
     def merge_json_file(
-        self, target_path: Path, new_data: Dict[str, Any], mcp_key: str
+        self, target_path: Path, new_data: dict[str, Any], mcp_key: str
     ) -> tuple[bool, Union[Path, None]]:
         """Merge new configuration data into existing JSON file.
 
@@ -738,7 +738,7 @@ class AgentSyncManager:
         ----------
         target_path : Path
             Path to target JSON file
-        new_data : Dict[str, Any]
+        new_data : dict[str, Any]
             New configuration data to merge
         mcp_key : str
             MCP configuration key format for this provider (e.g., "mcpServers", "mcp")
@@ -864,7 +864,7 @@ class AgentSyncManager:
 
     def validate_template(
         self, template: TemplateConfig, template_path: Path
-    ) -> List[str]:
+    ) -> list[str]:
         """Validate template configuration and return warnings.
 
         Parameters
@@ -876,8 +876,8 @@ class AgentSyncManager:
 
         Returns
         -------
-        List[str]
-            List of warning messages
+        list[str]
+            list of warning messages
 
         Raises
         ------
@@ -903,13 +903,13 @@ class AgentSyncManager:
 
         return warnings
 
-    def _cleanup_backups(self, backup_paths: List[Path]) -> None:
+    def _cleanup_backups(self, backup_paths: list[Path]) -> None:
         """Delete backup files after successful sync.
 
         Parameters
         ----------
-        backup_paths : List[Path]
-            List of backup file paths to delete
+        backup_paths : list[Path]
+            list of backup file paths to delete
         """
         if not backup_paths:
             return
@@ -926,13 +926,13 @@ class AgentSyncManager:
                     file=sys.stderr,
                 )
 
-    def load_mcp_servers(self) -> List[MCPServerConfig]:
+    def load_mcp_servers(self) -> list[MCPServerConfig]:
         """Load MCP servers from the config loaded during initialization.
 
         Returns
         -------
-        List[MCPServerConfig]
-            List of MCP server configuration objects
+        list[MCPServerConfig]
+            list of MCP server configuration objects
         """
         servers_dict = self._config.get("mcp_servers", {})
         servers = []
@@ -991,7 +991,7 @@ class AgentSyncManager:
 
             return 0
 
-        backup_files: List[Path] = []
+        backup_files: list[Path] = []
 
         # Validate that all enabled providers have mcp_config paths
         validation_errors = []
@@ -1083,19 +1083,19 @@ class AgentSyncManager:
 
         return success_count
 
-    def _get_template_mappings(self) -> Dict[str, Dict[str, set[Path]]]:
+    def _get_template_mappings(self) -> dict[str, dict[str, set[Path]]]:
         """Calculate file mappings for all templates (enabled and disabled).
 
         Returns
         -------
-        Dict[str, Dict[str, set[Path]]]
+        dict[str, dict[str, set[Path]]]
             Nested dictionary: {"enabled": {provider: set[Path]}, "disabled": {provider: set[Path]}}
         """
         templates = self.discover_templates()
-        enabled_files: Dict[str, set[Path]] = {
+        enabled_files: dict[str, set[Path]] = {
             provider: set() for provider in get_template_providers()
         }
-        disabled_files: Dict[str, set[Path]] = {
+        disabled_files: dict[str, set[Path]] = {
             provider: set() for provider in get_template_providers()
         }
 
@@ -1140,7 +1140,7 @@ class AgentSyncManager:
 
         return {"enabled": enabled_files, "disabled": disabled_files}
 
-    def _cleanup_disabled_templates(self, disabled_files: Dict[str, set[Path]]) -> int:
+    def _cleanup_disabled_templates(self, disabled_files: dict[str, set[Path]]) -> int:
         """Remove files/directories for disabled templates only.
 
         Only removes files that correspond to templates that exist but are disabled.
@@ -1148,7 +1148,7 @@ class AgentSyncManager:
 
         Parameters
         ----------
-        disabled_files : Dict[str, set[Path]]
+        disabled_files : dict[str, set[Path]]
             Dictionary mapping provider name to set of disabled file/directory paths
 
         Returns
