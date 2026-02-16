@@ -1,14 +1,16 @@
-# Provider base output directories
+# Provider configurations
+# Each provider can have:
+#   - templates_dir: Base directory for generated agent/command templates
+#   - mcp_config: Path to MCP server configuration file
 providers:
-  claude: ~/.claude
-  opencode: ~/.config/opencode
-
-# MCP configuration target files per provider
-# These files will be updated with MCP server configurations
-mcp_targets:
-  claude: ~/.claude.json
-  gemini: ~/.gemini/settings.json
-  opencode: ~/.config/opencode/opencode.json
+  claude:
+    templates_dir: ~/.claude
+    mcp_config: ~/.claude.json
+  opencode:
+    templates_dir: ~/.config/opencode
+    mcp_config: ~/.config/opencode/opencode.json
+  gemini:
+    mcp_config: ~/.gemini/settings.json
 
 # Global MCP servers (available to all projects by default)
 # Projects can override these settings in their local ./config.yml

@@ -8,9 +8,10 @@ Requirements:
     - PyYAML (managed via uv: uv add pyyaml)
 
 Usage:
-    uv run python sync-agents.py
+    uv run python sync-agents.py [--config CONFIG_FILE]
 """
 
+import argparse
 import json
 import re
 import sys
@@ -66,10 +67,10 @@ class FrontmatterParser:
         return TemplateConfig(
             type=frontmatter["type"],
             body=body,
-            shared_config=frontmatter.get("shared", {}),
+            shared_config=frontmatter.get("shared", {}) or {},
             provider_metadata={
-                "claude": frontmatter.get("claude", {}),
-                "opencode": frontmatter.get("opencode", {}),
+                "claude": frontmatter.get("claude", {}) or {},
+                "opencode": frontmatter.get("opencode", {}) or {},
             },
         )
 
@@ -205,7 +206,11 @@ class AgentSyncManager:
         rel_path = template_path.relative_to(type_dir)
 
         # Provider base paths from config
-        provider_base = Path(config["providers"][provider]).expanduser()
+        provider_config = config["providers"][provider]
+        templates_dir = provider_config.get("templates_dir")
+        if not templates_dir:
+            raise ValueError(f"No templates_dir configured for provider: {provider}")
+        provider_base = Path(templates_dir).expanduser()
 
         # Provider-specific subdirectory names
         dirs_by_provider = {
@@ -442,11 +447,45 @@ class AgentSyncManager:
             print("No MCP servers configured")
             return 0
 
-        # Get MCP target paths from config
-        mcp_targets = self.config.get("mcp_targets", {})
-        if not mcp_targets:
-            print("Warning: No mcp_targets defined in config.yml")
-            return 0
+        # Validate that all enabled providers have mcp_config paths
+        validation_errors = []
+        available_providers = self.config.get("providers", {})
+
+        for server in servers:
+            for provider_name, provider_config in server.providers.items():
+                if provider_config.get("enabled", False):
+                    # Check if provider exists in config
+                    if provider_name not in available_providers:
+                        validation_errors.append(
+                            f"MCP server '{server.name}' is enabled for provider '{provider_name}', "
+                            f"but provider '{provider_name}' is not defined in config.yml. "
+                            f"Add '{provider_name}:' to the 'providers:' section in config.yml"
+                        )
+                    # Check if provider has mcp_config path
+                    else:
+                        mcp_config = available_providers[provider_name].get(
+                            "mcp_config"
+                        )
+                        # Check if mcp_config exists, is a string, and is not empty/whitespace
+                        if (
+                            not mcp_config
+                            or not isinstance(mcp_config, str)
+                            or not mcp_config.strip()
+                        ):
+                            validation_errors.append(
+                                f"MCP server '{server.name}' is enabled for provider '{provider_name}', "
+                                f"but provider '{provider_name}' has no valid 'mcp_config' path configured. "
+                                f"Add 'mcp_config: <path>' to providers.{provider_name} in config.yml "
+                                f"(current value: {repr(mcp_config)})"
+                            )
+
+        # Raise error if validation failed
+        if validation_errors:
+            error_message = (
+                "MCP server configuration validation failed:\n\n"
+                + "\n\n".join(f"  • {error}" for error in validation_errors)
+            )
+            raise ValueError(error_message)
 
         # Generate and write configs for each provider
         success_count = 0
@@ -457,10 +496,12 @@ class AgentSyncManager:
         }
 
         for provider, generator_func in generators.items():
-            if provider not in mcp_targets:
+            # Get provider config and check for mcp_config path
+            provider_config = self.config.get("providers", {}).get(provider, {})
+            if not provider_config or "mcp_config" not in provider_config:
                 continue
 
-            target_path = Path(mcp_targets[provider]).expanduser()
+            target_path = Path(provider_config["mcp_config"]).expanduser()
             config_data = generator_func(servers)
 
             # Determine MCP key for this provider
@@ -521,13 +562,62 @@ class AgentSyncManager:
         return success_count
 
 
+def parse_arguments() -> argparse.Namespace:
+    """Parse command-line arguments."""
+    parser = argparse.ArgumentParser(
+        description="Synchronize agent and command templates to provider configurations",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  # Use config.yml in script directory (default)
+  %(prog)s
+
+  # Use custom config file
+  %(prog)s --config /path/to/my-config.yml
+  %(prog)s -c ~/my-project/config.yml
+        """,
+    )
+
+    parser.add_argument(
+        "-c",
+        "--config",
+        type=Path,
+        default=None,
+        metavar="FILE",
+        help="Path to config file (default: config.yml in script directory)",
+    )
+
+    return parser.parse_args()
+
+
 def main():
     """Main execution function."""
-    script_dir = Path(__file__).parent
-    templates_dir = script_dir / "templates"
+    # Parse command-line arguments
+    args = parse_arguments()
 
-    # Global config (always in script directory)
-    global_config_file = script_dir / "config.yml"
+    # Determine script directory
+    script_dir = Path(__file__).parent
+
+    # Determine config file path: use provided path or default to script directory
+    if args.config:
+        config_file = args.config.expanduser().resolve()
+    else:
+        config_file = script_dir / "config.yml"
+
+    # Validate that config file exists
+    if not config_file.exists():
+        print(
+            f"Error: Config file not found at {config_file}",
+            file=sys.stderr,
+        )
+        print(
+            f"\nTip: Create a config file or use --config to specify a different location",
+            file=sys.stderr,
+        )
+        return 1
+
+    # Determine templates directory
+    templates_dir = script_dir / "templates"
 
     # Project config (in current working directory)
     project_config_file = Path.cwd() / "config.yml"
@@ -539,23 +629,16 @@ def main():
         )
         return 1
 
-    if not global_config_file.exists():
-        print(
-            f"Error: Global config file not found at {global_config_file}",
-            file=sys.stderr,
-        )
-        return 1
-
     try:
-        # Use global config for manager initialization
-        manager = AgentSyncManager(templates_dir, global_config_file)
+        # Use specified config for manager initialization
+        manager = AgentSyncManager(templates_dir, config_file)
 
         # Sync templates
         template_count = manager.sync_all()
         print(f"Successfully generated {template_count} template files")
 
-        # Sync MCP servers
-        mcp_count = manager.sync_mcp_servers(global_config_file)
+        # Sync MCP servers (using the same config file)
+        mcp_count = manager.sync_mcp_servers(config_file)
         print(f"Successfully updated {mcp_count} MCP configuration files")
 
         return 0 if (template_count > 0 or mcp_count > 0) else 1
