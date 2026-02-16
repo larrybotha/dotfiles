@@ -13,7 +13,7 @@ update-all:
 # Sync agent and command configurations from templates
 sync-agents:
     #!/usr/bin/env bash
-    cd ~/.scripts/agents
+    cd ~/.scripts/llm-synchronizer
     echo "Synchronizing agent configurations..."
     uv run python sync-agents.py
 
