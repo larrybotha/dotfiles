@@ -23,7 +23,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Dict, List, Literal, NamedTuple, Optional
+from typing import Any, Dict, List, Literal, NamedTuple, Optional, Union
 
 import yaml
 
@@ -331,7 +331,7 @@ class TemplateGenerator:
             config,
             default_flow_style=False,
             sort_keys=False,
-            width=float("inf"),
+            width=999999,  # Large width to prevent wrapping
             allow_unicode=True,
         )
 
@@ -702,7 +702,7 @@ class AgentSyncManager:
 
     def merge_json_file(
         self, target_path: Path, new_data: Dict[str, Any], mcp_key: str
-    ) -> tuple[bool, Path | None]:
+    ) -> tuple[bool, Union[Path, None]]:
         """Merge new configuration data into existing JSON file.
 
         Parameters
@@ -1029,6 +1029,149 @@ class AgentSyncManager:
 
         return success_count
 
+    def _get_template_mappings(self) -> Dict[str, Dict[str, set[Path]]]:
+        """Calculate file mappings for all templates (enabled and disabled).
+
+        Returns
+        -------
+        Dict[str, Dict[str, set[Path]]]
+            Nested dictionary: {"enabled": {provider: set[Path]}, "disabled": {provider: set[Path]}}
+        """
+        templates = self.discover_templates()
+        enabled_files: Dict[str, set[Path]] = {
+            provider: set() for provider in get_template_providers()
+        }
+        disabled_files: Dict[str, set[Path]] = {
+            provider: set() for provider in get_template_providers()
+        }
+
+        for template_path in templates:
+            try:
+                # Skip README files
+                if template_path.name == "README.md":
+                    continue
+
+                template = FrontmatterParser.parse_file(template_path)
+
+                # Track files for each provider (enabled or disabled)
+                for provider in template.provider_metadata.keys():
+                    provider_config = template.provider_metadata.get(provider, {})
+
+                    output_path = self.get_output_path(
+                        config=self._config,
+                        provider=provider,
+                        template_path=template_path,
+                        template_type=template.type,
+                    )
+
+                    # Categorize by enabled status
+                    target_dict = (
+                        enabled_files
+                        if provider_config.get("enabled", False)
+                        else disabled_files
+                    )
+
+                    # For skills, track the entire directory
+                    if template.type == "skill":
+                        target_dict[provider].add(output_path.parent)
+                    else:
+                        target_dict[provider].add(output_path)
+
+            except Exception:
+                # Ignore errors during tracking - they'll be reported during generation
+                pass
+
+        return {"enabled": enabled_files, "disabled": disabled_files}
+
+    def _cleanup_disabled_templates(self, disabled_files: Dict[str, set[Path]]) -> int:
+        """Remove files/directories for disabled templates only.
+
+        Only removes files that correspond to templates that exist but are disabled.
+        This prevents removal of manually created files.
+
+        Parameters
+        ----------
+        disabled_files : Dict[str, set[Path]]
+            Dictionary mapping provider name to set of disabled file/directory paths
+
+        Returns
+        -------
+        int
+            Number of files/directories removed
+        """
+        removed_count = 0
+
+        for provider in get_template_providers():
+            disabled = disabled_files.get(provider, set())
+
+            for path in disabled:
+                if not path.exists():
+                    continue
+
+                try:
+                    if path.is_dir():
+                        shutil.rmtree(path)
+                        print(f"Removed disabled skill: {path}")
+                        removed_count += 1
+                    else:
+                        path.unlink()
+                        path_type = "agent" if "agent" in str(path) else "command"
+                        print(f"Removed disabled {path_type}: {path}")
+                        removed_count += 1
+
+                        # Clean up empty parent directories
+                        provider_config = self._config["providers"][provider]
+                        templates_dir = provider_config.get("templates_dir")
+                        if templates_dir:
+                            provider_base = Path(templates_dir).expanduser()
+                            provider_cfg = PROVIDERS[provider]
+                            # Determine stop directory based on path
+                            if "agent" in str(path) and provider_cfg.agent_dir:
+                                stop_dir = provider_base / provider_cfg.agent_dir
+                            elif "command" in str(path) and provider_cfg.command_dir:
+                                stop_dir = provider_base / provider_cfg.command_dir
+                            else:
+                                stop_dir = provider_base
+                            self._cleanup_empty_directories(path.parent, stop_dir)
+
+                except Exception as e:
+                    print(
+                        f"Warning: Failed to remove {path}: {e}",
+                        file=sys.stderr,
+                    )
+
+        return removed_count
+
+    def _cleanup_empty_directories(self, directory: Path, stop_at: Path) -> None:
+        """Recursively remove empty directories up to stop_at directory.
+
+        Parameters
+        ----------
+        directory : Path
+            Directory to start cleanup from
+        stop_at : Path
+            Directory to stop at (not removed even if empty)
+        """
+        try:
+            # Don't remove the base directory
+            if not directory.exists():
+                return
+
+            if directory == stop_at or not directory.is_relative_to(stop_at):
+                return
+
+            # Only remove if empty
+            if directory.is_dir() and not any(directory.iterdir()):
+                directory.rmdir()
+                print(f"Removed empty directory: {directory}")
+
+                # Try to remove parent if it's now empty
+                self._cleanup_empty_directories(directory.parent, stop_at)
+
+        except Exception:
+            # Silently ignore errors during directory cleanup
+            pass
+
     def sync_all(self) -> int:
         """Process all templates and generate provider configs.
 
@@ -1039,6 +1182,10 @@ class AgentSyncManager:
         """
         templates = self.discover_templates()
         print(f"Found {len(templates)} templates")
+
+        # Track enabled and disabled files before generation
+        mappings = self._get_template_mappings()
+        disabled_files = mappings["disabled"]
 
         success_count = 0
 
@@ -1090,6 +1237,12 @@ class AgentSyncManager:
 
             except Exception as e:
                 print(f"Error processing {template_path}: {e}", file=sys.stderr)
+
+        # Clean up disabled templates (not manually created files)
+        removed_count = self._cleanup_disabled_templates(disabled_files)
+
+        if removed_count > 0:
+            print(f"Cleaned up {removed_count} disabled/removed template(s)")
 
         return success_count
 
