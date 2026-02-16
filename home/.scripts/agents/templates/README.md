@@ -1,288 +1,361 @@
 # Agent and Command Templates
 
-This directory contains template files for AI agent and command configurations that are synchronized across multiple service providers (Claude Code, OpenCode).
+## Commands Overview
 
-## Template Structure
+- `research_codebase` - Research coordinator
+- `debug` - Issue investigation
+- `create_plan` - Interactive plan creation
+- `oneshot_plan` - Quick planning session
+- `iterate_plan` - Plan refinement
+- `validate_plan` - Plan review
+- `implement_plan` - Follow through on approved plans
+- `commit` - Git commit creation
+- `describe_pr` - PR documentation
+- `resume_handoff` / `create_handoff` - Session management
 
-Each template file is a Markdown file with YAML frontmatter that defines metadata and a body containing the prompt/instructions.
+### Agent-Command Relationships
 
-### Basic Template Format
+### Research & Analysis Agents
 
-```yaml
+- **codebase-locator** → Used by: `research_codebase`, `create_plan`, `ralph_research`
+- **codebase-analyzer** → Used by: `research_codebase`, `create_plan`, `debug`
+- **codebase-pattern-finder** → Used by: `create_plan`, `research_codebase`
+- **thoughts-locator** → Used by: `research_codebase`, `create_plan`
+- **thoughts-analyzer** → Used by: `research_codebase`, `create_plan`
+- **web-search-researcher** → Used by: `research_codebase` (when external info needed)
+
+### Core Workflow Patterns
+
+#### Research → Plan → Implement Workflow
+
+See [HumanLayer Workshop](https:/ithub.com/humanlayer/humanlayer/blob/afadcd6032b4238b3ef3462450354f1ae24fd32b/docs/workshop.mdx)
+
+```text
+/research_codebase → /create_plan → /implement_plan
+     ↓                ↓               ↓
+Multiple agents   Interactive     Single agent
+in parallel       planning       execution
+```
+
+1. Research the codebase
+
+   ```text
+   /research_codebase
+   ```
+
+   then
+
+   ```text
+   we are working on the issue in the issue.txt file,
+   please read the issue and research the codebase to understand how the system
+   works and what files+line numbers are relevant to the issue.
+
+   Do not make an implementation plan or explain how to fix.
+   ```
+
+   _The last line deliberately duplicates instruction in the command_
+
+   Reject the research if it's incorrect and refine inputs until it corroborates
+   the work to be done
+
+2. Create a plan
+
+   ```text
+   /create_plan
+   ```
+
+   then
+
+   ```text
+    we are working on the issue in the issue.txt file,
+    we've done the following research: PATH_TO_RESEARCH_OUTPUT.md
+
+    create a plan to [perform task]. [YOUR ADDITIONAL INSTRUCTIONS HERE]
+
+    work back and forth with me, sharing your open questions and phases outline
+    before writing the plan
+   ```
+
+   _The last line deliberately duplicates instruction in the command_
+
+   Iterate on the plan until happy
+
+3. Implement the plan
+
+   ```text
+   /implement_plan
+   ```
+
+   then
+
+   ```text
+    please implement the next phase of the plan. [YOUR ADDITIONAL INSTRUCTIONS HERE]
+
+    only work on that phase, then update the plan with your progress and await
+    further instructions and confirmation of the manual verification steps
+   ```
+
+   iterate with new sessions until complete
+
+4. Validate the plan
+
+   once changes are committed, validate the plan
+
+   ```text
+   /validate_plan
+   ```
+
+#### Debugging Workflow
+
+**TODO**: rewrite to be agnostic of humanlayer deps
+
+```text
+/debug → (investigation) → /implement_plan (fixes) → /commit
+   ↓           ↓                  ↓              ↓
+Problem    Parallel agents    Targeted     Commit fixes
+analysis   (logs, DB, git)    fixes
+```
+
+## Agents Overview
+
+### Research Agents
+
+```text
+User: "How does Y work in our codebase?"
+→ /research_codebase
+  ↳ codebase-locator (find files)
+  ↳ codebase-analyzer (understand implementation)
+  ↳ thoughts-locator (historical context)
+→ Generates research document
+```
+
+#### Parallel Research Pattern
+
+`research_codebase` spawns multiple agents simultaneously:
+
+- `codebase-locator` + `codebase-analyzer` + `thoughts-locator`
+- Waits for all to complete
+- Synthesizes findings into coherent document
+
+#### Sequential Planning Pattern
+
+`create_plan` uses agents sequentially:
+
+1. `codebase-locator` → Find relevant files
+2. `codebase-analyzer` → Understand current implementation
+3. `thoughts-locator` → Find historical context
+4. Interactive refinement with user
+
+### Brainstorming Agents
+
+The brainstorming agents follow a Socratic methodology for software specification development. Based on the [Socratic Coder](https:/ithub.com/0xVar/llm-prompts-socratic/blob/trunk/data/socratic-coder.md) approach, these agents help develop thorough specifications through guided questioning and critical analysis.
+
+#### socratic (Primary Agent)
+
+- **Purpose**: Socratic questioning agent for software specification development
+- **Access**: Full filesystem and bash capabilities
+- **Focus**: Asks targeted questions to gather detailed requirements for software ideas
+
+#### critic-subagent (Subagent)
+
+- **Purpose**: Critically analyzes brainstorming results to identify flaws, challenges, and improvement areas
+- **Access**: Full filesystem and bash capabilities
+- **Focus**: Technical feasibility, scalability, security, and market fit analysis
+
+#### spec-writer-subagent (Subagent)
+
+- **Purpose**: Compiles brainstorming findings into comprehensive developer-ready specifications
+- **Access**: Full filesystem and bash capabilities
+- **Focus**: Creates RFC-like specification documents for immediate implementation
+
+#### Using the Brainstorming Agents
+
+1. **Start with socratic agent**: Switch to the socratic agent and provide your software idea between `<idea>` tags
+2. **Answer questions one by one**: The socratic agent will ask targeted questions about functionality, UI, data management, security, etc.
+3. **Critical analysis**: Once brainstorming is complete, use `@critic-subagent` to identify potential issues and challenges
+4. **Specification creation**: Finally, use `@spec-writer-subagent` to compile everything into a comprehensive specification
+
+The workflow follows the Socratic method of iterative questioning and refinement, ensuring all aspects of the software are thoroughly explored before implementation.
+
+### Go Agents
+
+#### developer (Primary Agent)
+
+- **Purpose**: Main Go development agent for coding, debugging, and optimization
+- **Access**: Full filesystem, restricted bash (go commands and git read-only)
+- **Focus**: Standard library solutions, Go best practices
+
+#### pair-programmer (Primary Agent)
+
+- **Purpose**: Go pair programmer focused on best practices and code review
+- **Access**: Read-only filesystem (no write/edit/bash)
+- **Focus**: Expert-level Go guidance, code review, and best practices
+
+### Python Agents
+
+#### developer (Primary Agent)
+
+- **Purpose**: Main Python development agent for coding, debugging, and optimization
+- **Access**: Full filesystem, restricted bash (python, pip, poetry commands and git read-only)
+- **Focus**: Standard library solutions, PEP 8 compliance, Python best practices
+
+#### planner-subagent (Subagent)
+
+- **Purpose**: Python project planning and architecture
+- **Access**: Read-only filesystem
+- **Focus**: Python-based architecture planning and best practices
+
+#### researcher-subagent (Subagent)
+
+- **Purpose**: Python documentation and research
+- **Access**: Web fetch capabilities
+- **Focus**: Official Python documentation, PEPs, and best practices
+
+## Usage
+
+### Switching Between Primary Agents
+
+- Use **Tab** key to cycle through primary agents
+
+### Invoking Subagents
+
+- Manual invocation: `@go/planner-subagent`, `@go/researcher-subagent`, `@python/planner-subagent`, `@python/researcher-subagent`, `@brainstorm/critic-subagent`, or `@brainstorm/spec-writer-subagent`
+- Automatic invocation based on task requirements
+
+### When to Use Each Agent
+
+**go/developer**: Use for
+
+- Writing Go code
+- Debugging Go applications
+- Implementing features
+- Running tests and builds
+
+**go/pair-programmer**: Use for
+
+- Expert-level Go guidance and code review
+- Best practices consultation
+- Performance optimization advice
+- Architecture review and recommendations
+
+**go/planner-subagent**: Use for
+
+- Go project architecture planning
+- Task breakdown and roadmapping
+- Design decisions
+- Dependency analysis
+
+**go/researcher-subagent**: Use for
+
+- Looking up Go documentation
+- Finding standard library examples
+- Researching best practices
+- Exploring alternative approaches
+
+**python/developer**: Use for
+
+- Writing Python code
+- Debugging Python applications
+- Implementing features
+- Running tests and builds
+- Managing dependencies with pip/poetry
+
+**python/planner-subagent**: Use for
+
+- Python project architecture planning
+- Task breakdown and roadmapping
+- Design decisions following Python conventions
+- Dependency analysis and package structure
+
+**python/researcher-subagent**: Use for
+
+- Looking up Python documentation and PEPs
+- Finding standard library examples
+- Researching Python best practices
+- Exploring third-party package alternatives
+
+**socratic**: Use for
+
+- Software specification development through guided questioning
+- Requirements gathering and analysis
+- Exploring different aspects of software ideas (functionality, UI, data, security, etc.)
+- Iterative refinement of project concepts
+
+**critic-subagent**: Use for
+
+- Critical analysis of brainstorming results
+- Identifying technical feasibility issues
+- Evaluating scalability and security concerns
+- Market fit and resource requirement analysis
+
+**spec-writer-subagent**: Use for
+
+- Creating comprehensive specification documents
+- Compiling brainstorming findings into developer-ready formats
+- Structuring requirements and architecture details
+- Generating RFC-like documentation for implementation
+
+## Project-Specific Extensions
+
+To extend these agents for specific projects, create project-specific agents in `.opencode/agent/` directory:
+
+### Brainstorming Project Extension
+
+```markdown
 ---
-# Template metadata
-type: agent  # or "command"
-
-# Shared section - only for fields that are IDENTICAL across providers
-shared:
-  description: A description that is the same for all providers
-
-# Provider sections - specify exact format each provider expects
-claude:
-  enabled: true
-  # Claude-specific fields here
-
-opencode:
-  enabled: true
-  # OpenCode-specific fields here
----
-
-[Body content - the actual prompt/instructions]
-```
-
-### Key Principles
-
-1. **`type` field**: Must be either `agent` or `command`. This determines:
-   - Output directory structure
-   - Which metadata fields are available
-   
-2. **`shared` section**: Only include fields that have IDENTICAL values across all providers
-   - Typically just `description`
-   - Values are copied exactly to each provider's output
-
-3. **Provider sections**: Each provider has its own section (`claude`, `opencode`)
-   - Must include `enabled: true` to participate
-   - Contains provider-specific fields in their exact expected format
-   - **No transformations**: Values are output exactly as specified
-
-4. **No `providers` array**: Providers declare participation via their own sections with `enabled` flag
-
-5. **Claude `name` field**: Specified in the `claude` section, not at top level (it's Claude-specific)
-
-## Provider-Specific Field Formats
-
-Different providers expect different formats for the same concepts. Templates specify the exact format each provider needs.
-
-### Tools Format
-
-**Claude** - Comma-separated string with capitalized names:
-```yaml
-claude:
-  tools: "Grep, Glob, LS"
-```
-
-**OpenCode** - Object with boolean values:
-```yaml
-opencode:
-  tools:
-    grep: true
-    glob: true
-    list: true
-```
-
-**Tool Name Differences:**
-- Claude uses `LS`, OpenCode uses `list`
-- Otherwise names are typically the same (lowercase for OpenCode, Capitalized for Claude)
-
-### Model Format
-
-**Claude** - Short alias:
-```yaml
-claude:
-  model: sonnet  # or opus, haiku
-```
-
-**OpenCode** - Full identifier:
-```yaml
-opencode:
-  model: anthropic/claude-sonnet-4-5
-```
-
-## Provider Output Formats
-
-The sync script generates different output formats for each provider:
-
-### Claude Agent Output
-```yaml
-name: research/codebase-locator
-description: The description text
-tools: "Grep, Glob, LS"
-model: sonnet
-```
-
-### Claude Command Output
-```yaml
-description: The description text
-```
-
-### OpenCode Agent Output
-```yaml
-description: The description text
-mode: subagent
+description: Socratic specification development for [project-name]
+mode: primary
 model: anthropic/claude-sonnet-4-5
-tools:
-  grep: true
-  glob: true
-  list: true
-# Optional fields:
-# temperature: 0.3
-# permission:
-#   bash:
-#     "*": ask
-```
+temperature: 0.3
+prompt: |
+  You are working on the [project-name] project using Socratic methodology.
 
-### OpenCode Command Output
-```yaml
-description: The description text
-```
+  Project Context:
+  - [Add project-specific details]
+  - [Domain-specific requirements]
+  - [Technical constraints]
+  - [Target users]
 
-## Advanced OpenCode Features
-
-OpenCode supports additional fields for fine-grained control:
-
-### Mode
-```yaml
-opencode:
-  mode: subagent  # or "primary"
-```
-
-### Temperature
-```yaml
-opencode:
-  temperature: 0.3  # Float value
-```
-
-### Permission Control
-```yaml
-opencode:
-  permission:
-    bash:
-      "*": ask       # Ask before running any bash command
-      "git*": allow  # Auto-allow git commands
-```
-
-### Explicit Tool Disabling
-```yaml
-opencode:
-  tools:
-    grep: true
-    glob: true
-    write: false  # Explicitly disable write tool
-```
-
-## Examples
-
-### Example 1: Research Agent with Full Features
-
-```yaml
+  Focus your questions on [project-name] specific aspects while following the Socratic approach.
 ---
-type: agent
-
-shared:
-  description: Locates files, directories, and components relevant to a feature or task
-
-claude:
-  enabled: true
-  name: research/codebase-locator
-  tools: "Grep, Glob, LS"
-  model: sonnet
-
-opencode:
-  enabled: true
-  mode: subagent
-  model: anthropic/claude-sonnet-4-5
-  tools:
-    grep: true
-    glob: true
-    list: true
----
-
-[Agent instructions here]
 ```
 
-### Example 2: Simple Command
+### Go Project Extension
 
-```yaml
+```markdown
+---description: Go development for [project-name]mode: primarymodel: anthropic/claude-sonnet-4-5prompt: |
+  You are working on the [project-name] project.
+
+  Project Context:
+  - [Add project-specific details]
+  - [Key dependencies]
+  - [Build commands]
+  - [Project structure]
+
+  Build on standard library knowledge with these project-specific patterns.
 ---
-type: command
-
-shared:
-  description: Create git commits with user approval
-
-claude:
-  enabled: true
-
-opencode:
-  enabled: true
----
-
-[Command instructions here]
 ```
 
-### Example 3: OpenCode-Only Agent with Advanced Features
+### Python Project Extension
 
-```yaml
+```markdown
+---description: Python development for [project-name]mode: primarymodel: anthropic/claude-sonnet-4-5prompt: |
+  You are working on the [project-name] project.
+
+  Project Context:
+  - [Add project-specific details]
+  - [Key dependencies]
+  - [Build commands]
+  - [Project structure]
+  - [Python version requirements]
+
+  Build on standard library knowledge with these project-specific patterns.
 ---
-type: agent
-
-shared:
-  description: Specialized agent for data analysis tasks
-
-claude:
-  enabled: false
-
-opencode:
-  enabled: true
-  mode: primary
-  model: anthropic/claude-sonnet-4-5
-  temperature: 0.3
-  tools:
-    read: true
-    bash: true
-    write: false
-  permission:
-    bash:
-      "rm*": ask
-      "git*": allow
-      "*": ask
----
-
-[Agent instructions here]
 ```
 
-### Example 4: Claude-Only Agent
+## Links and resources
 
-```yaml
----
-type: agent
-
-shared:
-  description: Claude-specific debugging agent
-
-claude:
-  enabled: true
-  name: debug/error-analyzer
-  tools: "Read, Grep"
-  model: opus
-
-opencode:
-  enabled: false
----
-
-[Agent instructions here]
-```
-
-## Creating New Templates
-
-1. **Choose type**: Decide if this is an `agent` or `command`
-2. **Write shared description**: Start with the description that applies to all providers
-3. **Add provider sections**: For each provider you want to support:
-   - Set `enabled: true`
-   - Add provider-specific fields in their exact format
-4. **Write body content**: Add the prompt/instructions below the frontmatter
-5. **Validate**: Ensure YAML frontmatter is valid and required fields are present
-
-## File Organization
-
-```
-templates/
-├── agents/
-│   ├── research/        # Research and exploration agents
-│   ├── brainstorm/      # Creative and planning agents
-│   ├── go/              # Go language specialists
-│   └── python/          # Python language specialists
-└── commands/
-    └── g/               # Git-related commands
-```
-
-Place templates in the appropriate subdirectory based on their function and type.
+- [https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/](https://harper.blog/2025/02/16/my-llm-codegen-workflow-atm/)
+- [https://www.penguinrandomhouse.com/books/741805/co-intelligence-by-ethan-mollick/](https://www.penguinrandomhouse.com/books/741805/co-intelligence-by-ethan-mollick/)
+- [https://princeton-nlp.github.io/SocraticAI/](https://princeton-nlp.github.io/SocraticAI/)
+- [humanlayer](https:/ithub.com/humanlayer/humanlayer)
