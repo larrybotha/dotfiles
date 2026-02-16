@@ -1,15 +1,17 @@
 #!/usr/bin/env python3
 
 
-"""
-Agent and command configuration synchronization script.
+"""Agent and command configuration synchronization script.
+
 Generates provider-specific configurations from unified templates.
 
-Requirements:
-    - PyYAML (managed via uv: uv add pyyaml)
+Requirements
+------------
+- PyYAML (managed via uv: uv add pyyaml)
 
-Usage:
-    uv run python sync-agents.py [--config CONFIG_FILE]
+Usage
+-----
+uv run python sync-agents.py [--config CONFIG_FILE]
 """
 
 import argparse
@@ -27,12 +29,27 @@ import yaml
 
 
 class ProviderConfig(NamedTuple):
-    """Configuration for a provider."""
+    """Configuration for a provider.
+
+    Attributes
+    ----------
+    name : str
+        Provider name
+    mcp_key : str
+        Key used in MCP config JSON ("mcpServers" or "mcp")
+    agent_dir : Optional[str]
+        Directory name for agents (None if not supported)
+    command_dir : Optional[str]
+        Directory name for commands (None if not supported)
+    skill_dir : Optional[str]
+        Directory name for skills (None if not supported)
+    """
 
     name: str
-    mcp_key: str  # Key used in MCP config JSON ("mcpServers" or "mcp")
-    agent_dir: Optional[str]  # Directory name for agents (None if not supported)
-    command_dir: Optional[str]  # Directory name for commands (None if not supported)
+    mcp_key: str
+    agent_dir: Optional[str]
+    command_dir: Optional[str]
+    skill_dir: Optional[str]
 
 
 # Provider configurations
@@ -42,25 +59,44 @@ PROVIDERS: Dict[str, ProviderConfig] = {
         mcp_key="mcpServers",
         agent_dir="agents",
         command_dir="commands",
+        skill_dir="skills",
     ),
     "gemini": ProviderConfig(
         name="gemini",
         mcp_key="mcpServers",
-        # TODO: support Gemini, but requires TOML instead of YAML/Markdown
+        # TODO: support Gemini - requires TOML instead of YAML/Markdown
         agent_dir=None,
         command_dir=None,
+        skill_dir=None,
     ),
     "opencode": ProviderConfig(
         name="opencode",
         mcp_key="mcp",
         agent_dir="agent",
         command_dir="command",
+        skill_dir="skills",
     ),
 }
 
 
 def get_provider_config(provider: str) -> ProviderConfig:
-    """Get provider configuration, raising error if unknown."""
+    """Get provider configuration, raising error if unknown.
+
+    Parameters
+    ----------
+    provider : str
+        Provider name to look up
+
+    Returns
+    -------
+    ProviderConfig
+        Configuration for the specified provider
+
+    Raises
+    ------
+    ValueError
+        If provider is unknown
+    """
     if provider not in PROVIDERS:
         raise ValueError(
             f"Unknown provider: {provider}. Known providers: {list(PROVIDERS.keys())}"
@@ -70,15 +106,33 @@ def get_provider_config(provider: str) -> ProviderConfig:
 
 
 def get_template_providers() -> List[str]:
-    """Get list of providers that support templates."""
+    """Get list of providers that support templates.
+
+    Returns
+    -------
+    List[str]
+        List of provider names that support template generation
+    """
     return [name for name, config in PROVIDERS.items() if config.agent_dir is not None]
 
 
 @dataclass
 class TemplateConfig:
-    """Represents a parsed template with metadata."""
+    """Represents a parsed template with metadata.
 
-    type: Literal["agent"] | Literal["command"]
+    Attributes
+    ----------
+    type : Literal["agent", "command", "skill"]
+        Type of template
+    body : str
+        Template body content
+    shared_config : Dict[str, Any]
+        Configuration shared across all providers
+    provider_metadata : Dict[str, Dict[str, Any]]
+        Provider-specific metadata keyed by provider name
+    """
+
+    type: Literal["agent", "command", "skill"]
     body: str
     shared_config: Dict[str, Any]
     provider_metadata: Dict[str, Dict[str, Any]]
@@ -86,12 +140,25 @@ class TemplateConfig:
 
 @dataclass
 class MCPServerConfig:
-    """Represents a single MCP server configuration."""
+    """Represents a single MCP server configuration.
+
+    Attributes
+    ----------
+    name : str
+        Server name
+    command : str
+        Command to run the server
+    args : List[str]
+        Command-line arguments for the server
+    providers : Dict[str, Dict[str, Any]]
+        Provider-specific configuration mapping provider name to metadata
+        containing at minimum {enabled: bool, ...other metadata}
+    """
 
     name: str
     command: str
     args: List[str]
-    providers: Dict[str, Dict[str, Any]]  # provider -> {enabled: bool, ...metadata}
+    providers: Dict[str, Dict[str, Any]]
 
 
 class FrontmatterParser:
@@ -99,7 +166,23 @@ class FrontmatterParser:
 
     @staticmethod
     def parse_file(template_path: Path) -> TemplateConfig:
-        """Parse a template file into a TemplateConfig object."""
+        """Parse a template file into a TemplateConfig object.
+
+        Parameters
+        ----------
+        template_path : Path
+            Path to template file
+
+        Returns
+        -------
+        TemplateConfig
+            Parsed template configuration object
+
+        Raises
+        ------
+        ValueError
+            If frontmatter is invalid or skill validation fails
+        """
         content = template_path.read_text()
         parts = re.split(r"^---\s*$", content, maxsplit=2, flags=re.MULTILINE)
 
@@ -114,13 +197,18 @@ class FrontmatterParser:
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in {template_path}: {e}")
 
+        if "type" not in frontmatter:
+            raise ValueError(f"Missing 'type' field in frontmatter: {template_path}")
+
+        template_type = frontmatter["type"]
+
         provider_metadata = {}
 
         for provider_name in get_template_providers():
             provider_metadata[provider_name] = frontmatter.get(provider_name, {}) or {}
 
         return TemplateConfig(
-            type=frontmatter["type"],
+            type=template_type,
             body=body,
             shared_config=frontmatter.get("shared", {}) or {},
             provider_metadata=provider_metadata,
@@ -132,7 +220,18 @@ class MCPGenerator:
 
     @staticmethod
     def generate_claude_format(servers: List[MCPServerConfig]) -> Dict[str, Any]:
-        """Generate Claude format: {"mcpServers": {...}}"""
+        """Generate Claude format configuration.
+
+        Parameters
+        ----------
+        servers : List[MCPServerConfig]
+            List of MCP server configurations
+
+        Returns
+        -------
+        Dict[str, Any]
+            Configuration dictionary in Claude format: {"mcpServers": {...}}
+        """
         provider = get_provider_config("claude")
         mcp_servers = {}
 
@@ -149,7 +248,18 @@ class MCPGenerator:
 
     @staticmethod
     def generate_gemini_format(servers: List[MCPServerConfig]) -> Dict[str, Any]:
-        """Generate Gemini format (same as Claude)."""
+        """Generate Gemini format configuration.
+
+        Parameters
+        ----------
+        servers : List[MCPServerConfig]
+            List of MCP server configurations
+
+        Returns
+        -------
+        Dict[str, Any]
+            Configuration dictionary in Gemini format (same as Claude)
+        """
         provider = get_provider_config("gemini")
         mcp_servers = {}
 
@@ -166,7 +276,18 @@ class MCPGenerator:
 
     @staticmethod
     def generate_opencode_format(servers: List[MCPServerConfig]) -> Dict[str, Any]:
-        """Generate OpenCode format: {"mcp": {...}}"""
+        """Generate OpenCode format configuration.
+
+        Parameters
+        ----------
+        servers : List[MCPServerConfig]
+            List of MCP server configurations
+
+        Returns
+        -------
+        Dict[str, Any]
+            Configuration dictionary in OpenCode format: {"mcp": {...}}
+        """
         provider = get_provider_config("opencode")
         mcp = {}
 
@@ -188,7 +309,20 @@ class TemplateGenerator:
 
     @staticmethod
     def generate_frontmatter(template: TemplateConfig, provider: str) -> str:
-        """Generate provider-specific YAML frontmatter."""
+        """Generate provider-specific YAML frontmatter.
+
+        Parameters
+        ----------
+        template : TemplateConfig
+            Template configuration object
+        provider : str
+            Provider name
+
+        Returns
+        -------
+        str
+            YAML frontmatter string
+        """
         config = template.shared_config | template.provider_metadata.get(provider, {})
         # Remove 'enabled' field - not part of frontmatter
         config = {k: v for k, v in config.items() if k != "enabled"}
@@ -203,7 +337,20 @@ class TemplateGenerator:
 
     @staticmethod
     def generate_file_content(template: TemplateConfig, provider: str) -> str:
-        """Generate complete provider-format file."""
+        """Generate complete provider-format file.
+
+        Parameters
+        ----------
+        template : TemplateConfig
+            Template configuration object
+        provider : str
+            Provider name
+
+        Returns
+        -------
+        str
+            Complete file content with frontmatter and body
+        """
         frontmatter = TemplateGenerator.generate_frontmatter(template, provider)
 
         return f"---\n{frontmatter}---\n\n{template.body}\n"
@@ -220,11 +367,15 @@ class AgentSyncManager:
     def __init__(self, config_file: Path):
         """Initialize AgentSyncManager with config file.
 
-        Args:
-            config_file: Path to the YAML configuration file
+        Parameters
+        ----------
+        config_file : Path
+            Path to the YAML configuration file
 
-        Raises:
-            FileNotFoundError: If config file or templates directory doesn't exist
+        Raises
+        ------
+        FileNotFoundError
+            If config file or templates directory doesn't exist
         """
         self._config = self._load_config(config_file)
         self._config_file = config_file
@@ -235,7 +386,9 @@ class AgentSyncManager:
     def _resolve_templates_dir(self) -> Path:
         """Resolve templates directory from config file location.
 
-        Returns:
+        Returns
+        -------
+        Path
             Path to templates directory (config_file.parent / "templates")
         """
         return self._config_file.parent / "templates"
@@ -243,8 +396,10 @@ class AgentSyncManager:
     def _validate_templates_dir(self) -> None:
         """Validate that templates directory exists.
 
-        Raises:
-            FileNotFoundError: If templates directory doesn't exist
+        Raises
+        ------
+        FileNotFoundError
+            If templates directory doesn't exist
         """
         if not self._templates_dir.exists():
             raise FileNotFoundError(
@@ -254,7 +409,23 @@ class AgentSyncManager:
             )
 
     def _load_config(self, config_file: Path) -> Dict[str, Any]:
-        """Load provider configuration from YAML file."""
+        """Load provider configuration from YAML file.
+
+        Parameters
+        ----------
+        config_file : Path
+            Path to YAML configuration file
+
+        Returns
+        -------
+        Dict[str, Any]
+            Loaded configuration dictionary
+
+        Raises
+        ------
+        FileNotFoundError
+            If config file doesn't exist
+        """
         if not config_file.exists():
             raise FileNotFoundError(f"Config file not found: {config_file}")
 
@@ -262,13 +433,58 @@ class AgentSyncManager:
             return yaml.safe_load(f)
 
     def discover_templates(self) -> List[Path]:
-        """Find all template markdown files."""
-        return sorted(self._templates_dir.rglob("*.md"))
+        """Find all template markdown files.
+
+        Supports patterns:
+        - Agents: templates/agents/*.md (flat files or subdirectories)
+        - Commands: templates/commands/*.md (flat files or subdirectories)
+        - Skills: templates/skills/*/SKILL.md (must be in subdirectories)
+
+        Returns
+        -------
+        List[Path]
+            Deduplicated sorted list of template file paths
+        """
+        templates = set()
+
+        # Find all markdown files (flat files and files in subdirectories)
+        for md_file in self._templates_dir.rglob("*.md"):
+            templates.add(md_file)
+
+        return sorted(templates)
 
     def get_output_path(
-        self, template_path: Path, provider: str, template_type: str, config: Dict, /
+        self,
+        *,
+        config: Dict,
+        provider: str,
+        template_path: Path,
+        template_type: str,
     ) -> Path:
-        """Calculate output path for a generated file."""
+        """Calculate output path for a generated file.
+
+        Parameters
+        ----------
+        config : Dict
+            Configuration dictionary
+        provider : str
+            Provider name
+        template_path : Path
+            Path to the template file
+        template_type : str
+            Type of template (agent, command, skill)
+
+        Returns
+        -------
+        Path
+            Output path for the generated file
+
+        Raises
+        ------
+        ValueError
+            If templates_dir is not configured, template type is unknown,
+            or provider doesn't support the template type
+        """
         # Get provider configuration
         provider_cfg = get_provider_config(provider)
 
@@ -290,6 +506,8 @@ class AgentSyncManager:
             subdir = provider_cfg.agent_dir
         elif template_type == "command":
             subdir = provider_cfg.command_dir
+        elif template_type == "skill":
+            subdir = provider_cfg.skill_dir
         else:
             raise ValueError(f"Unknown template type: {template_type}")
 
@@ -301,10 +519,28 @@ class AgentSyncManager:
         # Build full path: base / subdir / relative_path
         base_dir = provider_base / subdir
 
+        # For skills, create nested directory structure
+        if template_type == "skill":
+            skill_name = rel_path.parts[0]
+            return base_dir / skill_name / "SKILL.md"
+
         return base_dir / rel_path
 
     def write_generated_file(self, output_path: Path, content: str) -> bool:
-        """Write generated content to output file."""
+        """Write generated content to output file.
+
+        Parameters
+        ----------
+        output_path : Path
+            Path to the output file
+        content : str
+            Content to write
+
+        Returns
+        -------
+        bool
+            True if write was successful, False otherwise
+        """
         output_path.parent.mkdir(parents=True, exist_ok=True)
 
         try:
@@ -317,22 +553,137 @@ class AgentSyncManager:
 
             return False
 
+    def copy_skill_directory(
+        self, skill_dir: Path, output_dir: Path, skip_files: Optional[List[str]] = None
+    ) -> tuple[int, int]:
+        """Copy all files from skill directory to output, excluding specified files.
+
+        Parameters
+        ----------
+        skill_dir : Path
+            Source skill directory
+        output_dir : Path
+            Destination directory
+        skip_files : Optional[List[str]], optional
+            List of filenames to skip (defaults to template files)
+
+        Returns
+        -------
+        tuple[int, int]
+            Tuple of (files_copied, errors_encountered)
+
+        Notes
+        -----
+        - Symlinks are followed (not preserved as symlinks)
+        - Broken symlinks are skipped with warning
+        - Existing files are overwritten
+        - Empty directories are not created
+        - Files larger than 10MB are skipped with warning
+        """
+        if skip_files is None:
+            skip_files = ["SKILL.md", "skill.md", ".DS_Store", ".gitkeep"]
+
+        # Convert to set for O(1) lookups and normalize case for macOS
+        skip_files_set = {name.upper() for name in skip_files}
+
+        if not skill_dir.exists():
+            print(f"Warning: Source directory not found: {skill_dir}", file=sys.stderr)
+            return (0, 0)
+
+        if not skill_dir.is_dir():
+            print(
+                f"Warning: Source path is not a directory: {skill_dir}",
+                file=sys.stderr,
+            )
+            return (0, 0)
+
+        copied_count = 0
+        error_count = 0
+        MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+
+        try:
+            for item in skill_dir.rglob("*"):
+                # Skip files in the ignore list (case-insensitive)
+                if item.name.upper() in skip_files_set:
+                    continue
+
+                # Skip broken symlinks
+                if item.is_symlink() and not item.exists():
+                    print(
+                        f"Warning: Skipping broken symlink: {item.relative_to(skill_dir)}",
+                        file=sys.stderr,
+                    )
+                    error_count += 1
+                    continue
+
+                if not item.is_file():
+                    continue
+
+                # Calculate destination path
+                rel_path = item.relative_to(skill_dir)
+                dest_path = output_dir / rel_path
+
+                try:
+                    # Check file size
+                    file_size = item.stat().st_size
+                    if file_size > MAX_FILE_SIZE:
+                        print(
+                            f"Warning: Skipping large file ({file_size / 1024 / 1024:.1f}MB): {rel_path}",
+                            file=sys.stderr,
+                        )
+                        error_count += 1
+                        continue
+
+                    # Create parent directories
+                    dest_path.parent.mkdir(parents=True, exist_ok=True)
+
+                    # Copy file (preserves metadata with copy2)
+                    shutil.copy2(item, dest_path)
+                    copied_count += 1
+
+                except PermissionError as e:
+                    print(
+                        f"Warning: Permission denied copying {rel_path}: {e}",
+                        file=sys.stderr,
+                    )
+                    error_count += 1
+                except OSError as e:
+                    print(
+                        f"Warning: Failed to copy {rel_path}: {e}",
+                        file=sys.stderr,
+                    )
+                    error_count += 1
+
+        except Exception as e:
+            print(
+                f"Error: Failed to traverse directory {skill_dir}: {e}",
+                file=sys.stderr,
+            )
+            return (copied_count, error_count + 1)
+
+        return (copied_count, error_count)
+
     def _deep_merge_mcp_servers(
         self, existing: Dict[str, Any], new: Dict[str, Any], mcp_key: str
     ) -> Dict[str, Any]:
-        """
-        Merge MCP server configurations, replacing the entire MCP servers section.
+        """Merge MCP server configurations, replacing the entire MCP servers section.
 
         This method treats config.yml as the source of truth for MCP servers.
         All servers in the JSON file are replaced with those from config.yml.
         Other top-level keys in the JSON file are preserved.
 
-        Args:
-            existing: Existing configuration dictionary
-            new: New configuration dictionary
-            mcp_key: Key for MCP servers ("mcpServers" or "mcp")
+        Parameters
+        ----------
+        existing : Dict[str, Any]
+            Existing configuration dictionary
+        new : Dict[str, Any]
+            New configuration dictionary
+        mcp_key : str
+            Key for MCP servers ("mcpServers" or "mcp")
 
-        Returns:
+        Returns
+        -------
+        Dict[str, Any]
             Merged configuration dictionary
         """
         result = existing.copy()
@@ -352,16 +703,21 @@ class AgentSyncManager:
     def merge_json_file(
         self, target_path: Path, new_data: Dict[str, Any], mcp_key: str
     ) -> tuple[bool, Path | None]:
-        """
-        Merge new configuration data into existing JSON file.
+        """Merge new configuration data into existing JSON file.
 
-        Args:
-            target_path: Path to target JSON file
-            new_data: New configuration data to merge
-            mcp_key: MCP configuration key format for this provider (e.g., "mcpServers", "mcp")
+        Parameters
+        ----------
+        target_path : Path
+            Path to target JSON file
+        new_data : Dict[str, Any]
+            New configuration data to merge
+        mcp_key : str
+            MCP configuration key format for this provider (e.g., "mcpServers", "mcp")
 
-        Returns:
-            Tuple of (success: bool, backup_path: Path | None)
+        Returns
+        -------
+        tuple[bool, Path | None]
+            Tuple of (success, backup_path)
             - success: True if merge was successful, False otherwise
             - backup_path: Path to backup file created, or None if no backup was created
         """
@@ -428,10 +784,78 @@ class AgentSyncManager:
 
             return (False, None)
 
+    def _validate_skill_template(self, template_path: Path) -> None:
+        """Validate skill template requirements.
+
+        Skills must follow the pattern: templates/skills/<skill-name>/SKILL.md
+        where <skill-name> is exactly one directory level deep.
+
+        Parameters
+        ----------
+        template_path : Path
+            Path to skill template file
+
+        Raises
+        ------
+        ValueError
+            If skill validation fails
+        """
+        skills_dir = self._templates_dir / "skills"
+
+        # Check that skill is in a subdirectory of skills/
+        try:
+            rel_path = template_path.relative_to(skills_dir)
+        except ValueError:
+            raise ValueError(
+                f"Skill template must be in subdirectory of skills/: {template_path}"
+            )
+
+        # Skills must be exactly one directory level deep (not flat, not nested deeper)
+        if len(rel_path.parts) != 2:
+            if len(rel_path.parts) == 1:
+                raise ValueError(
+                    f"Skill template must be in a subdirectory of skills/ "
+                    f"(e.g., skills/my-skill/SKILL.md), not directly in skills/: {template_path}"
+                )
+            else:
+                raise ValueError(
+                    f"Skill template must be exactly one directory deep "
+                    f"(e.g., skills/my-skill/SKILL.md), not nested deeper: {template_path}"
+                )
+
+        # Filename must be exactly SKILL.md (case-sensitive)
+        if template_path.name != "SKILL.md":
+            raise ValueError(
+                f"Skill template filename must be exactly 'SKILL.md' (case-sensitive), "
+                f"found '{template_path.name}'. Please rename: {template_path}"
+            )
+
     def validate_template(
         self, template: TemplateConfig, template_path: Path
     ) -> List[str]:
-        """Validate template configuration and return warnings."""
+        """Validate template configuration and return warnings.
+
+        Parameters
+        ----------
+        template : TemplateConfig
+            Parsed template configuration
+        template_path : Path
+            Path to template file
+
+        Returns
+        -------
+        List[str]
+            List of warning messages
+
+        Raises
+        ------
+        ValueError
+            If skill validation fails
+        """
+        # Validate skills have correct structure
+        if template.type == "skill":
+            self._validate_skill_template(template_path)
+
         warnings = []
         enabled_providers = [
             p
@@ -448,11 +872,12 @@ class AgentSyncManager:
         return warnings
 
     def _cleanup_backups(self, backup_paths: List[Path]) -> None:
-        """
-        Delete backup files after successful sync.
+        """Delete backup files after successful sync.
 
-        Args:
-            backup_paths: List of backup file paths to delete
+        Parameters
+        ----------
+        backup_paths : List[Path]
+            List of backup file paths to delete
         """
         if not backup_paths:
             return
@@ -470,11 +895,12 @@ class AgentSyncManager:
                 )
 
     def load_mcp_servers(self) -> List[MCPServerConfig]:
-        """
-        Load MCP servers from the config loaded during initialization.
+        """Load MCP servers from the config loaded during initialization.
 
-        Returns:
-            List of MCPServerConfig objects
+        Returns
+        -------
+        List[MCPServerConfig]
+            List of MCP server configuration objects
         """
         servers_dict = self._config.get("mcp_servers", {})
         servers = []
@@ -492,11 +918,17 @@ class AgentSyncManager:
         return servers
 
     def sync_mcp_servers(self) -> int:
-        """
-        Synchronize MCP server configurations to provider files.
+        """Synchronize MCP server configurations to provider files.
 
-        Returns:
+        Returns
+        -------
+        int
             Number of successfully updated files
+
+        Raises
+        ------
+        ValueError
+            If validation of provider configurations fails
         """
         servers = self.load_mcp_servers()
 
@@ -598,7 +1030,13 @@ class AgentSyncManager:
         return success_count
 
     def sync_all(self) -> int:
-        """Process all templates and generate provider configs."""
+        """Process all templates and generate provider configs.
+
+        Returns
+        -------
+        int
+            Number of successfully generated files
+        """
         templates = self.discover_templates()
         print(f"Found {len(templates)} templates")
 
@@ -626,11 +1064,29 @@ class AgentSyncManager:
 
                     content = self._generator.generate_file_content(template, provider)
                     output_path = self.get_output_path(
-                        template_path, provider, template.type, self._config
+                        config=self._config,
+                        provider=provider,
+                        template_path=template_path,
+                        template_type=template.type,
                     )
 
                     if self.write_generated_file(output_path, content):
                         success_count += 1
+
+                        # For skills, copy additional files from skill directory
+                        if template.type == "skill":
+                            skill_source_dir = template_path.parent
+                            skill_output_dir = output_path.parent
+                            copied, errors = self.copy_skill_directory(
+                                skill_source_dir, skill_output_dir
+                            )
+                            if copied > 0:
+                                print(f"  Copied {copied} additional file(s)")
+                            if errors > 0:
+                                print(
+                                    f"  Warning: {errors} file(s) failed to copy",
+                                    file=sys.stderr,
+                                )
 
             except Exception as e:
                 print(f"Error processing {template_path}: {e}", file=sys.stderr)
@@ -639,7 +1095,13 @@ class AgentSyncManager:
 
 
 def parse_arguments() -> argparse.Namespace:
-    """Parse command-line arguments."""
+    """Parse command-line arguments.
+
+    Returns
+    -------
+    argparse.Namespace
+        Parsed command-line arguments
+    """
     parser = argparse.ArgumentParser(
         description="Synchronize agent and command templates to provider configurations",
         formatter_class=argparse.RawDescriptionHelpFormatter,
@@ -667,7 +1129,13 @@ Examples:
 
 
 def main():
-    """Main execution function."""
+    """Main execution function.
+
+    Returns
+    -------
+    int
+        Exit code (0 for success, 1 for failure)
+    """
     args = parse_arguments()
     script_dir = Path(__file__).parent
     config_file = (
