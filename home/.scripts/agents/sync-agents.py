@@ -23,6 +23,17 @@ from typing import Any, Dict, List
 
 import yaml
 
+DIRS_BY_PROVIDER = {
+    "claude": {
+        "agent": "agents",
+        "command": "commands",
+    },
+    "opencode": {
+        "agent": "agent",
+        "command": "command",
+    },
+}
+
 
 @dataclass
 class TemplateConfig:
@@ -181,25 +192,16 @@ class AgentSyncManager:
         # Provider base paths from config
         provider_config = config["providers"][provider]
         templates_dir = provider_config.get("templates_dir")
+
         if not templates_dir:
             raise ValueError(f"No templates_dir configured for provider: {provider}")
+
         provider_base = Path(templates_dir).expanduser()
 
-        # Provider-specific subdirectory names
-        dirs_by_provider = {
-            "claude": {
-                "agent": "agents",
-                "command": "commands",
-            },
-            "opencode": {
-                "agent": "agent",
-                "command": "command",
-            },
-        }
-
         # Build full path: base / subdir / relative_path
-        subdir = dirs_by_provider[provider][template_type]
+        subdir = DIRS_BY_PROVIDER[provider][template_type]
         base_dir = provider_base / subdir
+
         return base_dir / rel_path
 
     def write_generated_file(self, output_path: Path, content: str) -> bool:
@@ -220,7 +222,11 @@ class AgentSyncManager:
         self, existing: Dict[str, Any], new: Dict[str, Any], mcp_key: str
     ) -> Dict[str, Any]:
         """
-        Deep merge MCP server configurations, preserving existing servers.
+        Merge MCP server configurations, replacing the entire MCP servers section.
+
+        This method treats config.yml as the source of truth for MCP servers.
+        All servers in the JSON file are replaced with those from config.yml.
+        Other top-level keys in the JSON file are preserved.
 
         Args:
             existing: Existing configuration dictionary
@@ -263,6 +269,7 @@ class AgentSyncManager:
         if target_path.exists():
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = target_path.with_suffix(f".backup.{timestamp}")
+
             try:
                 shutil.copy2(target_path, backup_path)
                 print(f"Created backup: {backup_path}")
