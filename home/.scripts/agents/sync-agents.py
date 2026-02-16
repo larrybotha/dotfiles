@@ -26,7 +26,6 @@ from typing import Any, Dict, List, Literal, NamedTuple, Optional
 import yaml
 
 
-# Provider configuration structure
 class ProviderConfig(NamedTuple):
     """Configuration for a provider."""
 
@@ -47,7 +46,8 @@ PROVIDERS: Dict[str, ProviderConfig] = {
     "gemini": ProviderConfig(
         name="gemini",
         mcp_key="mcpServers",
-        agent_dir=None,  # Gemini doesn't use templates
+        # TODO: support Gemini, but requires TOML instead of YAML/Markdown
+        agent_dir=None,
         command_dir=None,
     ),
     "opencode": ProviderConfig(
@@ -65,6 +65,7 @@ def get_provider_config(provider: str) -> ProviderConfig:
         raise ValueError(
             f"Unknown provider: {provider}. Known providers: {list(PROVIDERS.keys())}"
         )
+
     return PROVIDERS[provider]
 
 
@@ -100,23 +101,21 @@ class FrontmatterParser:
     def parse_file(template_path: Path) -> TemplateConfig:
         """Parse a template file into a TemplateConfig object."""
         content = template_path.read_text()
-
-        # Split frontmatter and body
         parts = re.split(r"^---\s*$", content, maxsplit=2, flags=re.MULTILINE)
+
         if len(parts) < 3:
             raise ValueError(f"No valid frontmatter in {template_path}")
 
         frontmatter_yaml = parts[1]
         body = parts[2].strip()
 
-        # Parse YAML
         try:
             frontmatter = yaml.safe_load(frontmatter_yaml)
         except yaml.YAMLError as e:
             raise ValueError(f"Invalid YAML in {template_path}: {e}")
 
-        # Extract metadata for providers that support templates
         provider_metadata = {}
+
         for provider_name in get_template_providers():
             provider_metadata[provider_name] = frontmatter.get(provider_name, {}) or {}
 
@@ -136,13 +135,16 @@ class MCPGenerator:
         """Generate Claude format: {"mcpServers": {...}}"""
         provider = get_provider_config("claude")
         mcp_servers = {}
+
         for server in servers:
             provider_config = server.providers.get(provider.name, {})
+
             if provider_config.get("enabled", False):
                 mcp_servers[server.name] = {
                     "command": server.command,
                     "args": server.args,
                 }
+
         return {provider.mcp_key: mcp_servers}
 
     @staticmethod
@@ -150,13 +152,16 @@ class MCPGenerator:
         """Generate Gemini format (same as Claude)."""
         provider = get_provider_config("gemini")
         mcp_servers = {}
+
         for server in servers:
             provider_config = server.providers.get(provider.name, {})
+
             if provider_config.get("enabled", False):
                 mcp_servers[server.name] = {
                     "command": server.command,
                     "args": server.args,
                 }
+
         return {provider.mcp_key: mcp_servers}
 
     @staticmethod
@@ -164,14 +169,17 @@ class MCPGenerator:
         """Generate OpenCode format: {"mcp": {...}}"""
         provider = get_provider_config("opencode")
         mcp = {}
+
         for server in servers:
             provider_config = server.providers.get(provider.name, {})
+
             if provider_config.get("enabled", False):
                 mcp[server.name] = {
                     "type": provider_config.get("type", "local"),
                     "command": [server.command] + server.args,
                     "enabled": True,
                 }
+
         return {provider.mcp_key: mcp}
 
 
@@ -181,14 +189,10 @@ class TemplateGenerator:
     @staticmethod
     def generate_frontmatter(template: TemplateConfig, provider: str) -> str:
         """Generate provider-specific YAML frontmatter."""
-        # Merge shared config with provider config (provider values override)
         config = template.shared_config | template.provider_metadata.get(provider, {})
-
         # Remove 'enabled' field - not part of frontmatter
         config = {k: v for k, v in config.items() if k != "enabled"}
 
-        # Output as YAML - field order follows natural dict merge order
-        # (shared fields first, then provider-specific fields)
         return yaml.dump(
             config,
             default_flow_style=False,
@@ -201,6 +205,7 @@ class TemplateGenerator:
     def generate_file_content(template: TemplateConfig, provider: str) -> str:
         """Generate complete provider-format file."""
         frontmatter = TemplateGenerator.generate_frontmatter(template, provider)
+
         return f"---\n{frontmatter}---\n\n{template.body}\n"
 
 
@@ -221,11 +226,11 @@ class AgentSyncManager:
         Raises:
             FileNotFoundError: If config file or templates directory doesn't exist
         """
-        self.config_file = config_file
         self._config = self._load_config(config_file)
-        self.templates_dir = self._resolve_templates_dir()
+        self._config_file = config_file
+        self._generator = TemplateGenerator
+        self._templates_dir = self._resolve_templates_dir()
         self._validate_templates_dir()
-        self.generator = TemplateGenerator
 
     def _resolve_templates_dir(self) -> Path:
         """Resolve templates directory from config file location.
@@ -233,7 +238,7 @@ class AgentSyncManager:
         Returns:
             Path to templates directory (config_file.parent / "templates")
         """
-        return self.config_file.parent / "templates"
+        return self._config_file.parent / "templates"
 
     def _validate_templates_dir(self) -> None:
         """Validate that templates directory exists.
@@ -241,11 +246,11 @@ class AgentSyncManager:
         Raises:
             FileNotFoundError: If templates directory doesn't exist
         """
-        if not self.templates_dir.exists():
+        if not self._templates_dir.exists():
             raise FileNotFoundError(
-                f"Templates directory not found at {self.templates_dir}\n"
-                f"Expected location: {self.config_file.parent}/templates\n"
-                f"Config file: {self.config_file}"
+                f"Templates directory not found at {self._templates_dir}\n"
+                f"Expected location: {self._config_file.parent}/templates\n"
+                f"Config file: {self._config_file}"
             )
 
     def _load_config(self, config_file: Path) -> Dict[str, Any]:
@@ -258,17 +263,17 @@ class AgentSyncManager:
 
     def discover_templates(self) -> List[Path]:
         """Find all template markdown files."""
-        return sorted(self.templates_dir.rglob("*.md"))
+        return sorted(self._templates_dir.rglob("*.md"))
 
     def get_output_path(
-        self, template_path: Path, provider: str, template_type: str, config: Dict
+        self, template_path: Path, provider: str, template_type: str, config: Dict, /
     ) -> Path:
         """Calculate output path for a generated file."""
         # Get provider configuration
         provider_cfg = get_provider_config(provider)
 
         # Get relative path from templates/{type}s/ directory
-        type_dir = self.templates_dir / (template_type + "s")
+        type_dir = self._templates_dir / (template_type + "s")
         rel_path = template_path.relative_to(type_dir)
 
         # Provider base paths from config
@@ -353,18 +358,16 @@ class AgentSyncManager:
         Args:
             target_path: Path to target JSON file
             new_data: New configuration data to merge
-            provider: Provider name (e.g., "claude", "gemini", "opencode")
+            mcp_key: MCP configuration key format for this provider (e.g., "mcpServers", "mcp")
 
         Returns:
             Tuple of (success: bool, backup_path: Path | None)
             - success: True if merge was successful, False otherwise
             - backup_path: Path to backup file created, or None if no backup was created
         """
-        # Create parent directory if needed
         target_path.parent.mkdir(parents=True, exist_ok=True)
-
-        # Create timestamped backup of existing file
         backup_path = None
+
         if target_path.exists():
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = target_path.with_suffix(f".backup.{timestamp}")
@@ -575,8 +578,9 @@ class AgentSyncManager:
                 continue
 
             success, backup_path = self.merge_json_file(
-                target_path, config_data, provider_name
+                target_path, config_data, mcp_key
             )
+
             if success:
                 success_count += 1
 
@@ -620,7 +624,7 @@ class AgentSyncManager:
                     if not provider_config.get("enabled", False):
                         continue
 
-                    content = self.generator.generate_file_content(template, provider)
+                    content = self._generator.generate_file_content(template, provider)
                     output_path = self.get_output_path(
                         template_path, provider, template.type, self._config
                     )
