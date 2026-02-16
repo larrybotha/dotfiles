@@ -2,3 +2,55 @@
 providers:
   claude: ~/.claude
   opencode: ~/.config/opencode
+
+# MCP configuration target files per provider
+# These files will be updated with MCP server configurations
+mcp_targets:
+  claude: ~/.claude.json
+  gemini: ~/.gemini/settings.json
+  opencode: ~/.config/opencode/opencode.json
+
+# Global MCP servers (available to all projects by default)
+# Projects can override these settings in their local ./config.yml
+# - To disable a global server for a project: set enabled: false in project config
+# - To add a project-specific server: define it in project config only
+# - Project config merges with global config (project takes precedence)
+mcp_servers:
+  vectorcode-mcp-server:
+    command: vectorcode-mcp-server
+    args: []
+    providers:
+      claude:
+        enabled: true
+      opencode:
+        enabled: true
+        type: local  # OpenCode-specific metadata
+      gemini:
+        enabled: true
+
+  dash-api:
+    command: uvx
+    args:
+      - --from
+      - git+https://github.com/Kapeli/dash-mcp-server.git
+      - dash-mcp-server
+    providers:
+      claude:
+        enabled: true
+      opencode:
+        enabled: true
+        type: local  # OpenCode-specific metadata
+      gemini:
+        enabled: true
+
+  mcp-server-fetch:
+    command: uvx
+    args:
+      - mcp-server-fetch
+    providers:
+      claude:
+        enabled: true
+      opencode:
+        enabled: false
+      gemini:
+        enabled: true

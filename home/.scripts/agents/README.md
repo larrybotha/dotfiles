@@ -198,6 +198,151 @@ opencode:
 - **OpenCode is canonical** - When creating templates, use OpenCode files as the source
 - **Field order doesn't matter** - YAML parsers don't require specific field order
 
+## MCP Server Configuration
+
+MCP (Model Context Protocol) servers can be configured at two levels: global (user-wide) and project-specific.
+
+### Global MCP Servers
+
+Defined in `~/.scripts/agents/config.yml`:
+
+```yaml
+# MCP configuration target files per provider
+mcp_targets:
+  claude: ~/.claude.json
+  gemini: ~/.gemini/settings.json
+  opencode: ~/.config/opencode/opencode.json
+
+# Global MCP servers (available to all projects by default)
+mcp_servers:
+  vectorcode-mcp-server:
+    command: vectorcode-mcp-server
+    args: []
+    providers:
+      claude:
+        enabled: true
+      opencode:
+        enabled: true
+        type: local  # OpenCode-specific metadata
+      gemini:
+        enabled: true
+```
+
+### Project-Level MCP Servers
+
+Defined in `./config.yml` (project root):
+
+```yaml
+mcp_servers:
+  my-project-api:
+    command: node
+    args: [./tools/api.js]
+    providers:
+      claude:
+        enabled: true
+      opencode:
+        enabled: true
+        type: local
+```
+
+### Disabling Global Servers for a Project
+
+Project configs can disable global servers:
+
+```yaml
+mcp_servers:
+  # Disable vectorcode for this project
+  vectorcode-mcp-server:
+    providers:
+      claude:
+        enabled: false
+      opencode:
+        enabled: false
+```
+
+### How It Works
+
+When you run `sync-agents.py`, it:
+
+1. Loads global MCP servers from `~/.scripts/agents/config.yml`
+2. Loads project MCP servers from `./config.yml` (if it exists)
+3. Merges servers (project config can add new servers or disable global ones)
+4. Generates provider-specific configuration files
+5. Preserves existing non-MCP settings in provider configs
+6. Creates timestamped backups before updating
+
+### Server Merge Behavior
+
+- **Server-level merge**: Project config completely replaces global server definition
+- **Add new server**: Define server only in project config
+- **Disable global server**: Set `enabled: false` in project config
+- **Override server**: Redefine server completely in project config
+
+### Provider-Specific Metadata
+
+Different providers support different metadata:
+
+- **Claude Code**: `command`, `args` (no extra metadata needed)
+- **OpenCode**: `command`, `args`, `type` (e.g., `local`, `remote`)
+- **Gemini**: `command`, `args`
+
+Example with provider-specific metadata:
+
+```yaml
+mcp_servers:
+  my-server:
+    command: uvx
+    args: [my-mcp-server]
+    providers:
+      claude:
+        enabled: true
+      opencode:
+        enabled: true
+        type: local  # OpenCode requires 'type'
+      gemini:
+        enabled: false
+```
+
+### Backup and Safety Features
+
+The sync script includes safety features:
+
+- **Backups**: Timestamped backups created before each update (`.backup.YYYYMMDD_HHMMSS`)
+- **Atomic writes**: Uses temporary files to prevent corruption
+- **Empty sync protection**: Warns if no servers would be written
+- **JSON validation**: Ensures valid JSON output
+- **Deep merge**: Preserves all existing settings in provider configs
+
+### Migration from Old mcp-servers.json
+
+If you previously used `mcp-servers.json` in your project root:
+
+1. Move server definitions to `./config.yml` under `mcp_servers:` key
+2. Add provider-specific `enabled` flags
+3. Remove old `mcp-servers.json` file
+4. Run `just sync-agents` to apply changes
+
+Before (mcp-servers.json):
+```json
+{
+  "vectorcode-mcp-server": {
+    "command": "vectorcode-mcp-server",
+    "args": []
+  }
+}
+```
+
+After (config.yml):
+```yaml
+mcp_servers:
+  vectorcode-mcp-server:
+    command: vectorcode-mcp-server
+    args: []
+    providers:
+      claude: { enabled: true }
+      opencode: { enabled: true, type: local }
+```
+
 ## Troubleshooting
 
 ### Generated files not updated
@@ -214,3 +359,9 @@ opencode:
 - Check `enabled: true` in provider section
 - For OpenCode-only agents, omit `claude` section entirely
 - Verify provider paths in `config.yml`
+
+### MCP servers not appearing
+- Verify `enabled: true` for each provider in server config
+- Check that `mcp_targets` paths in `config.yml` are correct
+- Review backup files to see what changed
+- Validate YAML syntax in config files
