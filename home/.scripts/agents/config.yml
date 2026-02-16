@@ -1,7 +1,3 @@
-# Provider configurations
-# Each provider can have:
-#   - templates_dir: Base directory for generated agent/command templates
-#   - mcp_config: Path to MCP server configuration file
 providers:
   claude:
     templates_dir: ~/.claude
@@ -12,11 +8,6 @@ providers:
   gemini:
     mcp_config: ~/.gemini/settings.json
 
-# Global MCP servers (available to all projects by default)
-# Projects can override these settings in their local ./config.yml
-# - To disable a global server for a project: set enabled: false in project config
-# - To add a project-specific server: define it in project config only
-# - Project config merges with global config (project takes precedence)
 mcp_servers:
   vectorcode-mcp-server:
     command: vectorcode-mcp-server
@@ -26,7 +17,7 @@ mcp_servers:
         enabled: true
       opencode:
         enabled: true
-        type: local  # OpenCode-specific metadata
+        type: local
       gemini:
         enabled: true
 
@@ -41,18 +32,6 @@ mcp_servers:
         enabled: true
       opencode:
         enabled: true
-        type: local  # OpenCode-specific metadata
-      gemini:
-        enabled: true
-
-  mcp-server-fetch:
-    command: uvx
-    args:
-      - mcp-server-fetch
-    providers:
-      claude:
-        enabled: true
-      opencode:
-        enabled: false
+        type: local
       gemini:
         enabled: true
