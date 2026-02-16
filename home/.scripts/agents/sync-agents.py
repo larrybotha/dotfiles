@@ -233,23 +233,10 @@ class AgentSyncManager:
         # Start with shallow copy of existing config
         result = existing.copy()
 
-        # Deep merge the MCP servers section
+        # Replace the entire MCP servers section with what's in config.yml
+        # This makes config.yml the source of truth for server configurations
         if mcp_key in new:
-            if mcp_key not in result:
-                # No existing MCP servers, just add new ones
-                result[mcp_key] = new[mcp_key]
-            else:
-                # Server-level deep merge: preserve existing servers and their fields
-                result[mcp_key] = existing[mcp_key].copy()
-                for server_name, server_config in new[mcp_key].items():
-                    if server_name in result[mcp_key]:
-                        # Deep merge individual server config (preserves env, custom fields)
-                        result[mcp_key][server_name] = (
-                            result[mcp_key][server_name] | server_config
-                        )
-                    else:
-                        # New server, just add it
-                        result[mcp_key][server_name] = server_config
+            result[mcp_key] = new[mcp_key]
 
         # Add any other top-level keys from new config
         for key, value in new.items():
