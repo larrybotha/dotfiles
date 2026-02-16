@@ -14,8 +14,10 @@ Usage:
 import argparse
 import json
 import re
+import shutil
 import sys
 from dataclasses import dataclass
+from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List
 
@@ -119,14 +121,14 @@ class MCPGenerator:
         return {"mcp": mcp}
 
 
-class ClaudeGenerator:
-    """Generates Claude-format agent and command files."""
+class TemplateGenerator:
+    """Generates template files for all providers using unified format."""
 
     @staticmethod
-    def generate_frontmatter(template: TemplateConfig) -> str:
-        """Generate Claude-specific YAML frontmatter."""
-        # Merge shared config with Claude config (Claude values override)
-        config = template.shared_config | template.provider_metadata.get("claude", {})
+    def generate_frontmatter(template: TemplateConfig, provider: str) -> str:
+        """Generate provider-specific YAML frontmatter."""
+        # Merge shared config with provider config (provider values override)
+        config = template.shared_config | template.provider_metadata.get(provider, {})
 
         # Remove 'enabled' field - not part of frontmatter
         config = {k: v for k, v in config.items() if k != "enabled"}
@@ -142,38 +144,9 @@ class ClaudeGenerator:
         )
 
     @staticmethod
-    def generate_file_content(template: TemplateConfig) -> str:
-        """Generate complete Claude-format file."""
-        frontmatter = ClaudeGenerator.generate_frontmatter(template)
-        return f"---\n{frontmatter}---\n\n{template.body}\n"
-
-
-class OpenCodeGenerator:
-    """Generates OpenCode-format agent and command files."""
-
-    @staticmethod
-    def generate_frontmatter(template: TemplateConfig) -> str:
-        """Generate OpenCode-specific YAML frontmatter."""
-        # Merge shared config with OpenCode config (OpenCode values override)
-        config = template.shared_config | template.provider_metadata.get("opencode", {})
-
-        # Remove 'enabled' field - not part of frontmatter
-        config = {k: v for k, v in config.items() if k != "enabled"}
-
-        # Output as YAML - field order follows natural dict merge order
-        # (shared fields first, then provider-specific fields)
-        return yaml.dump(
-            config,
-            default_flow_style=False,
-            sort_keys=False,
-            width=float("inf"),
-            allow_unicode=True,
-        )
-
-    @staticmethod
-    def generate_file_content(template: TemplateConfig) -> str:
-        """Generate complete OpenCode-format file."""
-        frontmatter = OpenCodeGenerator.generate_frontmatter(template)
+    def generate_file_content(template: TemplateConfig, provider: str) -> str:
+        """Generate complete provider-format file."""
+        frontmatter = TemplateGenerator.generate_frontmatter(template, provider)
         return f"---\n{frontmatter}---\n\n{template.body}\n"
 
 
@@ -183,7 +156,7 @@ class AgentSyncManager:
     def __init__(self, templates_dir: Path, config_file: Path):
         self.templates_dir = templates_dir
         self.config = self._load_config(config_file)
-        self.generators = {"claude": ClaudeGenerator, "opencode": OpenCodeGenerator}
+        self.generator = TemplateGenerator
 
     def _load_config(self, config_file: Path) -> Dict[str, Any]:
         """Load provider configuration from YAML file."""
@@ -301,13 +274,9 @@ class AgentSyncManager:
 
         # Create timestamped backup of existing file
         if target_path.exists():
-            from datetime import datetime
-
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             backup_path = target_path.with_suffix(f".backup.{timestamp}")
             try:
-                import shutil
-
                 shutil.copy2(target_path, backup_path)
                 print(f"Created backup: {backup_path}")
             except Exception as e:
@@ -540,15 +509,14 @@ class AgentSyncManager:
                     print(f"Warning: {warning}")
 
                 # Generate for each enabled provider
-                for provider in self.generators.keys():
+                for provider in template.provider_metadata.keys():
                     provider_config = template.provider_metadata.get(provider, {})
 
                     # Check if provider is enabled
                     if not provider_config.get("enabled", False):
                         continue  # Skip disabled/missing providers
 
-                    generator = self.generators[provider]
-                    content = generator.generate_file_content(template)
+                    content = self.generator.generate_file_content(template, provider)
                     output_path = self.get_output_path(
                         template_path, provider, template.type, self.config
                     )
@@ -616,16 +584,18 @@ def main():
         )
         return 1
 
-    # Determine templates directory
-    templates_dir = script_dir / "templates"
-
-    # Project config (in current working directory)
-    project_config_file = Path.cwd() / "config.yml"
+    # Determine templates directory (relative to config file location)
+    templates_dir = config_file.parent / "templates"
 
     # Validation
     if not templates_dir.exists():
         print(
-            f"Error: Templates directory not found at {templates_dir}", file=sys.stderr
+            f"Error: Templates directory not found at {templates_dir}",
+            file=sys.stderr,
+        )
+        print(
+            f"\nTip: Templates should be located at {templates_dir} (relative to config file at {config_file})",
+            file=sys.stderr,
         )
         return 1
 
