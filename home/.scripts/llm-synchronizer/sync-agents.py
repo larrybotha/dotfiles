@@ -20,10 +20,10 @@ import re
 import shutil
 import sys
 from dataclasses import dataclass
-from datetime import datetime
+from datetime import UTC, datetime
 from pathlib import Path
 from textwrap import dedent
-from typing import Any, Literal, NamedTuple, Union
+from typing import Any, Literal, NamedTuple
 
 import yaml
 
@@ -99,7 +99,7 @@ def get_provider_config(provider: str) -> ProviderConfig:
     """
     if provider not in PROVIDERS:
         raise ValueError(
-            f"Unknown provider: {provider}. Known providers: {list(PROVIDERS.keys())}"
+            f"Unknown provider: {provider}. Known providers: {list(PROVIDERS.keys())}",
         )
 
     return PROVIDERS[provider]
@@ -160,6 +160,11 @@ class MCPServerConfig:
     providers: dict[str, dict[str, Any]]
 
 
+# 3 parts: frontmatter open delimiter, content, frontmatter close delimiter
+_FRONTMATTER_PARTS = 3
+_SKILL_PATH_DEPTH = 2  # expected path parts for a skill: [subdirectory, filename]
+
+
 class FrontmatterParser:
     """Parses YAML frontmatter from markdown files."""
 
@@ -185,7 +190,7 @@ class FrontmatterParser:
         content = template_path.read_text()
         parts = re.split(r"^---\s*$", content, maxsplit=2, flags=re.MULTILINE)
 
-        if len(parts) < 3:
+        if len(parts) < _FRONTMATTER_PARTS:
             raise ValueError(f"No valid frontmatter in {template_path}")
 
         frontmatter_yaml = parts[1]
@@ -194,7 +199,7 @@ class FrontmatterParser:
         try:
             frontmatter = yaml.safe_load(frontmatter_yaml)
         except yaml.YAMLError as e:
-            raise ValueError(f"Invalid YAML in {template_path}: {e}")
+            raise ValueError(f"Invalid YAML in {template_path}") from e
 
         if "type" not in frontmatter:
             raise ValueError(f"Missing 'type' field in frontmatter: {template_path}")
@@ -307,7 +312,7 @@ class MCPGenerator:
                     command = server_config["command"]
                     args = server_config.get("args", [])
                     # Combine into single array
-                    server_config["command"] = [command] + args
+                    server_config["command"] = [command, *args]
                     # Remove args field
                     if "args" in server_config:
                         del server_config["args"]
@@ -322,6 +327,13 @@ class MCPGenerator:
                 mcp_servers[server.name] = server_config
 
         return {provider.mcp_key: mcp_servers}
+
+
+MCP_GENERATORS: dict[str, Any] = {
+    "claude": MCPGenerator.generate_claude_format,
+    "gemini": MCPGenerator.generate_gemini_format,
+    "opencode": MCPGenerator.generate_opencode_format,
+}
 
 
 class TemplateGenerator:
@@ -384,7 +396,7 @@ class AgentSyncManager:
     the config file.
     """
 
-    def __init__(self, config_file: Path):
+    def __init__(self, config_file: Path) -> None:
         """Initialize AgentSyncManager with config file.
 
         Parameters
@@ -425,7 +437,7 @@ class AgentSyncManager:
             raise FileNotFoundError(
                 f"Templates directory not found at {self._templates_dir}\n"
                 f"Expected location: {self._config_file.parent}/templates\n"
-                f"Config file: {self._config_file}"
+                f"Config file: {self._config_file}",
             )
 
     def _load_config(self, config_file: Path) -> dict[str, Any]:
@@ -449,7 +461,7 @@ class AgentSyncManager:
         if not config_file.exists():
             raise FileNotFoundError(f"Config file not found: {config_file}")
 
-        with open(config_file, "r") as f:
+        with config_file.open() as f:
             return yaml.safe_load(f)
 
     def discover_templates(self) -> list[Path]:
@@ -533,7 +545,7 @@ class AgentSyncManager:
 
         if subdir is None:
             raise ValueError(
-                f"Provider {provider} does not support template type {template_type}"
+                f"Provider {provider} does not support template type {template_type}",
             )
 
         # Build full path: base / subdir / relative_path
@@ -566,8 +578,6 @@ class AgentSyncManager:
         try:
             output_path.write_text(content)
             print(f"Generated: {output_path}")
-
-            return True
         except PermissionError as e:
             print(f"Permission denied writing {output_path}: {e}", file=sys.stderr)
             return False
@@ -575,9 +585,54 @@ class AgentSyncManager:
             # Covers: disk full, I/O errors, IsADirectoryError, etc.
             print(f"Error writing {output_path}: {e}", file=sys.stderr)
             return False
+        else:
+            return True
 
-    def copy_skill_directory(
-        self, skill_dir: Path, output_dir: Path, skip_files: list[str] | None = None
+    def _copy_skill_file(
+        self,
+        item: Path,
+        rel_path: Path,
+        dest_path: Path,
+        max_file_size: int,
+    ) -> bool:
+        """Copy a single skill file to its destination.
+
+        Returns True on success, False on any error (with warning printed).
+        """
+        try:
+            file_size = item.stat().st_size
+            if file_size > max_file_size:
+                print(
+                    f"Warning: Skipping large file "
+                    f"({file_size / 1024 / 1024:.1f}MB): {rel_path}",
+                    file=sys.stderr,
+                )
+                # Return inside try: intentionally bypasses the else clause below.
+                return False
+
+            dest_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(item, dest_path)
+
+        except PermissionError as e:
+            print(
+                f"Warning: Permission denied copying {rel_path}: {e}",
+                file=sys.stderr,
+            )
+            return False
+        except OSError as e:
+            print(
+                f"Warning: Failed to copy {rel_path}: {e}",
+                file=sys.stderr,
+            )
+            return False
+        else:
+            return True
+
+    def copy_skill_directory(  # noqa: C901 — inherent traversal complexity: 2 guard clauses + rglob loop with skip/symlink/is_file checks + 2 outer OSError handlers; per-file logic already extracted into _copy_skill_file
+        self,
+        skill_dir: Path,
+        output_dir: Path,
+        skip_files: list[str] | None = None,
     ) -> tuple[int, int]:
         """Copy all files from skill directory to output, excluding specified files.
 
@@ -622,18 +677,18 @@ class AgentSyncManager:
 
         copied_count = 0
         error_count = 0
-        MAX_FILE_SIZE = 10 * 1024 * 1024  # 10MB
+        max_file_size = 10 * 1024 * 1024  # 10MB
 
         try:
             for item in skill_dir.rglob("*"):
-                # Skip files in the ignore list (case-insensitive)
                 if item.name.upper() in skip_files_set:
                     continue
 
                 # Skip broken symlinks
                 if item.is_symlink() and not item.exists():
                     print(
-                        f"Warning: Skipping broken symlink: {item.relative_to(skill_dir)}",
+                        f"Warning: Skipping broken symlink: "
+                        f"{item.relative_to(skill_dir)}",
                         file=sys.stderr,
                     )
                     error_count += 1
@@ -642,39 +697,12 @@ class AgentSyncManager:
                 if not item.is_file():
                     continue
 
-                # Calculate destination path
                 rel_path = item.relative_to(skill_dir)
                 dest_path = output_dir / rel_path
 
-                try:
-                    # Check file size
-                    file_size = item.stat().st_size
-                    if file_size > MAX_FILE_SIZE:
-                        print(
-                            f"Warning: Skipping large file ({file_size / 1024 / 1024:.1f}MB): {rel_path}",
-                            file=sys.stderr,
-                        )
-                        error_count += 1
-                        continue
-
-                    # Create parent directories
-                    dest_path.parent.mkdir(parents=True, exist_ok=True)
-
-                    # Copy file (preserves metadata with copy2)
-                    shutil.copy2(item, dest_path)
+                if self._copy_skill_file(item, rel_path, dest_path, max_file_size):
                     copied_count += 1
-
-                except PermissionError as e:
-                    print(
-                        f"Warning: Permission denied copying {rel_path}: {e}",
-                        file=sys.stderr,
-                    )
-                    error_count += 1
-                except OSError as e:
-                    print(
-                        f"Warning: Failed to copy {rel_path}: {e}",
-                        file=sys.stderr,
-                    )
+                else:
                     error_count += 1
 
         except PermissionError as e:
@@ -693,7 +721,10 @@ class AgentSyncManager:
         return (copied_count, error_count)
 
     def _deep_merge_mcp_servers(
-        self, existing: dict[str, Any], new: dict[str, Any], mcp_key: str
+        self,
+        existing: dict[str, Any],
+        new: dict[str, Any],
+        mcp_key: str,
     ) -> dict[str, Any]:
         """Merge MCP server configurations, replacing the entire MCP servers section.
 
@@ -729,9 +760,63 @@ class AgentSyncManager:
 
         return result
 
+    def _create_backup(self, target_path: Path) -> Path | None:
+        """Create a timestamped backup of target_path.
+
+        Returns the backup path on success, or None if backup failed or was not needed.
+        """
+        if not target_path.exists():
+            return None
+
+        timestamp = datetime.now(tz=UTC).strftime("%Y%m%d_%H%M%S")
+        backup_path = target_path.with_suffix(f".backup.{timestamp}")
+
+        try:
+            shutil.copy2(target_path, backup_path)
+            print(f"Created backup: {backup_path}")
+        except (OSError, PermissionError) as e:
+            # Backup is optional - log warning but continue
+            print(f"Warning: Could not create backup: {e}", file=sys.stderr)
+            return None
+        else:
+            return backup_path
+
+    def _write_json_atomic(
+        self,
+        target_path: Path,
+        data: dict[str, Any],
+    ) -> bool:
+        """Write data as JSON to target_path via a temp file for atomicity.
+
+        Returns True on success, False on I/O error.
+        Re-raises on JSON serialization errors (programming bugs).
+        """
+        temp_path = target_path.with_suffix(target_path.suffix + ".tmp")
+
+        try:
+            temp_path.write_text(json.dumps(data, indent=2) + "\n")
+            temp_path.replace(target_path)
+            print(f"Updated MCP config: {target_path}")
+        except (TypeError, ValueError) as e:
+            # JSON serialization errors indicate programming bugs
+            print(f"Error serializing config data: {e}", file=sys.stderr)
+            if temp_path.exists():
+                temp_path.unlink()
+            raise  # Re-raise to expose programming errors
+        except (OSError, PermissionError) as e:
+            print(f"Error writing {target_path}: {e}", file=sys.stderr)
+            if temp_path.exists():
+                temp_path.unlink()
+            return False
+        else:
+            return True
+
     def merge_json_file(
-        self, target_path: Path, new_data: dict[str, Any], mcp_key: str
-    ) -> tuple[bool, Union[Path, None]]:
+        self,
+        target_path: Path,
+        new_data: dict[str, Any],
+        mcp_key: str,
+    ) -> tuple[bool, Path | None]:
         """Merge new configuration data into existing JSON file.
 
         Parameters
@@ -751,19 +836,7 @@ class AgentSyncManager:
             - backup_path: Path to backup file created, or None if no backup was created
         """
         target_path.parent.mkdir(parents=True, exist_ok=True)
-        backup_path = None
-
-        if target_path.exists():
-            timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            backup_path = target_path.with_suffix(f".backup.{timestamp}")
-
-            try:
-                shutil.copy2(target_path, backup_path)
-                print(f"Created backup: {backup_path}")
-            except (OSError, PermissionError) as e:
-                # Backup is optional - log warning but continue
-                print(f"Warning: Could not create backup: {e}", file=sys.stderr)
-                backup_path = None  # Reset if backup failed
+        backup_path = self._create_backup(target_path)
 
         # Load existing config or start with empty dict
         existing_config = {}
@@ -784,7 +857,8 @@ class AgentSyncManager:
                 if mcp_key in existing_config:
                     # Both keys exist - warn and prefer provider's key
                     print(
-                        f"Warning: {target_path} has both '{mcp_key}' and '{other_key}'. "
+                        f"Warning: {target_path} has both "
+                        f"'{mcp_key}' and '{other_key}'. "
                         f"Using '{mcp_key}' and discarding '{other_key}'.",
                         file=sys.stderr,
                     )
@@ -794,27 +868,10 @@ class AgentSyncManager:
         # Deep merge MCP servers to preserve existing servers
         merged_config = self._deep_merge_mcp_servers(existing_config, new_data, mcp_key)
 
-        # Write merged config atomically using temp file
-        temp_path = target_path.with_suffix(target_path.suffix + ".tmp")
-
-        try:
-            temp_path.write_text(json.dumps(merged_config, indent=2) + "\n")
-            # Atomic rename
-            temp_path.replace(target_path)
-            print(f"Updated MCP config: {target_path}")
-
-            return (True, backup_path)
-        except (TypeError, ValueError) as e:
-            # JSON serialization errors indicate programming bugs
-            print(f"Error serializing config data: {e}", file=sys.stderr)
-            if temp_path.exists():
-                temp_path.unlink()
-            raise  # Re-raise to expose programming errors
-        except (OSError, PermissionError) as e:
-            print(f"Error writing {target_path}: {e}", file=sys.stderr)
-            if temp_path.exists():
-                temp_path.unlink()
+        if not self._write_json_atomic(target_path, merged_config):
             return (False, None)
+
+        return (True, backup_path)
 
     def _validate_skill_template(self, template_path: Path) -> None:
         """Validate skill template requirements.
@@ -837,33 +894,36 @@ class AgentSyncManager:
         # Check that skill is in a subdirectory of skills/
         try:
             rel_path = template_path.relative_to(skills_dir)
-        except ValueError:
+        except ValueError as e:
             raise ValueError(
-                f"Skill template must be in subdirectory of skills/: {template_path}"
-            )
+                f"Skill template must be in subdirectory of skills/: {template_path}",
+            ) from e
 
         # Skills must be exactly one directory level deep (not flat, not nested deeper)
-        if len(rel_path.parts) != 2:
+        if len(rel_path.parts) != _SKILL_PATH_DEPTH:
             if len(rel_path.parts) == 1:
                 raise ValueError(
                     f"Skill template must be in a subdirectory of skills/ "
-                    f"(e.g., skills/my-skill/SKILL.md), not directly in skills/: {template_path}"
+                    f"(e.g., skills/my-skill/SKILL.md), "
+                    f"not directly in skills/: {template_path}",
                 )
-            else:
-                raise ValueError(
-                    f"Skill template must be exactly one directory deep "
-                    f"(e.g., skills/my-skill/SKILL.md), not nested deeper: {template_path}"
-                )
+            raise ValueError(
+                f"Skill template must be exactly one directory deep "
+                f"(e.g., skills/my-skill/SKILL.md), "
+                f"not nested deeper: {template_path}",
+            )
 
         # Filename must be exactly SKILL.md (case-sensitive)
         if template_path.name != "SKILL.md":
             raise ValueError(
                 f"Skill template filename must be exactly 'SKILL.md' (case-sensitive), "
-                f"found '{template_path.name}'. Please rename: {template_path}"
+                f"found '{template_path.name}'. Please rename: {template_path}",
             )
 
     def validate_template(
-        self, template: TemplateConfig, template_path: Path
+        self,
+        template: TemplateConfig,
+        template_path: Path,
     ) -> list[str]:
         """Validate template configuration and return warnings.
 
@@ -898,7 +958,7 @@ class AgentSyncManager:
         if not enabled_providers:
             warnings.append(
                 f"{template_path.name}: No providers enabled. "
-                f"This template will not generate any files."
+                f"This template will not generate any files.",
             )
 
         return warnings
@@ -919,7 +979,7 @@ class AgentSyncManager:
                 if backup_path.exists():
                     backup_path.unlink()
                     print(f"Deleted backup: {backup_path}")
-            except (OSError, PermissionError) as e:
+            except (OSError, PermissionError) as e:  # noqa: PERF203 - per-item error handling keeps cleanup loop running on individual failures
                 # Log error but don't fail the sync
                 print(
                     f"Warning: Could not delete backup {backup_path}: {e}",
@@ -953,12 +1013,13 @@ class AgentSyncManager:
             # Warn if command is empty for local servers (best effort check)
             if not values.get("command") and values.get("type", "local") == "local":
                 print(
-                    f"Warning: MCP server '{name}' has empty 'command' for local server",
+                    f"Warning: MCP server '{name}' has empty 'command' "
+                    f"for local server",
                     file=sys.stderr,
                 )
 
-            # Default args to empty list if missing
-            if "args" not in values:
+            # Default args to empty list if missing or explicitly null in YAML
+            if not values.get("args"):
                 values["args"] = []
 
             servers.append(
@@ -966,12 +1027,12 @@ class AgentSyncManager:
                     name=name,
                     values=values,
                     providers=providers,
-                )
+                ),
             )
 
         return servers
 
-    def sync_mcp_servers(self) -> int:
+    def sync_mcp_servers(self) -> int:  # noqa: C901 — inherent orchestration complexity: validation loop (2 branches) + provider loop (skip/empty-guard/success/failure branches); already clean and well-structured
         """Synchronize MCP server configurations to provider files.
 
         Returns
@@ -991,80 +1052,74 @@ class AgentSyncManager:
 
             return 0
 
+        providers_config = self._config.get("providers", {})
         backup_files: list[Path] = []
 
-        # Validate that all enabled providers have mcp_config paths
-        validation_errors = []
-        available_providers = self._config.get("providers", {})
-
-        for server in servers:
-            for provider_name, provider_config in server.providers.items():
-                if provider_config.get("enabled", False):
-                    # Check if provider exists in config
-                    if provider_name not in available_providers:
-                        validation_errors.append(
-                            f"MCP server '{server.name}' is enabled for provider '{provider_name}', "
-                            f"but provider '{provider_name}' is not defined in config.yml. "
-                            f"Add '{provider_name}:' to the 'providers:' section in config.yml"
-                        )
-                    # Check if provider has mcp_config path
-                    else:
-                        mcp_config = available_providers[provider_name].get(
-                            "mcp_config"
-                        )
-                        has_mcp_config = any(
-                            (
-                                mcp_config,
-                                isinstance(mcp_config, str),
-                                mcp_config.strip(),
-                            )
-                        )
-
-                        if not has_mcp_config:
-                            validation_errors.append(
-                                f"MCP server '{server.name}' is enabled for provider '{provider_name}', "
-                                f"but provider '{provider_name}' has no valid 'mcp_config' path configured. "
-                                f"Add 'mcp_config: <path>' to providers.{provider_name} in config.yml "
-                                f"(current value: {repr(mcp_config)})"
-                            )
-
-        if validation_errors:
-            error_message = (
-                "MCP server configuration validation failed:\n\n"
-                + "\n\n".join(f"  • {error}" for error in validation_errors)
-            )
-            raise ValueError(error_message)
-
-        success_count = 0
-        generators = {
-            "claude": MCPGenerator.generate_claude_format,
-            "gemini": MCPGenerator.generate_gemini_format,
-            "opencode": MCPGenerator.generate_opencode_format,
+        # Collect the unique set of provider names enabled across all servers
+        enabled_providers = {
+            provider_name
+            for server in servers
+            for provider_name, cfg in server.providers.items()
+            if cfg.get("enabled", False)
         }
 
-        for provider_name, generator_func in generators.items():
-            provider_cfg = get_provider_config(provider_name)
-            provider_config = self._config.get("providers", {}).get(provider_name, {})
+        # Validate that all enabled providers exist and have mcp_config paths
+        validation_errors = []
 
-            if not provider_config or "mcp_config" not in provider_config:
+        for provider_name in sorted(enabled_providers):
+            if provider_name not in providers_config:
+                validation_errors.append(
+                    f"Provider '{provider_name}' is not defined in config.yml. "
+                    f"Add '{provider_name}:' to the 'providers:' section in config.yml",
+                )
+            else:
+                mcp_config = providers_config[provider_name].get("mcp_config")
+
+                if not (isinstance(mcp_config, str) and mcp_config.strip()):
+                    validation_errors.append(
+                        f"Provider '{provider_name}' has no valid "
+                        f"'mcp_config' path configured. "
+                        f"Add 'mcp_config: <path>' to "
+                        f"providers.{provider_name} in config.yml "
+                        f"(current value: {mcp_config!r})",
+                    )
+
+        if validation_errors:
+            raise ValueError(
+                "MCP server configuration validation failed:\n\n"
+                + "\n\n".join(f"  • {error}" for error in validation_errors),
+            )
+
+        success_count = 0
+
+        for provider_name, generator_func in MCP_GENERATORS.items():
+            provider_cfg = get_provider_config(provider_name)
+            provider_config = providers_config.get(provider_name) or {}
+
+            if "mcp_config" not in provider_config:
                 continue
 
             target_path = Path(provider_config["mcp_config"]).expanduser()
             config_data = generator_func(servers)
             mcp_key = provider_cfg.mcp_key
 
-            # Protect against empty sync (all servers disabled) deleting manual servers
-            if mcp_key in config_data and not config_data[mcp_key]:
-                print(
-                    dedent(f"""
-                    Warning: No enabled servers for {provider_name},
-                    skipping to preserve existing servers
-                    """)
-                )
+            # Determine if any servers in config.yml reference this provider
+            # (regardless of enabled state). Used to distinguish:
+            #   - No servers reference provider → skip to preserve any manually-added servers
+            #   - Servers reference provider but all disabled → sync empty dict to remove them
+            provider_is_referenced = any(
+                provider_name in server.providers for server in servers
+            )
+
+            if not provider_is_referenced:
+                # No servers are managed for this provider by this script;
+                # skip to avoid wiping manually-added servers in the target config.
                 continue
 
             success, backup_path = self.merge_json_file(
-                target_path, config_data, mcp_key
+                target_path,
+                config_data,
+                mcp_key,
             )
 
             if success:
@@ -1074,7 +1129,8 @@ class AgentSyncManager:
                     backup_files.append(backup_path)
             else:
                 print(
-                    f"Sync failed for {provider_name}, keeping all backups for recovery"
+                    f"Sync failed for {provider_name}, "
+                    f"keeping all backups for recovery",
                 )
 
                 return success_count
@@ -1089,7 +1145,8 @@ class AgentSyncManager:
         Returns
         -------
         dict[str, dict[str, set[Path]]]
-            Nested dictionary: {"enabled": {provider: set[Path]}, "disabled": {provider: set[Path]}}
+            Nested dictionary: {"enabled": {provider: set[Path]},
+            "disabled": {provider: set[Path]}}
         """
         templates = self.discover_templates()
         enabled_files: dict[str, set[Path]] = {
@@ -1108,7 +1165,7 @@ class AgentSyncManager:
                 template = FrontmatterParser.parse_file(template_path)
 
                 # Track files for each provider (enabled or disabled)
-                for provider in template.provider_metadata.keys():
+                for provider in template.provider_metadata:
                     provider_config = template.provider_metadata.get(provider, {})
 
                     output_path = self.get_output_path(
@@ -1132,8 +1189,6 @@ class AgentSyncManager:
                         target_dict[provider].add(output_path)
 
             except Exception:
-                # All errors will be properly reported during actual generation
-                # in sync_all().
                 # Silently ignoring errors here allows discovery to continue for
                 # valid templates.
                 pass
@@ -1231,11 +1286,59 @@ class AgentSyncManager:
                 # Try to remove parent if it's now empty
                 self._cleanup_empty_directories(directory.parent, stop_at)
 
-        except Exception:
+        except Exception:  # noqa: BLE001, S110  # intentional catch-all; empty-dir cleanup is non-critical and must never abort the caller
             # This is best-effort cleanup that should never fail the main
             # operation. Possible errors include PermissionError, OSError
             # (directory not empty), and filesystem errors.
             pass
+
+    def _process_template(self, template_path: Path) -> int:
+        """Parse and generate output files for a single template.
+
+        Returns the number of files successfully written for this template.
+        """
+        if template_path.name == "README.md":
+            return 0
+
+        template = FrontmatterParser.parse_file(template_path)
+        warnings = self.validate_template(template, template_path)
+
+        for warning in warnings:
+            print(f"Warning: {warning}")
+
+        success_count = 0
+
+        for provider, provider_config in template.provider_metadata.items():
+            if not provider_config.get("enabled", False):
+                continue
+
+            content = self._generator.generate_file_content(template, provider)
+            output_path = self.get_output_path(
+                config=self._config,
+                provider=provider,
+                template_path=template_path,
+                template_type=template.type,
+            )
+
+            if not self.write_generated_file(output_path, content):
+                continue
+
+            success_count += 1
+
+            if template.type == "skill":
+                copied, errors = self.copy_skill_directory(
+                    template_path.parent,
+                    output_path.parent,
+                )
+                if copied > 0:
+                    print(f"  Copied {copied} additional file(s)")
+                if errors > 0:
+                    print(
+                        f"  Warning: {errors} file(s) failed to copy",
+                        file=sys.stderr,
+                    )
+
+        return success_count
 
     def sync_all(self) -> int:
         """Process all templates and generate provider configs.
@@ -1256,50 +1359,7 @@ class AgentSyncManager:
 
         for template_path in templates:
             try:
-                # Skip README files
-                if template_path.name == "README.md":
-                    continue
-
-                template = FrontmatterParser.parse_file(template_path)
-                warnings = self.validate_template(template, template_path)
-
-                for warning in warnings:
-                    print(f"Warning: {warning}")
-
-                # Generate for each enabled provider
-                for provider in template.provider_metadata.keys():
-                    provider_config = template.provider_metadata.get(provider, {})
-
-                    # skip if provider is not enabled
-                    if not provider_config.get("enabled", False):
-                        continue
-
-                    content = self._generator.generate_file_content(template, provider)
-                    output_path = self.get_output_path(
-                        config=self._config,
-                        provider=provider,
-                        template_path=template_path,
-                        template_type=template.type,
-                    )
-
-                    if self.write_generated_file(output_path, content):
-                        success_count += 1
-
-                        # For skills, copy additional files from skill directory
-                        if template.type == "skill":
-                            skill_source_dir = template_path.parent
-                            skill_output_dir = output_path.parent
-                            copied, errors = self.copy_skill_directory(
-                                skill_source_dir, skill_output_dir
-                            )
-                            if copied > 0:
-                                print(f"  Copied {copied} additional file(s)")
-                            if errors > 0:
-                                print(
-                                    f"  Warning: {errors} file(s) failed to copy",
-                                    file=sys.stderr,
-                                )
-
+                success_count += self._process_template(template_path)
             except Exception as e:
                 # This is a batch processing loop where one bad template should
                 # not stop processing of other templates. Errors are logged with the
@@ -1326,7 +1386,9 @@ def parse_arguments() -> argparse.Namespace:
         Parsed command-line arguments
     """
     parser = argparse.ArgumentParser(
-        description="Synchronize agent and command templates to provider configurations",
+        description=(
+            "Synchronize agent, command, and skill templates to provider configurations"
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
@@ -1351,8 +1413,8 @@ Examples:
     return parser.parse_args()
 
 
-def main():
-    """Main execution function.
+def main() -> int:
+    """Run the agent synchronization script.
 
     Returns
     -------
@@ -1386,18 +1448,18 @@ def main():
 
         print(f"Successfully generated {template_count} template files")
         print(f"Successfully updated {mcp_count} MCP configuration files")
-
-        return 0 if (template_count > 0 or mcp_count > 0) else 1
     except FileNotFoundError as e:
         print(f"Error: {e}", file=sys.stderr)
 
         return 1
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001  # intentional catch-all in CLI script
         # Final fallback for any unexpected errors. Ensures graceful exit
         # with error message rather than traceback.
         print(f"Error: {e}", file=sys.stderr)
 
         return 1
+    else:
+        return 0 if (template_count > 0 or mcp_count > 0) else 1
 
 
 if __name__ == "__main__":
