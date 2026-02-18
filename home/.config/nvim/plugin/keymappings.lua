@@ -58,6 +58,7 @@ set("v", "˚", ":m '<-2<CR>gv=gv", { desc = "move selection up - <A-K>" })
 
 set("", "<leader>vs", ":source $MYVIMRC<CR>", { desc = "source .vimrc" })
 set("", "<leader>vi", ":tabedit $MYVIMRC<CR>", { desc = "open .vimrc in tab" })
+set("", "<leader>vt", ":vnew | terminal<CR>", { desc = "open terminal in vertical split" })
 
 set("", "<leader>=", "<C-w>=", { desc = "set all windows to equal width" })
 
