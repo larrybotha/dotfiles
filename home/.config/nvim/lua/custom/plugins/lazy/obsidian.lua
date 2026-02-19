@@ -1,3 +1,20 @@
+--- Creates a new split window with a date-prefixed filename in the current directory
+---
+--- This function constructs a filename starting with the current date (YYYY-MM-DD)
+--- in the same directory as the current file, then opens the command line with
+--- `:new <current_dir>/<date>-` allowing the user to complete the filename.
+---
+--- Example: If current file is in ~/notes/, this opens command line with:
+---   :new ~/notes/2026-02-19-
+local function new_dated_split()
+	local current_dir = vim.fn.expand("%:h")
+	local date = os.date("%Y-%m-%d")
+	local partial_path = current_dir .. "/" .. date .. "-"
+
+	-- Open command line with the partial path and position cursor at the end
+	vim.api.nvim_feedkeys(":new " .. partial_path, "n", false)
+end
+
 return {
 	{
 		"epwalsh/obsidian.nvim",
@@ -23,6 +40,11 @@ return {
 				{ desc = "open 'everything' obsidian vault in vertical split terminal" }
 			)
 
+			-- Create command for opening dated split
+			vim.api.nvim_create_user_command("CustomNewFileDated", new_dated_split, {})
+
+			-- Expand 'obsn' to 'CustomNewFileDated'
+			vim.cmd([[cabbrev obsn CustomNewFileDated<CR>]])
 		end,
 	},
 }
