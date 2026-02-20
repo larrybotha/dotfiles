@@ -47,6 +47,7 @@ return {
 			end,
 			default = { "lazydev", "lsp", "path", "snippets", "buffer" },
 			per_filetype = {
+				markdown = { "lazydev", "lsp", "path", "snippets" },
 				sql = { "snippets", "dadbod", "buffer" },
 				lua = { inherit_defaults = true, "lazydev" },
 			},
