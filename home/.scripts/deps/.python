@@ -13,6 +13,7 @@ packages=(
 
   # diagnostics, linting, lsp, formatters
   autoimport # formatter
+  tmux-language-server
 
   epy-reader # reading epubs
 )

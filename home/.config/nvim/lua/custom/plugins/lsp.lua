@@ -76,6 +76,11 @@ local function configureLsp()
 			},
 		},
 
+		tmux = {
+			filetypes = { "tmux" },
+			settings = { command = "tmux-language-server" },
+		},
+
 		yamlls = {
 			settings = {
 				yaml = {
