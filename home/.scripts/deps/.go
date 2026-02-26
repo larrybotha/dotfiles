@@ -3,6 +3,7 @@
 packages=(
   github.com/x-motemen/gore/cmd/gore@latest      # repl
   github.com/isaacphi/mcp-language-server@latest # mcp server
+  github.com/sqls-server/sqls@latest             # LSP
 )
 
 function ensure_has_go() {

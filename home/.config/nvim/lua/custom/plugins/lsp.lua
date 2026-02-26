@@ -105,7 +105,7 @@ local function configureLsp()
 		nil_ls = true,
 		ruff = true, -- linting Python, not type-checking
 		somesass_ls = true,
-		sqlls = true,
+		sqls = true,
 		svelte = true,
 		tailwindcss = true,
 		taplo = true,
