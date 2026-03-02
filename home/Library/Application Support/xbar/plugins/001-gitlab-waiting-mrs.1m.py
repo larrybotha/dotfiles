@@ -20,6 +20,7 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
+
 ACCESS_TOKEN = os.getenv("GITLAB_ACCESS_TOKEN", "")
 PROJECT_ID = os.getenv("PROJECT_ID", "")
 REVIEWER_ID = os.getenv("REVIEWER_ID", "")
@@ -229,7 +230,7 @@ def format_mr_details(mr, approval):
     ref = (mr.get("references", {}) or {}).get("short") or f"!{mr.get('iid', '')}"
     url = mr.get("web_url") or "https://gitlab.com"
 
-    assignees = ", ".join([a.get("username", "?") for a in mr.get("assignees", [])])
+    assignees = ", ".join([a.get("username") or "(unassigned)" for a in mr.get("assignees", [])])
     assignees = escape_xbar_chars(assignees)
 
     keys = [
