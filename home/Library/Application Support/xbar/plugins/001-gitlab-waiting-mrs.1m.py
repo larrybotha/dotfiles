@@ -47,7 +47,9 @@ class _Icon(Enum):
     EMPTY_GRAY = "○ | color=gray"
     EMPTY_RED = "○ | color=red"
     FILLED_GREEN = "● | color=green"
+    FILLED_ORANGE = "● | color=orange"
     FILLED_YELLOW = "● | color=yellow"
+    PARTIAL_ORANGE = "◐ | color=orange"
     PARTIAL_YELLOW = "◐ | color=yellow"
 
 
@@ -175,19 +177,37 @@ def fetch_all_approvals(merge_requests):
     return approvals_by_mr_id
 
 
-def determine_menu_icon(approvals_by_mr_id, total_mrs):
-    """Determine which icon to display based on approval status."""
+def determine_menu_icon(merge_requests, approvals_by_mr_id, total_mrs):
+    """Determine which icon to display based on approval status and requested changes."""
     num_unapproved = len(
         [v for v in approvals_by_mr_id.values() if len(v.get("approved_by", [])) == 0]
     )
-    logger.info(f"Unapproved MRs: {num_unapproved}/{total_mrs}")
+    num_requested_changes = len(
+        [
+            mr
+            for mr in merge_requests
+            if mr.get("detailed_merge_status") == "requested_changes"
+        ]
+    )
+    logger.info(
+        f"Unapproved MRs: {num_unapproved}/{total_mrs}, Requested changes: {num_requested_changes}/{total_mrs}"
+    )
 
-    if num_unapproved == total_mrs:
-        logger.debug("All MRs unapproved - showing FILLED_YELLOW")
-        return _Icon.FILLED_YELLOW
+    # Requested changes takes priority (most urgent) - YELLOW
+    if num_requested_changes > 0:
+        if num_requested_changes == total_mrs:
+            logger.debug("All MRs have requested changes - showing FILLED_YELLOW")
+            return _Icon.FILLED_YELLOW
+        else:
+            logger.debug("Some MRs have requested changes - showing PARTIAL_YELLOW")
+            return _Icon.PARTIAL_YELLOW
+    # Then check approval status - ORANGE for awaiting approval
+    elif num_unapproved == total_mrs:
+        logger.debug("All MRs awaiting approval - showing FILLED_ORANGE")
+        return _Icon.FILLED_ORANGE
     elif num_unapproved > 0:
-        logger.debug("Some MRs unapproved - showing PARTIAL_YELLOW")
-        return _Icon.PARTIAL_YELLOW
+        logger.debug("Some MRs awaiting approval - showing PARTIAL_ORANGE")
+        return _Icon.PARTIAL_ORANGE
     else:
         logger.debug("All MRs approved - showing FILLED_GREEN")
         return _Icon.FILLED_GREEN
@@ -225,9 +245,19 @@ def format_mr_details(mr, approval):
     link_text = " - ".join([x for x in [ref, assignees] if x])
 
     approved_count = len(approval.get("approved_by") or []) if approval else 0
-    color = "green" if approved_count > 0 else "yellow"
+    detailed_merge_status = mr.get("detailed_merge_status")
 
-    logger.debug(f"Displaying MR {mr_iid}: approved={approved_count}, color={color}")
+    # Determine color: yellow for requested changes, orange for awaiting approval, green for approved
+    if detailed_merge_status == "requested_changes":
+        color = "yellow"
+    elif approved_count > 0:
+        color = "green"
+    else:
+        color = "orange"
+
+    logger.debug(
+        f"Displaying MR {mr_iid}: approved={approved_count}, status={detailed_merge_status}, color={color}"
+    )
     updated_at = mr.get("updated_at", "")
 
     return {
@@ -298,7 +328,7 @@ def main():
     approvals_by_mr_id = fetch_all_approvals(merge_requests)
 
     # Determine and display menu icon
-    icon = determine_menu_icon(approvals_by_mr_id, len(merge_requests))
+    icon = determine_menu_icon(merge_requests, approvals_by_mr_id, len(merge_requests))
     print_menu_icon(icon)
 
     # Display menu items
