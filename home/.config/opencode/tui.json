@@ -1,0 +1,14 @@
+{
+  "$schema": "https://opencode.ai/tui.json",
+  "theme": "aura",
+  "keybinds": {
+    "input_newline": "shift+enter",
+    "messages_half_page_down": "<leader>j",
+    "messages_half_page_up": "<leader>k",
+    "messages_last": "<leader>shift+g",
+    "session_child_cycle": "<leader>n",
+    "session_child_cycle_reverse": "<leader>p",
+    "session_new": "<leader>shift+n",
+    "session_parent": "<leader>shift+p"
+  }
+}
