@@ -93,4 +93,8 @@ fi
 
 export PATH=$PATH:$GOPATH/bin
 
+# Opencode - enable LSP support
+# https://opencode.ai/docs/tools/#lsp-experimental
+export OPENCODE_EXPERIMENTAL_LSP_TOOL=true
+
 # vim: set filetype=sh:
