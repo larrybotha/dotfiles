@@ -75,9 +75,9 @@ fi
 
 # Add Node and NVM to `$PATH`
 export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh"  # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && [ type complete &>/dev/null ] && \
-  . "$NVM_DIR/bash_completion"  # This loads nvm bash_completion
+[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
+[ -s "$NVM_DIR/bash_completion" ] && [ type complete ] &>/dev/null &&
+  . "$NVM_DIR/bash_completion" # This loads nvm bash_completion
 
 # go lang
 # TODO: normalise this across OS's
