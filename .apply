@@ -112,8 +112,17 @@ function symlink_configs() {
     ".screenrc|$HOME/.screenrc"
     ".scripts|$HOME/.scripts"
     ".wgetrc|$HOME/.wgetrc"
-    ".zshenv|$HOME/.zshenv"
     "init|$HOME/init"
+
+    # .zshenv must exist in TWO locations due to ZDOTDIR:
+    # 1. First shell (login):
+    #   ZDOTDIR not set → zsh loads ~/.zshenv → sets ZDOTDIR
+    # 2. Subshells:
+    #   ZDOTDIR set → zsh loads $ZDOTDIR/.zshenv
+    # Without both, subshells won't source .zshenv and environment vars will be
+    # missing
+    ".zshenv|$HOME/.zshenv"
+    ".zshenv|$ZDOTDIR/.zshenv"
 
     # .config links
     ".config/asynctasks|$HOME/.config/asynctasks"
