@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-anthropic-auth@latest"],
+  "plugin": ["opencode-anthropic-auth@latest", "ecc-universal"],
   "model": "anthropic/claude-sonnet-4-5",
   "autoupdate": true,
   "mcp": {
