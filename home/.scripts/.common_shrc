@@ -61,9 +61,6 @@ if type zoxide>/dev/null; then
   fi
 fi
 
-# init nvm
-[ -s "${NVM_DIR:-}/nvm.sh" ] && \. "${NVM_DIR:-}/nvm.sh"
-
 # fzf must be sourced last before it's enabled
 if [[ ! "$PATH" == *"$HOME/.fzf/bin"* ]]; then
   PATH="${PATH:+${PATH}:}$HOME/.fzf/bin"

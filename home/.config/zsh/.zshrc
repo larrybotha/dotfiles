@@ -1,12 +1,16 @@
-# allow for using homebrew completions
-# must be set before calling compinit
-# see https://github.com/casey/just#shell-completion-scripts
+# Homebrew completions
+# HOMEBREW_PREFIX is guaranteed to be set by .zshenv
+# It's available in all shell contexts (login, non-login, tmux, etc.)
 fpath=($HOMEBREW_PREFIX/share/zsh/site-functions $fpath)
 
 source "$ZDOTDIR"/completions
 
 source ~/.scripts/.aliases
 source ~/.scripts/.functions
+
+# Load NVM lazily (only when node/npm/nvm/npx is called)
+# This is sourced BEFORE .common_shrc to prevent duplicate loading
+source ~/.scripts/.nvm-lazy
 
 source "$HOME/.scripts/.common_shrc"
 

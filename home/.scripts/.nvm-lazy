@@ -1,0 +1,51 @@
+# .nvm-lazy - Lazy load NVM on first use
+# This saves ~200-500ms on every shell startup
+
+# Internal function that actually loads NVM
+_load_nvm() {
+  # Remove the stub functions to reveal the real commands
+  unset -f nvm node npm npx
+  
+  # Load NVM if available
+  if [[ -s "$NVM_DIR/nvm.sh" ]]; then
+    source "$NVM_DIR/nvm.sh"
+  fi
+  
+  # Load bash completion if in bash
+  if [[ -s "$NVM_DIR/bash_completion" ]] && [[ -n "${BASH_VERSION:-}" ]]; then
+    source "$NVM_DIR/bash_completion"
+  fi
+}
+
+# Stub function for nvm command
+# On first call, loads NVM and then executes the real nvm
+nvm() {
+  _load_nvm
+  nvm "$@"
+}
+
+# Stub function for node
+node() {
+  _load_nvm
+  node "$@"
+}
+
+# Stub function for npm
+npm() {
+  _load_nvm
+  npm "$@"
+}
+
+# Stub function for npx
+npx() {
+  _load_nvm
+  npx "$@"
+}
+
+# Optional: Auto-load NVM if in a Node project directory
+# Uncomment if you want eager loading when package.json or .nvmrc exists
+# if [[ -f package.json ]] || [[ -f .nvmrc ]]; then
+#   _load_nvm
+# fi
+
+# vim: set filetype=sh:
