@@ -1,4 +1,7 @@
-# Set XDG home
+# .exports - Fast static environment variables only
+# This file should contain ONLY export statements, no executable code
+
+# XDG Base Directory Specification
 export XDG_CONFIG_HOME="$HOME/.config"
 export XDG_DATA_HOME="$XDG_CONFIG_HOME/local/share"
 export XDG_CACHE_HOME="$XDG_CONFIG_HOME/cache"
@@ -8,7 +11,7 @@ export EDITOR="nvim"
 
 # Larger bash history (allow 32³ entries; default is 500)
 export HISTSIZE=32768
-export HISTFILESIZE=$HISTSIZE
+export HISTFILESIZE=32768
 export HISTCONTROL=ignoredups
 # Make some commands not show up in history
 export HISTIGNORE="ls:cd:cd -:pwd:exit:date:* --help"
@@ -20,20 +23,6 @@ export LC_ALL="en_GB.UTF-8"
 # Highlight section titles in manual pages
 export LESS_TERMCAP_md="$ORANGE"
 
-# Don’t clear the screen after quitting a manual page
-export MANPAGER="less -X"
-
-# Link Homebrew casks in `/Applications` rather than `~/Applications`
-export HOMEBREW_CASK_OPTS="--appdir=/Applications"
-
-# fzf
-# use fd for searching files
-export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
-export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
-
-# set config dir for ptpython
-export PTPYTHON_CONFIG_HOME=$HOME/.config/ptpython
-
 # use Neovim for man pages
 if type -p "nvim" >/dev/null; then
   export MANPAGER="nvim +Man\!"
@@ -44,12 +33,28 @@ else
   export MANPAGER="less --incsearch"
 fi
 
-###
-# PATH
-###
-# Add homebrew's installs to the `$PATH` before non-Homebrew things
-export PATH="/usr/local/bin:$PATH"
+# Homebrew
+export HOMEBREW_CASK_OPTS="--appdir=/Applications"
 
+# fzf
+export FZF_DEFAULT_COMMAND='fd --type f --strip-cwd-prefix --hidden --follow --exclude .git'
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+
+# Tool-specific
+export PTPYTHON_CONFIG_HOME="$HOME/.config/ptpython"
+
+# NVM (export directory only, no loading)
+export NVM_DIR="$HOME/.nvm"
+
+# OpenCode - enable LSP support
+export OPENCODE_EXPERIMENTAL_LSP_TOOL=true
+
+# PATH - Static additions only
+# Homebrew bins (macOS)
+export PATH="/usr/local/bin:$PATH"
+export PATH="/opt/homebrew/bin:$PATH"
+
+# Linux Homebrew
 if [[ "$(uname -s)" == "Linux" ]]; then
   export PATH="/home/linuxbrew/.linuxbrew/bin:$PATH"
   export PATH="/home/linuxbrew/.linuxbrew/sbin:$PATH"
@@ -58,43 +63,26 @@ fi
 # Add `~/bin` to the `$PATH`
 export PATH="$HOME/bin:$PATH"
 
-# Add Google's depot_tools for adding Chrome to iOS Simulator to path
+# Development tools (only add if they exist to avoid PATH pollution)
+# Google's depot_tools for Chrome iOS Simulator
 # Installation: https://chromium.googlesource.com/chromium/src/+/master/docs/ios/build_instructions.md
-# Install to ~/code/depot_tools
-export PATH="$PATH:$HOME/code/depot_tools"
+[[ -d "$HOME/code/depot_tools" ]] && export PATH="$HOME/code/depot_tools:$PATH"
 
-# Add Rust's Cargo to path
-if command -v "cargo" >/dev/null; then
-  export PATH="$PATH:$HOME/.cargo/bin"
-fi
+# Rust cargo binaries
+[[ -d "$HOME/.cargo/bin" ]] && export PATH="$HOME/.cargo/bin:$PATH"
 
-# Add uv tools to path
-if command -v "uv" >/dev/null; then
-  export PATH="$HOME/.config/local/share/../bin:$PATH"
-fi
+# uv Python package installer
+[[ -d "$HOME/.config/local/share/../bin" ]] && export PATH="$HOME/.config/local/share/../bin:$PATH"
 
-# Add Node and NVM to `$PATH`
-export NVM_DIR="$HOME/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && \. "$NVM_DIR/nvm.sh" # This loads nvm
-[ -s "$NVM_DIR/bash_completion" ] && [ type complete ] &>/dev/null &&
-  . "$NVM_DIR/bash_completion" # This loads nvm bash_completion
+# Go binaries
+[[ -d "$HOME/go/bin" ]] && export PATH="$HOME/go/bin:$PATH"
 
-# go lang
-# TODO: normalise this across OS's
-export PATH="$HOME/go/bin:$PATH"
-
+# Go configuration
 if [[ "$(uname -s)" == "Darwin" ]]; then
-  # install Go to ~/golang on Mac
-  GOPATH=$HOME/golang
+  export GOPATH="$HOME/golang"
 elif [[ "$(uname -s)" == "Linux" ]]; then
-  # install Go to /usr/local/go on Linux
-  GOPATH=/usr/local/go
+  export GOPATH="/usr/local/go"
 fi
-
-export PATH=$PATH:$GOPATH/bin
-
-# Opencode - enable LSP support
-# https://opencode.ai/docs/tools/#lsp-experimental
-export OPENCODE_EXPERIMENTAL_LSP_TOOL=true
+[[ -d "$GOPATH/bin" ]] && export PATH="$PATH:$GOPATH/bin"
 
 # vim: set filetype=sh:
