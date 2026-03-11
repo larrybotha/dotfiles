@@ -6,9 +6,11 @@
     "messages_half_page_down": "<leader>j",
     "messages_half_page_up": "<leader>k",
     "messages_last": "<leader>shift+g",
-    "session_child_cycle": "<leader>n",
-    "session_child_cycle_reverse": "<leader>p",
+    "session_child_first": "<leader>n",
+    "session_child_cycle": "n",
+    "session_child_cycle_reverse": "p",
     "session_new": "<leader>shift+n",
-    "session_parent": "<leader>shift+p"
+    "session_parent": "shift+p"
   }
 }
+
