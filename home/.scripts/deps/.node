@@ -14,6 +14,7 @@ common_modules=(
   @zed-industries/claude-code-acp # codecompanion + claude code dep
   @zed-industries/codex-acp       # codecompanion + codex cli
   n8n
+  opencode-claude-auth # fixes Claude auth for OpenCode
   # opencode/everything-claude-code
   # `npx ecc-install python must still be run`
   ecc-universal
