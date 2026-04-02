@@ -10,6 +10,8 @@ statsig/
 todos/
 history.jsonl
 stats-cache.json
+.claude.json.backup.*
+mcp-needs-auth-cache.json
 
 # Generated from templates by sync-agents.py
 agents/
