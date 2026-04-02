@@ -2,15 +2,10 @@ local function configureLsp()
 	local capabilities = require("blink.cmp").get_lsp_capabilities()
 	local servers = {
 		biome = {
-			root_dir = require("lspconfig.util").root_pattern(
-				-- enable biome when package.json is present,
-				-- in addition to defaults
-				"biome.json",
-				"biome.jsonc",
-				"package.json"
-			),
 			-- enable biome even when not in a biome project
 			single_file_support = true,
+			-- enable biome when any of these files are present
+			root_markers = { "biome.json", "biome.jsonc", "package.json" },
 		},
 
 		eslint = { settings = { command = "eslint_d" } },
