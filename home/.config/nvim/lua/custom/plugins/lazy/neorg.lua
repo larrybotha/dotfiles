@@ -1,8 +1,20 @@
 return {
 	"nvim-neorg/neorg",
+	dependencies = {
+		"nvim-neorg/tree-sitter-norg",
+		"nvim-neorg/tree-sitter-norg-meta",
+	},
 	lazy = false, -- Disable lazy loading as some `lazy.nvim` distributions set `lazy = true` by default
-	version = "*", -- Pin Neorg to the latest stable release
+	version = "*",
 	config = function()
+		-- see https://github.com/nvim-neorg/neorg/issues/1715#issuecomment-4174077279
+		for _, name in ipairs({ "norg", "norg_meta" }) do
+			local path, err = package.searchpath("parser." .. name, package.cpath)
+			if path and not err then
+				vim.opt.rtp:prepend({ path:gsub(("parser/%s%%.so"):format(name), "") })
+			end
+		end
+
 		require("neorg").setup({
 			load = {
 				["core.defaults"] = {},
