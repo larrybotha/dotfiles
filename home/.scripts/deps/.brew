@@ -91,6 +91,7 @@ brews=(
   "tmuxinator"
   "tokei"
   "tre-command"
+  "tree-sitter-cli" # nvim-treesitter dependency
   "tursodatabase/tap/turso"
   "uv"
   "vim"
