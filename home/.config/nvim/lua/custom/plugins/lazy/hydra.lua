@@ -1,4 +1,4 @@
-local function bind_diag_jump(n, x)
+local function bind_diag_jump(n, _)
 	return function()
 		vim.diagnostic.jump({ count = n })
 		vim.diagnostic.open_float()
