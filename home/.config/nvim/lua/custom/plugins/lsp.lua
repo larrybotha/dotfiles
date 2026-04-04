@@ -144,14 +144,11 @@ vim.diagnostic.config(
 	---@type vim.diagnostic.Opts
 	{
 		float = {
-			focusable = false,
+			focusable = false, -- prevent focusing of diagnostic when moving between diagnostics
 			border = "rounded",
 			source = true,
-			header = "",
-			prefix = "",
-		},
-		jump = {
-			float = true, -- open float window when jumping
+			header = "", -- remove "Diagnostic" header
+			prefix = "", -- remove number prefix
 		},
 	}
 )
