@@ -178,7 +178,7 @@ casks=(
   "qlcolorcode"
   "qlmarkdown"
   "qlstephen"
-  "qlvideo"
+  "quicklook-video"
   "quicklook-csv"
   "quicklook-json"
   "rescuetime"
