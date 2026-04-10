@@ -1,123 +1,124 @@
-local function configureLsp()
+local servers = {
+	biome = {
+		-- enable biome even when not in a biome project
+		single_file_support = true,
+		-- enable biome when any of these files are present
+		root_markers = { "biome.json", "biome.jsonc", "package.json" },
+	},
+
+	eslint = { settings = { command = "eslint_d" } },
+
+	gopls = {
+		settings = {
+			gopls = {
+				hints = {
+					assignVariableTypes = true,
+					compositeLiteralFields = true,
+					compositeLiteralTypes = true,
+					constantValues = true,
+					functionTypeParameters = true,
+					parameterNames = true,
+					rangeVariableTypes = true,
+				},
+				gofumpt = true,
+			},
+		},
+	},
+
+	html = { filetypes = { "html", "htmldjango" } },
+	htmx = { filetypes = { "html", "htmldjango" } },
+
+	rust_analyzer = {
+		diagnostics = { enable = false },
+		settings = {
+			-- to enable rust-analyzer settings visit:
+			-- https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/user/generated_config.adoc
+			["rust-analyzer"] = {
+				-- enable clippy on save
+				checkOnSave = { command = "clippy" },
+			},
+		},
+	},
+
+	-- see https://www.andersevenrud.net/neovim.github.io/lsp/configurations/pyright/
+	pyright = {
+		settings = {
+			-- rely on other LSPs for offer completions, definitions, and references
+			disableLanguageServices = true,
+			-- rely on other formatters for organising imports
+			disableOrganizeImports = true,
+		},
+	},
+
+	jsonls = {
+		settings = {
+			json = {
+				schemas = require("schemastore").json.schemas(),
+				validate = { enable = true },
+			},
+		},
+	},
+
+	lua_ls = {
+		settings = {
+			Lua = {
+				diagnostics = {
+					globals = { "vim" },
+				},
+			},
+		},
+	},
+
+	yamlls = {
+		settings = {
+			yaml = {
+				schemaStore = { enable = false, url = "" },
+				schemas = require("schemastore").yaml.schemas(),
+			},
+		},
+	},
+
+	ansiblels = true,
+	bashls = true,
+	clangd = true,
+	cmake = true,
+	css_variables = true,
+	cssls = true,
+	docker_compose_language_service = true,
+	dockerls = true,
+	elmls = true,
+	emmet_ls = true,
+	gitlab_ci_ls = true,
+	marksman = true,
+	nil_ls = true,
+	ruff = true, -- linting Python, not type-checking
+	somesass_ls = true,
+	sqls = true,
+	svelte = true,
+	tailwindcss = true,
+	taplo = true,
+	templ = true,
+	terraformls = true,
+	ts_ls = true,
+	vimls = true,
+}
+
+local function configureLsp(serverConfigs)
 	local capabilities = require("blink.cmp").get_lsp_capabilities()
-	local servers = {
-		biome = {
-			-- enable biome even when not in a biome project
-			single_file_support = true,
-			-- enable biome when any of these files are present
-			root_markers = { "biome.json", "biome.jsonc", "package.json" },
-		},
-
-		eslint = { settings = { command = "eslint_d" } },
-
-		gopls = {
-			settings = {
-				gopls = {
-					hints = {
-						assignVariableTypes = true,
-						compositeLiteralFields = true,
-						compositeLiteralTypes = true,
-						constantValues = true,
-						functionTypeParameters = true,
-						parameterNames = true,
-						rangeVariableTypes = true,
-					},
-					gofumpt = true,
-				},
-			},
-		},
-
-		html = { filetypes = { "html", "htmldjango" } },
-		htmx = { filetypes = { "html", "htmldjango" } },
-
-		rust_analyzer = {
-			diagnostics = { enable = false },
-			settings = {
-				-- to enable rust-analyzer settings visit:
-				-- https://github.com/rust-analyzer/rust-analyzer/blob/master/docs/user/generated_config.adoc
-				["rust-analyzer"] = {
-					-- enable clippy on save
-					checkOnSave = { command = "clippy" },
-				},
-			},
-		},
-
-		-- see https://www.andersevenrud.net/neovim.github.io/lsp/configurations/pyright/
-		pyright = {
-			settings = {
-				-- rely on other LSPs for offer completions, definitions, and references
-				disableLanguageServices = true,
-				-- rely on other formatters for organising imports
-				disableOrganizeImports = true,
-			},
-		},
-
-		jsonls = {
-			settings = {
-				json = {
-					schemas = require("schemastore").json.schemas(),
-					validate = { enable = true },
-				},
-			},
-		},
-
-		lua_ls = {
-			settings = {
-				Lua = {
-					diagnostics = {
-						globals = { "vim" },
-					},
-				},
-			},
-		},
-
-		yamlls = {
-			settings = {
-				yaml = {
-					schemaStore = { enable = false, url = "" },
-					schemas = require("schemastore").yaml.schemas(),
-				},
-			},
-		},
-
-		ansiblels = true,
-		bashls = true,
-		clangd = true,
-		cmake = true,
-		css_variables = true,
-		cssls = true,
-		docker_compose_language_service = true,
-		dockerls = true,
-		elmls = true,
-		emmet_ls = true,
-		gitlab_ci_ls = true,
-		marksman = true,
-		nil_ls = true,
-		ruff = true, -- linting Python, not type-checking
-		somesass_ls = true,
-		sqls = true,
-		svelte = true,
-		tailwindcss = true,
-		taplo = true,
-		templ = true,
-		terraformls = true,
-		ts_ls = true,
-		vimls = true,
-	}
 	local ensure_installed = {}
 
-	for name, _ in pairs(servers) do
+	for name, _ in pairs(serverConfigs) do
 		vim.list_extend(ensure_installed, { name })
 	end
 
 	require("custom.plugins.mason").setup()
-	-- must come _after_ mason.setup()
+	-- mason-lspconfig must be setup _after_ mason.setup()
 	require("mason-lspconfig").setup({
 		ensure_installed = ensure_installed,
 		automatic_enable = false,
 	})
 
-	for name, config in pairs(servers) do
+	for name, config in pairs(serverConfigs) do
 		if config == true then
 			config = {}
 		end
@@ -133,7 +134,7 @@ end
 
 require("fidget").setup({})
 
-configureLsp()
+configureLsp(servers)
 
 vim.diagnostic.config(
 	---@type vim.diagnostic.Opts
@@ -149,7 +150,7 @@ vim.diagnostic.config(
 )
 
 vim.api.nvim_create_autocmd("LspAttach", {
-	group = vim.api.nvim_create_augroup("CustomLspConfig", {}),
+	group = vim.api.nvim_create_augroup("custom-lsp", {}),
 	callback = function(event)
 		local setKeymap = vim.keymap.set
 		local lspBuf = vim.lsp.buf
