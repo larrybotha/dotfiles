@@ -48,24 +48,14 @@ M.setup = function()
 		end,
 	})
 
-	vim.api.nvim_create_user_command("DoTheLinters", function()
-		local linters = lint.get_running()
-
-		if #linters == 0 then
-			return vim.print("󰦕")
-		end
-
-		vim.print("󱉶 " .. table.concat(linters, ", ") .. " 🚀")
-	end, {})
-
-	-- Optional: More aggressive linting for stdin-capable linters
-	--vim.api.nvim_create_autocmd({ "InsertLeave" }, {
-	--  group = lint_augroup,
-	--  callback = function()
-	--    -- Only lint with stdin-capable linters on InsertLeave
-	--    lint.try_lint(nil, { filter = "stdin" })
-	--  end,
-	--})
+	-- More aggressive linting for stdin-capable linters
+	vim.api.nvim_create_autocmd({ "InsertLeave" }, {
+		group = lint_augroup,
+		callback = function()
+			-- Only lint with stdin-capable linters on InsertLeave
+			lint.try_lint(nil, { filter = "stdin" })
+		end,
+	})
 end
 
 return M
