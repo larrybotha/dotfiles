@@ -9,8 +9,8 @@ fi
 brew reinstall neovim
 
 commands=(
- "+Lazy! sync" # update plugins
- "+TSUpdate" # update treesitter parsers
+  "+Lazy! sync" # update plugins
+  "+TSUpdate"   # update treesitter parsers
 )
 
 for x in "${commands[@]}"; do
