@@ -48,6 +48,16 @@ M.setup = function()
 			--"rustfmt", -- install via rustup
 		},
 	})
+
+	vim.api.nvim_create_autocmd("User", {
+		pattern = "VeryLazy",
+		once = true,
+		callback = function()
+			vim.inspect("VeryLazy event emitted")
+			print("VeryLazy event emitted")
+			vim.cmd("MasonToolsUpdate")
+		end,
+	})
 end
 
 return M
