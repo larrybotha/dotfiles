@@ -2,7 +2,7 @@ if vim.g.did_load_filetypes then
 	return
 end
 
-local group = vim.api.nvim_create_augroup("CustomFiletypeGroup", { clear = true })
+local group = vim.api.nvim_create_augroup("custom-ftdetect-filetypes", { clear = true })
 
 vim.api.nvim_create_autocmd({ "BufRead", "BufNewFile" }, {
 	group = group,

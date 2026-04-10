@@ -66,7 +66,7 @@ M.setup = function()
 	end)
 
 	-- Setup autocmds to trigger linting
-	local lint_augroup = vim.api.nvim_create_augroup("CustomLint", { clear = true })
+	local lint_augroup = vim.api.nvim_create_augroup("custom-nvim-lint", { clear = true })
 
 	vim.api.nvim_create_autocmd({ "BufWritePost", "BufReadPost" }, {
 		group = lint_augroup,

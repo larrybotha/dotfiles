@@ -1,4 +1,4 @@
-local group = vim.api.nvim_create_augroup("CustomGoGroup", { clear = true })
+local group = vim.api.nvim_create_augroup("custom-ftplugin-go", { clear = true })
 
 -- See https://github.com/ray-x/go.nvim?tab=readme-ov-file for lots of tips
 -- for a good Go experience
