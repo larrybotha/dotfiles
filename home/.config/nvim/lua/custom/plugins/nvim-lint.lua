@@ -33,37 +33,8 @@ M.setup = function()
 		},
 
 		-- Python
-		python = { "mypy" },
+		python = { "dmypy" },
 	}
-
-	-- Customize mypy to use dmypy with specific configuration
-	-- See https://github.com/jose-elias-alvarez/null-ls.nvim/issues/831#issuecomment-1488648192
-	local mypy = lint.linters.mypy
-	mypy.cmd = "dmypy"
-	mypy.args = {
-		"run",
-		"--timeout",
-		"500",
-		"--",
-		"--hide-error-context",
-		"--no-color-output",
-		"--show-absolute-path",
-		"--show-column-numbers",
-		"--show-error-codes",
-		"--no-error-summary",
-		"--no-pretty",
-	}
-
-	-- Wrap mypy to skip linting in fugitive buffers and .venv directories
-	lint.linters.mypy = require("lint.util").wrap(mypy, function(diagnostic)
-		local bufname = vim.api.nvim_buf_get_name(0)
-		-- Do not run in fugitive windows, or when inside of a .venv area
-		if string.find(bufname, "fugitive") or string.find(bufname, ".venv") then
-			return nil -- Exclude this diagnostic
-		end
-
-		return diagnostic
-	end)
 
 	-- Setup autocmds to trigger linting
 	local lint_augroup = vim.api.nvim_create_augroup("custom-nvim-lint", { clear = true })
