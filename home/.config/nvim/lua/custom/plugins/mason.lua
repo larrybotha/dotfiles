@@ -79,15 +79,10 @@ M.setup = function()
 		},
 	})
 
-	vim.api.nvim_create_autocmd("User", {
-		pattern = "VeryLazy",
-		once = true,
-		callback = function()
-			vim.inspect("VeryLazy event emitted")
-			print("VeryLazy event emitted")
-			vim.cmd("MasonToolsUpdate")
-		end,
-	})
+	-- Update tools on start
+	vim.defer_fn(function()
+		vim.cmd("MasonToolsUpdate")
+	end, 100)
 end
 
 return M
