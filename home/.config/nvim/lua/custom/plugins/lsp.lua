@@ -113,6 +113,7 @@ local function configureLsp(serverConfigs)
 
 	require("custom.plugins.mason").setup()
 	-- mason-lspconfig must be setup _after_ mason.setup()
+	-- TODO: define LSP servers in custom.plugins.mason
 	require("mason-lspconfig").setup({
 		ensure_installed = ensure_installed,
 		automatic_enable = false,
