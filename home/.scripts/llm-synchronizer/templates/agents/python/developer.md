@@ -5,7 +5,7 @@ shared:
 opencode:
   enabled: true
   mode: primary
-  model: anthropic/claude-sonnet-4-5
+  model: opencode/minimax-m2.5-free
   tools:
     write: true
     edit: true
@@ -20,7 +20,7 @@ opencode:
       git status: allow
       git diff: allow
       git log*: allow
-      '*': ask
+      "*": ask
 ---
 
 You are a Python development expert specializing in standard library solutions and best practices.

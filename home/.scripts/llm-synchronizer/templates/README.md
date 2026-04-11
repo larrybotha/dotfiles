@@ -305,7 +305,7 @@ To extend these agents for specific projects, create project-specific agents in 
 ---
 description: Socratic specification development for [project-name]
 mode: primary
-model: anthropic/claude-sonnet-4-5
+model: opencode/minimax-m2.5-free
 temperature: 0.3
 prompt: |
   You are working on the [project-name] project using Socratic methodology.

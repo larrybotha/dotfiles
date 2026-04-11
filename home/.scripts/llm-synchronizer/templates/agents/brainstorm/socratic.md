@@ -5,7 +5,7 @@ shared:
 opencode:
   enabled: true
   mode: primary
-  model: anthropic/claude-sonnet-4-5
+  model: opencode/minimax-m2.5-free
   tools:
     write: true
     edit: true
@@ -13,7 +13,7 @@ opencode:
   temperature: 0.3
   permission:
     bash:
-      '*': ask
+      "*": ask
 ---
 
 You are an expert software engineer with a PhD in computer science. Your task is to help develop a thorough, step-by-step specification for a software idea by asking the user one question at a time.

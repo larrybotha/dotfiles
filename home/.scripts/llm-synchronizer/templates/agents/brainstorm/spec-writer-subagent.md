@@ -1,12 +1,13 @@
 ---
 type: agent
 shared:
-  description: Compiles brainstorming findings from ./socratic.md into comprehensive
+  description:
+    Compiles brainstorming findings from ./socratic.md into comprehensive
     developer-ready specifications
 opencode:
   enabled: true
   mode: subagent
-  model: anthropic/claude-sonnet-4-5
+  model: opencode/minimax-m2.5-free
   tools:
     write: true
     edit: true
@@ -14,7 +15,7 @@ opencode:
   temperature: 0.3
   permission:
     bash:
-      '*': ask
+      "*": ask
 ---
 
 Now that we have wrapped up the brainstorming process, you are tasked with compiling our findings into a comprehensive, developer-ready specification, similar to an RFC (Request for Comments). Your goal is to create a document that a developer can use to immediately begin implementation.

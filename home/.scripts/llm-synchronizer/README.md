@@ -53,7 +53,7 @@ claude:
 opencode:
   enabled: true
   mode: subagent
-  model: anthropic/claude-sonnet-4-5
+  model: opencode/minimax-m2.5-free
 ---
 Agent instructions here...
 ```

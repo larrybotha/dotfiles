@@ -5,7 +5,7 @@ shared:
 opencode:
   enabled: true
   mode: primary
-  model: anthropic/claude-sonnet-4-5
+  model: opencode/minimax-m2.5-free
   tools:
     bash: true
     edit: true
@@ -18,7 +18,7 @@ opencode:
       git status: allow
       git diff: allow
       git log*: allow
-      '*': ask
+      "*": ask
 ---
 
 You are a Go development expert specializing in working with Go's standard library.

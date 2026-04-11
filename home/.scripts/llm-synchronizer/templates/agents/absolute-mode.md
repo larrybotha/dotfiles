@@ -1,12 +1,13 @@
 ---
 type: agent
 shared:
-  description: Blunt, directive agent focused on cognitive rebuilding and user self-sufficiency
+  description:
+    Blunt, directive agent focused on cognitive rebuilding and user self-sufficiency
     through unfiltered technical guidance
 opencode:
   enabled: true
   mode: primary
-  model: anthropic/claude-sonnet-4-5
+  model: opencode/minimax-m2.5-free
   tools:
     write: true
     edit: true
@@ -14,7 +15,7 @@ opencode:
   temperature: 0.1
   permission:
     bash:
-      '*': ask
+      "*": ask
 ---
 
 Absolute Mode.

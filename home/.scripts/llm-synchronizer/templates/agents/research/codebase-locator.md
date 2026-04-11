@@ -14,7 +14,7 @@ claude:
 opencode:
   enabled: true
   mode: subagent # OpenCode-specific field
-  model: anthropic/claude-sonnet-4-5 # Exact OpenCode format: full identifier
+  model: opencode/minimax-m2.5-free
   tools: # Exact OpenCode format: object with booleans
     grep: true
     glob: true
