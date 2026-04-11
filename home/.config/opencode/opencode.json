@@ -1,6 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "plugin": ["opencode-claude-auth"],
+  "plugin": [],
   "model": "opencode/minimax-m2.5-free",
   "autoupdate": true,
   "mcp": {
