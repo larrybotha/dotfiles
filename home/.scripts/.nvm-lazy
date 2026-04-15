@@ -42,6 +42,12 @@ npx() {
   npx "$@"
 }
 
+# Stub function for pi (npm global: @mariozechner/pi-coding-agent)
+pi() {
+  _load_nvm
+  command pi "$@"
+}
+
 # Optional: Auto-load NVM if in a Node project directory
 # Uncomment if you want eager loading when package.json or .nvmrc exists
 # if [[ -f package.json ]] || [[ -f .nvmrc ]]; then

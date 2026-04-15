@@ -16,6 +16,7 @@ common_modules=(
   # opencode/everything-claude-code
   # `npx ecc-install python must still be run`
   ecc-universal
+  @mariozechner/pi-coding-agent
 
   # diagnostics, linting, lsp, formatters
   alex                   # diagnostics
