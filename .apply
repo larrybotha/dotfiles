@@ -102,6 +102,7 @@ function symlink_configs() {
     ".bashrc|$HOME/.bashrc"
     ".cbfmt.toml|$HOME/.cbfmt.toml"
     ".cursor|$HOME/.cursor"
+    ".agents|$HOME/.agents"
     ".claude|$HOME/.claude"
     ".pi|$HOME/.pi"
     ".gemini|$HOME/.gemini"
