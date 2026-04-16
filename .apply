@@ -97,24 +97,26 @@ function symlink_configs() {
 
   local src_dir="./home"
   local configs=(
-    # $HOME links
+    # $HOME files
     ".bash_profile|$HOME/.bash_profile"
     ".bashrc|$HOME/.bashrc"
     ".cbfmt.toml|$HOME/.cbfmt.toml"
-    ".cursor|$HOME/.cursor"
-    ".agents|$HOME/.agents"
-    ".claude|$HOME/.claude"
-    ".pi|$HOME/.pi"
-    ".gemini|$HOME/.gemini"
-    ".gnupg|$HOME/.gnupg"
-    ".hushlogin|$HOME/.hushlogin"
     ".ignore|$HOME/.ignore"
     ".inputrc|$HOME/.inputrc"
-    ".password-store|$HOME/.password-store"
-    ".screenrc|$HOME/.screenrc"
-    ".scripts|$HOME/.scripts"
-    ".wgetrc|$HOME/.wgetrc"
+    ".hushlogin|$HOME/.hushlogin"
     "init|$HOME/init"
+    ".wgetrc|$HOME/.wgetrc"
+    ".screenrc|$HOME/.screenrc"
+
+    # $HOME dirs
+    ".agents|$HOME/.agents"
+    ".claude|$HOME/.claude"
+    ".cursor|$HOME/.cursor"
+    ".gemini|$HOME/.gemini"
+    ".gnupg|$HOME/.gnupg"
+    ".password-store|$HOME/.password-store"
+    ".pi|$HOME/.pi"
+    ".scripts|$HOME/.scripts"
 
     # .zshenv must exist in TWO locations due to ZDOTDIR:
     # 1. First shell (login):
