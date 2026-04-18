@@ -1,57 +1,56 @@
 # .nvm-lazy - Lazy load NVM on first use
 # This saves ~200-500ms on every shell startup
 
+# Registry of lazy stubs — each stub appends itself on first call,
+_nvm_stubs=()
+
 # Internal function that actually loads NVM
 _load_nvm() {
-  # Remove the stub functions to reveal the real commands
-  unset -f nvm node npm npx
-  
+  # Remove registered stub functions to reveal the real commands
+  # Use unfunction (zsh) to avoid "no such hash table element" errors;
+  # fall back to unset -f for bash.
+  for _stub in "${_nvm_stubs[@]}"; do
+    unfunction "$_stub" 2>/dev/null || unset -f "$_stub" 2>/dev/null
+  done
+
   # Load NVM if available
   if [[ -s "$NVM_DIR/nvm.sh" ]]; then
     source "$NVM_DIR/nvm.sh"
   fi
-  
+
   # Load bash completion if in bash
   if [[ -s "$NVM_DIR/bash_completion" ]] && [[ -n "${BASH_VERSION:-}" ]]; then
     source "$NVM_DIR/bash_completion"
   fi
 }
 
-# Stub function for nvm command
-# On first call, loads NVM and then executes the real nvm
+# Stub functions — each registers itself before triggering NVM load.
+# Adding a new dep requires only one more stub line;
+# _load_nvm automatically handles it via _nvm_stubs.
 nvm() {
+  _nvm_stubs+=(nvm)
   _load_nvm
   nvm "$@"
 }
-
-# Stub function for node
 node() {
+  _nvm_stubs+=(node)
   _load_nvm
   node "$@"
 }
-
-# Stub function for npm
 npm() {
+  _nvm_stubs+=(npm)
   _load_nvm
   npm "$@"
 }
-
-# Stub function for npx
 npx() {
+  _nvm_stubs+=(npx)
   _load_nvm
   npx "$@"
 }
-
-# Stub function for pi (npm global: @mariozechner/pi-coding-agent)
 pi() {
+  _nvm_stubs+=(pi)
   _load_nvm
   command pi "$@"
 }
-
-# Optional: Auto-load NVM if in a Node project directory
-# Uncomment if you want eager loading when package.json or .nvmrc exists
-# if [[ -f package.json ]] || [[ -f .nvmrc ]]; then
-#   _load_nvm
-# fi
 
 # vim: set filetype=sh:
