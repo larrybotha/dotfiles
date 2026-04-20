@@ -21,7 +21,6 @@ opt.scrolloff = 5 -- minimum lines to keep above and below cursor
 opt.showcmd = true -- show timeout on leader
 opt.showmatch = true -- show matching brackets/parenthesis
 opt.smartcase = true -- case sensitive when uc present
-opt.smartindent = true -- autoindent on new lines
 opt.spell = false -- disable spellcheck
 opt.splitbelow = true -- open split panes underneath the current pane
 opt.splitright = true -- open split panes to the right of the current pane
