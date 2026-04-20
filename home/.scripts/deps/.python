@@ -9,6 +9,7 @@ packages=(
   pynvim # add python support for neovim
   chromadb
   debugpy
+  huggingface-hub
   "vectorcode[lsp,mcp]"
 
   # diagnostics, linting, lsp, formatters
