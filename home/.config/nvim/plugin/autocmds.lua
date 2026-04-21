@@ -89,15 +89,32 @@ create_autocmd("BufWritePre", {
 	pattern = "*",
 })
 
----
--- Jump to last known cursor position
----
-create_autocmd("BufReadPost", {
-	callback = function()
-		local current_line = vim.fn.line("'\"")
+-- Jump to the last known cursor position when opening a file.
+--
+-- Uses BufWinEnter instead of the canonical BufRead + nested FileType pattern
+-- (:help last-position-jump) because in Neovim the FileType event fires before
+-- the BufRead callback can register a nested FileType autocmd, so the nested
+-- approach is unreliable.
+--
+-- BufWinEnter fires after the buffer is displayed in a window and after
+-- filetype detection, so the " mark (restored from shada) and &ft are both
+-- available.
+create_autocmd("BufWinEnter", {
+	callback = function(args)
+		local ft = vim.bo[args.buf].filetype
 
-		if current_line > 0 and current_line <= vim.fn.line("$") then
-			vim.api.nvim_exec2('normal g`" |', {})
+		-- skip commit/rebase buffers (git messages shouldn't jump to previous position).
+		if ft:match("commit") or ft:match("rebase") then
+			return
+		end
+
+		local mark_line = vim.fn.line("'\"")
+		local last_line = vim.api.nvim_buf_line_count(args.buf)
+
+		-- skip if mark is on line 1 (the default; no point jumping there).
+		-- skip if mark exceeds the file's line count (file was truncated since last visit).
+		if mark_line > 1 and mark_line <= last_line then
+			vim.cmd([[normal! g`"]])
 		end
 	end,
 	desc = "jump to last known cursor position after reading file into buffer",
