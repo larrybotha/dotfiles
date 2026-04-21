@@ -124,6 +124,10 @@ local function configureLsp(serverConfigs)
 			config = {}
 		end
 
+		-- require the config module so lspconfig registers its defaults
+		-- (root_dir, filetypes, etc.) so vim.lsp.config can merge onto them
+		require("lspconfig.configs." .. name)
+
 		config = vim.tbl_deep_extend("force", {}, {
 			capabilities = capabilities,
 		}, config)
