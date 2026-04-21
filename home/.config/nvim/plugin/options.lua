@@ -31,12 +31,6 @@ opt.winminheight = 0 -- windows can be 0 line high
 opt.wrap = false -- don't wrap lines
 opt.winborder = "double" -- use double line for floating window borders
 
--- a: Suppress "hit-enter" prompt that appears when a command has completed
--- t: Suppress "Terminal" message that appears when you enter a terminal buffer
--- I: Suppress "search hit TOP, continuing at BOTTOM" message that appears when
---  a search wraps around the end of the file.
-opt.shortmess = "atI"
-
 opt.swapfile = false
 opt.backup = false
 
@@ -62,6 +56,6 @@ local python3_host_prog = vim.fn.expand("$XDG_DATA_HOME/../bin/pynvim-python")
 if vim.fn.filereadable(python3_host_prog) then
 	vim.g.python3_host_prog = python3_host_prog
 else
-	vim.print("python3_host_prog not set - this is required for python deps in Neovim")
-	vim.print("see :help provider-python")
+	vim.notify("python3_host_prog not set - this is required for python deps in Neovim", vim.log.levels.WARN)
+	vim.notify("see :help provider-python", vim.log.levels.INFO)
 end
