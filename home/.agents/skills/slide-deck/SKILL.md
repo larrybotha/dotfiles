@@ -1,7 +1,13 @@
 ---
 name: slide-deck
 description: Research a topic then build a self-contained HTML slide deck with sidebar navigation. Use when asked to create a presentation, slide deck, or interactive guide from research.
+compatibility: Requires Docker
 ---
+
+## Requirements
+
+- Docker (image `pi-slide-deck-validate` built on first run)
+- No Python, html5lib, or beautifulsoup4 needed on host
 
 # Slide Deck Builder
 
@@ -31,14 +37,17 @@ description: Research a topic then build a self-contained HTML slide deck with s
 - No light mode, no theme toggle, no responsive breakpoints below 768px.
 - Don't invent new CSS custom properties. The template defines them all.
 - Don't cram multiple topics into one slide.
+- Don't write HTML from scratch. Copy `templates/sidebar-deck.html` and fill in content — the scaffold's `<div class="main">` wrapper, nav structure, and JS hooks must be preserved exactly.
+- No misnested elements. Browsers auto-close parents on invalid nesting (e.g. `<span>` wrapping `<div>`), silently breaking DOM. Use the template's nesting patterns exactly.
 
 ## Verification
 
-Before writing, check:
+Before writing, run:
 
-- Every slide has `<div class="description">` as first content block? ✓
-- Every slide has `<div class="sources">` with ≥1 `<a href>`? ✓
-- Zero `@import` / CDN URLs / external font refs in the file? ✓
-- Every nav `data-slide` matches a slide `id`? ✓
-- Fix violations before writing.
+```bash
+scripts/validate.sh OUTPUT.html
+```
 
+Runs in Docker — no host dependencies. Uses html5lib parser (mirrors browser DOM construction) to catch misnested elements, broken nav links, and external deps. Fix all ✗ before writing.
+
+Editorial rules (description first, sources with links, etc.) are enforced by Content Rules above — the validator only checks structural validity.
