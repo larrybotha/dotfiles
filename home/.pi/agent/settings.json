@@ -1,9 +1,8 @@
 {
-  "lastChangelogVersion": "0.68.0",
+  "lastChangelogVersion": "0.68.1",
   "defaultThinkingLevel": "off",
   "defaultProvider": "opencode",
-  "defaultModel": "glm-5.1",
-  "packages": [
-    "npm:pi-annotate"
-  ]
+  "defaultModel": "kimi-k2.6",
+  "packages": ["npm:pi-annotate"]
 }
+
