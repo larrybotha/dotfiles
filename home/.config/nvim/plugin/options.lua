@@ -33,6 +33,7 @@ opt.winborder = "double" -- use double line for floating window borders
 
 opt.swapfile = false
 opt.backup = false
+opt.shortmess:append("I") -- don't show intro message
 
 opt.formatoptions:remove("o") -- don't have `o` add a comment
 
