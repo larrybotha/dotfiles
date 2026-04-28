@@ -62,7 +62,7 @@ brews=(
   "lynx"
   "mpv"
   "neovim"
-  "nvm"
+  "fnm"
   "ollama"
   "oven-sh/bun/bun"
   "packer"

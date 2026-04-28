@@ -8,9 +8,6 @@ source "$ZDOTDIR"/completions
 source ~/.scripts/.aliases
 source ~/.scripts/.functions
 
-# Load NVM lazily (only when node/npm/nvm/npx is called)
-# This is sourced BEFORE .common_shrc to prevent duplicate loading
-source ~/.scripts/.nvm-lazy
 
 source "$HOME/.scripts/.common_shrc"
 

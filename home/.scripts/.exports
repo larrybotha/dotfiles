@@ -43,9 +43,6 @@ export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 # Tool-specific
 export PTPYTHON_CONFIG_HOME="$HOME/.config/ptpython"
 
-# NVM (export directory only, no loading)
-export NVM_DIR="$HOME/.nvm"
-
 # OpenCode - enable LSP support
 export OPENCODE_EXPERIMENTAL_LSP_TOOL=true
 
@@ -84,5 +81,11 @@ elif [[ "$(uname -s)" == "Linux" ]]; then
   export GOPATH="/usr/local/go"
 fi
 [[ -d "$GOPATH/bin" ]] && export PATH="$PATH:$GOPATH/bin"
+
+# fnm (Fast Node Manager)
+# Must come AFTER all other PATH additions so fnm's node dir takes precedence
+if type -p fnm &>/dev/null; then
+  eval "$(fnm env)"
+fi
 
 # vim: set filetype=sh:

@@ -52,29 +52,25 @@ mac_modules=(
   alfred-fkill
 )
 
-function _ensure_has_nvm() {
-  # install Node Version Manager and node
-  export NVM_DIR="$HOME/.nvm"
-  # shellcheck source=/dev/null
-  [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"
-
-  if command -v nvm &>/dev/null; then
-    echo "nvm already installed"
+function _ensure_has_fnm() {
+  if command -v fnm &>/dev/null; then
+    echo "fnm already installed"
   else
-    echo "installing nvm"
-    curl -o- https://raw.githubusercontent.com/nvm-sh/nvm/v0.40.3/install.sh | bash
-    # shellcheck source=/dev/null
-    . "$NVM_DIR/nvm.sh"
+    echo "installing fnm via brew"
+    brew install fnm
   fi
+
+  # Activate fnm so node is available in this script
+  eval "$(fnm env --shell bash)"
 }
 
 function _ensure_has_node() {
   if command -v node &>/dev/null; then
     echo "node already installed"
   else
-    echo "installing node"
-    nvm install node
-    nvm alias default node
+    echo "installing node via fnm"
+    fnm install --lts
+    fnm default lts-latest
   fi
 }
 
@@ -107,7 +103,7 @@ function _conditional_install() {
 }
 
 function _main() {
-  _ensure_has_nvm
+  _ensure_has_fnm
   _ensure_has_node
 
   local update_existing=false
