@@ -88,4 +88,5 @@ return {
 			opencode.command("session.redo")
 		end, { desc = "Redo opencode action" })
 	end,
+	enabled = false,
 }
