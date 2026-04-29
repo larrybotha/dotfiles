@@ -22,8 +22,8 @@ local function navigate_or_passthrough(key, nav_cmd)
 		end
 
 		if is_passthrough then
-			-- Send raw key to the terminal program via its channel
-			-- nvim_feedkeys doesn't reliably reach the terminal program from t-mode callbacks
+			-- Send raw key to the terminal program via its pty channel.
+			-- nvim_feedkeys doesn't reliably reach the terminal program from t-mode callbacks.
 			local chan = vim.bo.channel
 			if chan and chan > 0 then
 				-- Ctrl+letter = ASCII(letter) - 96 (e.g. C-h = 104-96 = 8)
@@ -52,8 +52,13 @@ return {
 		},
 		init = function()
 			-- Prevent plugin from setting its own (conflicting) tnoremaps.
-			-- Without this, the plugin's tnoremap uses <C-w>: which fails inside
-			-- snacks.terminal — the command name gets typed as literal text.
+			-- The plugin's tnoremap sends <C-w>: to escape terminal mode, but in Neovim
+			-- <C-w> in t-mode is handled by a built-in terminal command handler, not as a
+			-- regular keymap. When a <tnoremap <expr>> returns <C-w> as a key code, Neovim
+			-- may send it to the pty as raw byte 0x17 instead of processing it through the
+			-- built-in handler. The shell then interprets C-w (delete word) / C-u (kill line),
+			-- and the literal command text (e.g. "TmuxNavigateLeft") ends up typed at the
+			-- prompt. This affects all Neovim terminal types (:terminal, snacks, toggleterm, etc.).
 			vim.g.tmux_navigator_no_mappings = 1
 
 			vim.keymap.set({ "n", "t" }, "<C-h>", navigate_or_passthrough("h", "TmuxNavigateLeft"))
