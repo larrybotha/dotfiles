@@ -62,6 +62,28 @@ This must ALWAYS be printed right after a session was started and once again at 
 - List sessions on your active socket with metadata: `./scripts/find-sessions.sh -S "$SOCKET"`; add `-q partial-name` to filter.
 - Scan all sockets under the shared directory: `./scripts/find-sessions.sh --all` (uses `AGENT_TMUX_SOCKET_DIR` or `${TMPDIR:-/tmp}/agent-tmux-sockets`).
 
+## Command formatting
+
+Multi-command bash one-liners MUST use line continuations (`\`) after `&&` to keep output readable. Every `&&` gets its own line:
+
+```bash
+# RIGHT — each command on its own line
+SOCKET_DIR=${TMPDIR:-/tmp}/agent-tmux-sockets && \
+    SOCKET="$SOCKET_DIR/test-agent.sock" && \
+    SESSION=pi-test && \
+    tmux -S "$SOCKET" send-keys -t "$SESSION" Escape && \
+    sleep 2 && \
+    tmux -S "$SOCKET" send-keys -t "$SESSION" -l -- 'some command here' && \
+    tmux -S "$SOCKET" send-keys -t "$SESSION" Enter
+```
+
+```bash
+# WRONG — unreadable wall of text
+SOCKET_DIR=${TMPDIR:-/tmp}/agent-tmux-sockets && SOCKET="$SOCKET_DIR/test-agent.sock" && SESSION=pi-test && tmux -S "$SOCKET" send-keys -t "$SESSION" Escape && sleep 2 && tmux -S "$SOCKET" send-keys -t "$SESSION" -l -- 'some command here' && tmux -S "$SOCKET" send-keys -t "$SESSION" Enter
+```
+
+Single-command lines need no continuation. If a chain has 3+ commands, break it up. This rule applies to ALL bash commands in tool calls, not just tmux.
+
 ## Sending input safely
 
 - **Important:** the `-l` flag sends all following arguments as literal text — including `Enter`. When using `-l`, send the text and `Enter` key as **two separate commands**:
