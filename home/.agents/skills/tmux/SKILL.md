@@ -59,27 +59,27 @@ This must ALWAYS be printed right after a session was started and once again at 
 
 ## Finding sessions
 
-- List sessions on your active socket with metadata: `./scripts/find-sessions.sh -S "$SOCKET"`; add `-q partial-name` to filter.
-- Scan all sockets under the shared directory: `./scripts/find-sessions.sh --all` (uses `AGENT_TMUX_SOCKET_DIR` or `${TMPDIR:-/tmp}/agent-tmux-sockets`).
+- List sessions on your active socket with metadata: `~/.agents/skills/tmux/scripts/find-sessions.sh -S "$SOCKET"`; add `-q partial-name` to filter.
+- Scan all sockets under the shared directory: `~/.agents/skills/tmux/scripts/find-sessions.sh --all` (uses `AGENT_TMUX_SOCKET_DIR` or `${TMPDIR:-/tmp}/agent-tmux-sockets`).
 
 ## Command formatting
 
 Multi-command bash one-liners MUST use line continuations (`\`) after `&&` to keep output readable. Every `&&` gets its own line:
 
 ```bash
-# RIGHT — each command on its own line
+# RIGHT — each command on its own line; use wait-for-text.sh to sync
 SOCKET_DIR=${TMPDIR:-/tmp}/agent-tmux-sockets && \
     SOCKET="$SOCKET_DIR/test-agent.sock" && \
     SESSION=pi-test && \
-    tmux -S "$SOCKET" send-keys -t "$SESSION" Escape && \
-    sleep 2 && \
+    tmux -S "$SOCKET" send-keys -t "$SESSION" -- 'PYTHON_BASIC_REPL=1 python3 -q' Enter && \
+    ~/.agents/skills/tmux/scripts/wait-for-text.sh -S "$SOCKET" -t "$SESSION" -p '^>>>' -T 15 && \
     tmux -S "$SOCKET" send-keys -t "$SESSION" -l -- 'some command here' && \
     tmux -S "$SOCKET" send-keys -t "$SESSION" Enter
 ```
 
 ```bash
-# WRONG — unreadable wall of text
-SOCKET_DIR=${TMPDIR:-/tmp}/agent-tmux-sockets && SOCKET="$SOCKET_DIR/test-agent.sock" && SESSION=pi-test && tmux -S "$SOCKET" send-keys -t "$SESSION" Escape && sleep 2 && tmux -S "$SOCKET" send-keys -t "$SESSION" -l -- 'some command here' && tmux -S "$SOCKET" send-keys -t "$SESSION" Enter
+# WRONG — unreadable wall of text; also uses sleep instead of wait-for-text.sh
+SOCKET_DIR=${TMPDIR:-/tmp}/agent-tmux-sockets && SOCKET="$SOCKET_DIR/test-agent.sock" && SESSION=pi-test && tmux -S "$SOCKET" send-keys -t "$SESSION" -- 'PYTHON_BASIC_REPL=1 python3 -q' Enter && sleep 2 && tmux -S "$SOCKET" send-keys -t "$SESSION" -l -- 'some command here' && tmux -S "$SOCKET" send-keys -t "$SESSION" Enter
 ```
 
 Single-command lines need no continuation. If a chain has 3+ commands, break it up. This rule applies to ALL bash commands in tool calls, not just tmux.
@@ -120,7 +120,7 @@ Some special rules for processes:
 
 - Use timed polling to avoid races with interactive tools. Example: wait for a Python prompt before sending code:
   ```bash
-  ./scripts/wait-for-text.sh -S "$SOCKET" -t "$SESSION" -p '^>>>' -T 15 -l 4000
+  ~/.agents/skills/tmux/scripts/wait-for-text.sh -S "$SOCKET" -t "$SESSION" -p '^>>>' -T 15 -l 4000
   ```
 - For long-running commands, poll for completion text (`"Type quit to exit"`, `"Program exited"`, etc.) before proceeding.
 
@@ -138,10 +138,10 @@ Some special rules for processes:
 
 ## Helper: wait-for-text.sh
 
-`./scripts/wait-for-text.sh` polls a pane for a regex (or fixed string) with a timeout. Works on Linux/macOS with bash + tmux + grep.
+`~/.agents/skills/tmux/scripts/wait-for-text.sh` polls a pane for a regex (or fixed string) with a timeout. Works on Linux/macOS with bash + tmux + grep.
 
 ```bash
-./scripts/wait-for-text.sh -t session -p 'pattern' [-F] [-T 20] [-i 0.5] [-l 2000] [-S socket-path | -L socket-name]
+~/.agents/skills/tmux/scripts/wait-for-text.sh -t session -p 'pattern' [-F] [-T 20] [-i 0.5] [-l 2000] [-S socket-path | -L socket-name]
 ```
 
 - `-t`/`--target` pane target (required). Use session-only (e.g. `agent-py`) for the active pane; use `{session}:{window}.{pane}` only when you need a specific pane.
