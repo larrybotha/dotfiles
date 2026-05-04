@@ -155,6 +155,11 @@ if type -p "bat" >/dev/null; then
   alias cat="bat"
 fi
 
+# pi coding agent with all built-in tools (grep/fd/ls use rg/fd internally)
+if type -p "pi" >/dev/null; then
+  alias pi='pi --tools read,bash,edit,write,grep,find,ls'
+fi
+
 # use tre for tree if installed
 if type -p "tre" >/dev/null; then
   tre() { command tre "$@" -e && source "/tmp/tre_aliases_$USER" 2>/dev/null; }
