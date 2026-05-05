@@ -16,18 +16,21 @@ const DEBUG = process.env.DEBUG === "1";
 const log = DEBUG ? (...args) => console.error("[debug]", ...args) : () => {};
 
 function printUsage() {
-  console.log("Usage: screenshot.js [--full-page] [--device <preset>] [--landscape]");
+  console.log("Usage: screenshot.js [--full-page] [--device <preset>] [--landscape] [--selector <CSS>]");
   console.log("\nExamples:");
   console.log("  screenshot.js");
   console.log("  screenshot.js --full-page");
   console.log("  screenshot.js --device iphone-14");
   console.log("  screenshot.js --device pixel-7 --full-page");
+  console.log("  screenshot.js --selector '.card'");
+  console.log("  screenshot.js --selector '#hero' --full-page");
 }
 
 const args = process.argv.slice(2);
 let fullPage = false;
 let landscape = false;
 let deviceName = null;
+let selector = null;
 
 for (let i = 0; i < args.length; i++) {
   const arg = args[i];
@@ -50,6 +53,18 @@ for (let i = 0; i < args.length; i++) {
       process.exit(1);
     }
     deviceName = value;
+    i += 1;
+    continue;
+  }
+
+  if (arg === "--selector") {
+    const value = args[i + 1];
+    if (!value || value.startsWith("--")) {
+      console.error("✗ --selector requires a CSS selector");
+      printUsage();
+      process.exit(1);
+    }
+    selector = value;
     i += 1;
     continue;
   }
@@ -119,9 +134,65 @@ try {
       await applyActiveEmulation(cdp, sessionId);
     }
 
+    // Resolve selector to clip region if provided
+    let clipFromSelector = null;
+    if (selector) {
+      log(`resolving selector: ${selector}`);
+      const evalResult = await cdp.send(
+        "Runtime.evaluate",
+        {
+          expression: `(() => {
+            const el = document.querySelector(${JSON.stringify(selector)});
+            if (!el) return JSON.stringify({ error: "Element not found", selector: ${JSON.stringify(selector)} });
+            const r = el.getBoundingClientRect();
+            const scrollX = window.scrollX;
+            const scrollY = window.scrollY;
+            // Scroll element into view first
+            el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            // Re-read rect after scroll
+            const r2 = el.getBoundingClientRect();
+            return JSON.stringify({
+              x: r2.x + window.scrollX,
+              y: r2.y + window.scrollY,
+              width: r2.width,
+              height: r2.height,
+              scrolled: true
+            });
+          })()`,
+          returnByValue: true,
+        },
+        sessionId,
+        5000,
+      );
+
+      const parsed = JSON.parse(evalResult.result.value);
+      if (parsed.error) {
+        throw new Error(parsed.error);
+      }
+
+      clipFromSelector = {
+        x: Math.floor(parsed.x),
+        y: Math.floor(parsed.y),
+        width: Math.max(1, Math.ceil(parsed.width)),
+        height: Math.max(1, Math.ceil(parsed.height)),
+        scale: 1,
+      };
+
+      log(`selector clip region:`, clipFromSelector);
+    }
+
     let params = { format: "png" };
 
-    if (fullPage) {
+    if (clipFromSelector) {
+      // For selector screenshots, need full-page metrics to capture beyond viewport
+      log("reading layout metrics for selector clip...");
+      params = {
+        ...params,
+        fromSurface: true,
+        captureBeyondViewport: true,
+        clip: clipFromSelector,
+      };
+    } else if (fullPage) {
       log("reading layout metrics...");
       const metrics = await cdp.send("Page.getLayoutMetrics", {}, sessionId, 10000);
       const contentSize = metrics.cssContentSize || metrics.contentSize;
