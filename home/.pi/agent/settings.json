@@ -1,8 +1,8 @@
 {
-  "lastChangelogVersion": "0.70.6",
+  "lastChangelogVersion": "0.73.0",
   "defaultThinkingLevel": "off",
   "defaultProvider": "opencode",
-  "defaultModel": "glm-5.1",
+  "defaultModel": "minimax-m2.5",
   "packages": [
     "npm:pi-annotate"
   ]
