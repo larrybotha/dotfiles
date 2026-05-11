@@ -1,34 +1,14 @@
 # Pi Extensions
 
-Custom extensions for [pi](https://github.com/mariozechner/pi-coding-agent).
+Custom extensions for [pi](https://github.com/earendil-works/pi-coding-agent).
 
 ## Setup
 
-Requires `@mariozechner/pi-coding-agent` installed globally (`npm i -g @mariozechner/pi-coding-agent`).
+Requires `@earendil-works/pi-coding-agent` installed globally (e.g. `brew install pi`).
+Pi's jiti resolves `@earendil-works/*` packages from its own installation — no local symlinks or `file:` devDependencies needed.
 
-### Recreate package.json
-
-Adjust the `file:` paths below to match your global npm root (`npm root -g`). The path below assumes nvm with node v24.7.0.
-
-```sh
-cat > package.json << 'EOF'
-{
-  "name": "pi-extensions",
-  "private": true,
-  "type": "module",
-  "devDependencies": {
-    "@mariozechner/pi-ai": "file:$(npm root -g)/@mariozechner/pi-ai",
-    "@mariozechner/pi-coding-agent": "file:$(npm root -g)/@mariozechner/pi-coding-agent",
-    "@mariozechner/pi-tui": "file:$(npm root -g)/@mariozechner/pi-tui"
-  }
-}
-EOF
-```
-
-Then install and link:
+Only `typebox` needs a local install:
 
 ```sh
 npm install
-npm link @mariozechner/pi-ai @mariozechner/pi-coding-agent @mariozechner/pi-tui
 ```
-
