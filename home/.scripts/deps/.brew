@@ -176,7 +176,7 @@ casks=(
   "proxyman"
   "qlImageSize"
   "qlcolorcode"
-  "qlmarkdown"
+  "xykong/tap/flux-markdown"
   "qlstephen"
   "quicklook-video"
   "quicklook-csv"
