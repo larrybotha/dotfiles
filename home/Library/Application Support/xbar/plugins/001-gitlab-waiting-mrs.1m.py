@@ -20,7 +20,6 @@ from datetime import datetime
 from enum import Enum
 from pathlib import Path
 
-
 ACCESS_TOKEN = os.getenv("GITLAB_ACCESS_TOKEN", "")
 PROJECT_ID = os.getenv("PROJECT_ID", "")
 REVIEWER_ID = os.getenv("REVIEWER_ID", "")
@@ -42,6 +41,17 @@ logging.basicConfig(
     ],
 )
 logger = logging.getLogger(__name__)
+
+
+class MRReviewState(Enum):
+    """MR state from reviewer perspective, ordered by priority."""
+
+    CONFLICTS = "conflicts"  # has_conflicts=true - cannot merge
+    REQUESTED_CHANGES = "requested_changes"  # reviewer requested changes
+    DRAFT = "draft"  # draft=true - not ready for review
+    AWAITING_APPROVAL = "awaiting_approval"  # needs approval
+    APPROVED = "approved"  # approved and mergeable
+    OTHER = "other"  # fallback
 
 
 class _Icon(Enum):
@@ -82,7 +92,7 @@ def build_url():
     return base + "?" + urllib.parse.urlencode(params)
 
 
-def get_approval(project_id, mr_iid, token):
+def get_approval(mr_iid):
     url = f"{API_BASE}/projects/{PROJECT_ID}/merge_requests/{mr_iid}/approvals"
     headers = {
         "PRIVATE-TOKEN": ACCESS_TOKEN,
@@ -169,48 +179,96 @@ def fetch_all_approvals(merge_requests):
     for mr in merge_requests:
         mr_iid = mr.get("iid")
         logger.debug(f"Processing MR: {mr_iid} - {mr.get('title', 'No title')}")
-        approvals_by_mr_id[mr_iid] = get_approval(
-            mr.get("project_id"),
-            mr_iid,
-            ACCESS_TOKEN,
-        )
+        approvals_by_mr_id[mr_iid] = get_approval(mr_iid)
 
     return approvals_by_mr_id
 
 
-def determine_menu_icon(merge_requests, approvals_by_mr_id, total_mrs):
-    """Determine which icon to display based on approval status and requested changes."""
-    num_unapproved = len(
-        [v for v in approvals_by_mr_id.values() if len(v.get("approved_by", [])) == 0]
-    )
-    num_requested_changes = len(
-        [
-            mr
-            for mr in merge_requests
-            if mr.get("detailed_merge_status") == "requested_changes"
-        ]
-    )
-    logger.info(
-        f"Unapproved MRs: {num_unapproved}/{total_mrs}, Requested changes: {num_requested_changes}/{total_mrs}"
-    )
+def classify_mr_state(mr: dict, approval: dict) -> MRReviewState:
+    """Classify MR state from reviewer perspective.
 
-    # Requested changes takes priority (most urgent) - YELLOW
-    if num_requested_changes > 0:
-        if num_requested_changes == total_mrs:
-            logger.debug("All MRs have requested changes - showing FILLED_YELLOW")
+    Priority order (highest to lowest):
+    1. Has conflicts - informational
+    2. Requested changes - YELLOW
+    3. Draft - GRAY (not actionable)
+    4. Awaiting approval - ORANGE
+    5. Approved - GREEN
+    """
+    # Check conflicts first (informational only, not used for icon)
+    if mr.get("has_conflicts"):
+        return MRReviewState.CONFLICTS
+
+    # Check if reviewer requested changes
+    if mr.get("detailed_merge_status") == "requested_changes":
+        return MRReviewState.REQUESTED_CHANGES
+
+    # Check if draft
+    if mr.get("draft"):
+        return MRReviewState.DRAFT
+
+    # Check approval status
+    approved_by = approval.get("approved_by", []) if approval else []
+    approvals_required = approval.get("approvals_required", 0) if approval else 0
+
+    # Reviewer assigned but no approvals yet
+    if len(approved_by) == 0:
+        return MRReviewState.AWAITING_APPROVAL
+
+    # No approval rules configured means no approval needed
+    if approvals_required == 0:
+        return MRReviewState.APPROVED
+
+    if len(approved_by) >= approvals_required:
+        return MRReviewState.APPROVED
+    else:
+        return MRReviewState.AWAITING_APPROVAL
+
+
+def determine_menu_icon(merge_requests, approvals_by_mr_id):
+    """Determine icon based on highest-priority MR state."""
+    if not merge_requests:
+        return _Icon.EMPTY_GRAY
+
+    states = [
+        classify_mr_state(mr, approvals_by_mr_id.get(mr.get("iid")))
+        for mr in merge_requests
+    ]
+
+    state_counts = {}
+    for s in states:
+        state_counts[s] = state_counts.get(s, 0) + 1
+
+    logger.info(f"MR states: {state_counts}")
+
+    total = len(merge_requests)
+
+    # Priority: requested_changes > awaiting_approval > approved
+    # Draft is informational, doesn't drive icon unless all are draft
+
+    num_requested = state_counts.get(MRReviewState.REQUESTED_CHANGES, 0)
+    num_draft = state_counts.get(MRReviewState.DRAFT, 0)
+    num_awaiting = state_counts.get(MRReviewState.AWAITING_APPROVAL, 0)
+
+    # Yellow for requested changes
+    if num_requested > 0:
+        non_draft_total = total - num_draft
+        if num_requested == non_draft_total and non_draft_total > 0:
             return _Icon.FILLED_YELLOW
         else:
-            logger.debug("Some MRs have requested changes - showing PARTIAL_YELLOW")
             return _Icon.PARTIAL_YELLOW
-    # Then check approval status - ORANGE for awaiting approval
-    elif num_unapproved == total_mrs:
-        logger.debug("All MRs awaiting approval - showing FILLED_ORANGE")
-        return _Icon.FILLED_ORANGE
-    elif num_unapproved > 0:
-        logger.debug("Some MRs awaiting approval - showing PARTIAL_ORANGE")
-        return _Icon.PARTIAL_ORANGE
+
+    # Orange for awaiting approval (exclude drafts from calculation)
+    actionable_total = total - num_draft
+    if num_awaiting > 0 and actionable_total > 0:
+        if num_awaiting == actionable_total:
+            return _Icon.FILLED_ORANGE
+        else:
+            return _Icon.PARTIAL_ORANGE
+
+    # All approved or all draft
+    if num_draft == total:
+        return _Icon.EMPTY_GRAY
     else:
-        logger.debug("All MRs approved - showing FILLED_GREEN")
         return _Icon.FILLED_GREEN
 
 
@@ -219,6 +277,30 @@ def escape_xbar_chars(text):
     if not isinstance(text, str):
         return text
     return text.replace("|", "│")
+
+
+# State-to-color mapping for menu items
+STATE_COLOR_MAP = {
+    MRReviewState.CONFLICTS: "red",
+    MRReviewState.REQUESTED_CHANGES: "yellow",
+    MRReviewState.DRAFT: "gray",
+    MRReviewState.AWAITING_APPROVAL: "orange",
+    MRReviewState.APPROVED: "green",
+    MRReviewState.OTHER: "gray",
+}
+
+
+def get_state_label(state: MRReviewState) -> str:
+    """Get human-readable label for MR state."""
+    labels = {
+        MRReviewState.CONFLICTS: "Has conflicts",
+        MRReviewState.REQUESTED_CHANGES: "Changes requested",
+        MRReviewState.DRAFT: "Draft",
+        MRReviewState.AWAITING_APPROVAL: "Awaiting approval",
+        MRReviewState.APPROVED: "Approved",
+        MRReviewState.OTHER: "Other",
+    }
+    return labels.get(state, "Unknown")
 
 
 def format_mr_details(mr, approval):
@@ -230,34 +312,39 @@ def format_mr_details(mr, approval):
     ref = (mr.get("references", {}) or {}).get("short") or f"!{mr.get('iid', '')}"
     url = mr.get("web_url") or "https://gitlab.com"
 
-    assignees = ", ".join([a.get("username") or "(unassigned)" for a in mr.get("assignees", [])])
+    assignees = ", ".join(
+        [a.get("username") or "(unassigned)" for a in mr.get("assignees", [])]
+    )
     assignees = escape_xbar_chars(assignees)
 
-    keys = [
-        "detailed_merge_status",
-        "description",
-        "has_conflicts",
-        "updated_at",
-        "user_notes_count",
-        "labels",
-        "merge_status",
+    # Classify state
+    review_state = classify_mr_state(mr, approval)
+    color = STATE_COLOR_MAP.get(review_state, "gray")
+
+    # Build detail fields
+    details = [
+        ("review_state", get_state_label(review_state)),
+        ("detailed_merge_status", mr.get("detailed_merge_status")),
+        ("has_conflicts", mr.get("has_conflicts")),
+        ("draft", mr.get("draft")),
+        ("updated_at", mr.get("updated_at")),
+        ("user_notes_count", mr.get("user_notes_count")),
+        ("labels", mr.get("labels")),
     ]
-    details = [(k, mr.get(k)) for k in keys]
+
     link_text = " - ".join([x for x in [ref, assignees] if x])
 
-    approved_count = len(approval.get("approved_by") or []) if approval else 0
-    detailed_merge_status = mr.get("detailed_merge_status")
-
-    # Determine color: yellow for requested changes, orange for awaiting approval, green for approved
-    if detailed_merge_status == "requested_changes":
-        color = "yellow"
-    elif approved_count > 0:
-        color = "green"
-    else:
-        color = "orange"
+    # Approval info
+    approved_by = approval.get("approved_by", []) if approval else []
+    approvals_required = approval.get("approvals_required", 0) if approval else 0
+    approvals_left = approval.get("approvals_left", 0) if approval else 0
+    approval_info = f"{len(approved_by)}/{approvals_required} approvals"
+    if approvals_left > 0:
+        approval_info += f" ({approvals_left} needed)"
+    details.append(("approval", approval_info))
 
     logger.debug(
-        f"Displaying MR {mr_iid}: approved={approved_count}, status={detailed_merge_status}, color={color}"
+        f"MR {mr_iid}: state={review_state.value}, color={color}, {approval_info}"
     )
     updated_at = mr.get("updated_at", "")
 
@@ -329,7 +416,7 @@ def main():
     approvals_by_mr_id = fetch_all_approvals(merge_requests)
 
     # Determine and display menu icon
-    icon = determine_menu_icon(merge_requests, approvals_by_mr_id, len(merge_requests))
+    icon = determine_menu_icon(merge_requests, approvals_by_mr_id)
     print_menu_icon(icon)
 
     # Display menu items
