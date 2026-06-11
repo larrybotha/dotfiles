@@ -33,7 +33,7 @@ M.setup = function()
 		},
 
 		-- Python
-		python = { "dmypy" },
+		python = { "ruff" },
 	}
 
 	-- Setup autocmds to trigger linting
