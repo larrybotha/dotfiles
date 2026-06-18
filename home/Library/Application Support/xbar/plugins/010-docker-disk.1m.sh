@@ -15,9 +15,9 @@ export PATH="/usr/local/bin:/usr/bin:$PATH"
 DOCKER="$(command -v docker)"
 
 humanize() {
-    local L_BYTES="${1:-0}"
-    local L_BASE="${2:-1000}"
-    echo "$1" | awk -v bytes="${L_BYTES}" -v base="${L_BASE}" 'function human(x, base) {
+  local L_BYTES="${1:-0}"
+  local L_BASE="${2:-1000}"
+  echo "$1" | awk -v bytes="$L_BYTES" -v base="$L_BASE" 'function human(x, base) {
          if(base!=1024)base=1000
          basesuf=(base==1024)?"iB":"B"
 
@@ -34,10 +34,10 @@ humanize() {
       BEGIN{print human(bytes, base)}'
 }
 
-dehumanise() {
-    read -r v
-    echo "$v" | awk \
-        'BEGIN{IGNORECASE = 1}
+dehumanize() {
+  read -r v
+  echo "$v" | awk \
+    'BEGIN{IGNORECASE = 1}
         function printpower(n,b,p) {printf "%d\n", n*b^p}
         /[0-9](B)?$/{ printpower($1, 10,  1); next;};
         /K(B)?$/{     printpower($1, 10,  3); next;};
@@ -46,20 +46,21 @@ dehumanise() {
         /T(B)?$/{     printpower($1, 10, 12); next;};'
 }
 
-DOCKER_DF=$(${DOCKER} system df --format "{{.Size}}")
+DOCKER_DF=$("$DOCKER" system df --format "{{.Size}}")
 
-IMAGE_SIZES=$(echo "${DOCKER_DF}" | sed -n 1p | dehumanise)
-CONTAINER_SIZES=$(echo "${DOCKER_DF}" | sed -n 2p | dehumanise)
-VOLUME_SIZES=$(echo "${DOCKER_DF}" | sed -n 3p | dehumanise)
-BUILD_SIZES=$(echo "${DOCKER_DF}" | sed -n 4p | dehumanise)
+IMAGE_SIZES=$(echo "$DOCKER_DF" | sed -n 1p | dehumanize)
+CONTAINER_SIZES=$(echo "$DOCKER_DF" | sed -n 2p | dehumanize)
+VOLUME_SIZES=$(echo "$DOCKER_DF" | sed -n 3p | dehumanize)
+BUILD_SIZES=$(echo "$DOCKER_DF" | sed -n 4p | dehumanize)
 
 TOTAL=$((IMAGE_SIZES + CONTAINER_SIZES + VOLUME_SIZES + BUILD_SIZES))
 
-echo "🐳: $(humanize ${TOTAL})"
+echo "🐳"
 echo "---"
-echo "images: $(echo "${DOCKER_DF}" | sed -n 1p)"
-echo "containers: $(echo "${DOCKER_DF}" | sed -n 2p)"
-echo "volumes: $(echo "${DOCKER_DF}" | sed -n 3p)"
-echo "build cache: $(echo "${DOCKER_DF}" | sed -n 4p)"
+echo "total: $(humanize "$TOTAL")"
+echo "images: $(echo "$DOCKER_DF" | sed -n 1p)"
+echo "containers: $(echo "$DOCKER_DF" | sed -n 2p)"
+echo "volumes: $(echo "$DOCKER_DF" | sed -n 3p)"
+echo "build cache: $(echo "$DOCKER_DF" | sed -n 4p)"
 echo "---"
 echo "Refresh | refresh=true"
