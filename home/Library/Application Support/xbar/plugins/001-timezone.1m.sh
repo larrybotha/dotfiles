@@ -15,79 +15,71 @@ timezones=(
 for tz in "${timezones[@]}"; do
   IFS=: read -r zone flag city <<<"$tz"
   times+=("$(TZ="$zone" date +"%H:%M")")
+  flags+=("$flag")
+  cities+=("$city")
 done
 
 echo "${times[0]}"
 echo "---"
 
+#######################################
+# Render a calendar for the given month.
+# Globals:
+#   None
+# Arguments:
+#   $1: YYYY-MM-DD, any day in the target month
+#   $2: xbar prefix ("" for top-level, "--" for dropdown)
+# Outputs:
+#   Month header and calendar lines to stdout
+# Returns:
+#   0
+#######################################
 calendar() {
-  local year=$1
-  local month=$2
-  local prefix=$3
-  local today=$4
-  local first_dow days_in_month
+  local ymd=$1 prefix=$2
+  local day_of_week days_in_month today_day year
+  day_of_week=$(date -j -f "%Y-%m-%d" "$ymd" +%w)
+  days_in_month=$(date -j -v+1m -v1d -v-1d -f "%Y-%m-%d" "$ymd" +%d)
+  year=$(date -j -f "%Y-%m-%d" "$ymd" +%Y)
 
-  first_dow=$(date -j -f "%Y-%m-%d" "${year}-$(printf '%02d' "$month")-01" +%w)
-  days_in_month=$(date -j -v+1m -v1d -v-1d -f "%Y-%m-%d" "${year}-$(printf '%02d' "$month")-01" +%d)
+  if [ "$(date -j -f "%Y-%m-%d" "$ymd" +%Y-%m)" = "$(date +%Y-%m)" ]; then
+    today_day=$(date +%-e)
+  else
+    today_day=0
+  fi
 
-  echo "$(date -j -f "%Y-%m-%d" "${year}-$(printf '%02d' "$month")-01" +%B) ${year}"
+  echo "$(date -j -f "%Y-%m-%d" "$ymd" +%B) ${year}"
   echo "${prefix} Su  Mo  Tu  We  Th  Fr  Sa | trim=false font=courier"
 
-  local week=""
-  for ((i = 0; i < first_dow; i++)); do
-    week="${week}    "
-  done
+  local w=""
 
-  for ((day = 1; day <= days_in_month; day++)); do
-    if [ "$today" -gt 0 ] && [ "$day" -eq "$today" ]; then
-      week="${week}$(printf "(%2d)" "$day")"
-    else
-      week="${week}$(printf " %2d " "$day")"
-    fi
+  for ((i = 0; i < day_of_week; i++)); do w="${w}    "; done
 
-    if [ $(((first_dow + day) % 7)) -eq 0 ] || [ "$day" -eq "$days_in_month" ]; then
-      while [ $(((first_dow + day) % 7)) -ne 0 ]; do
-        week="${week}    "
-        ((day++))
+  for ((d = 1; d <= days_in_month; d++)); do
+    if [ "$d" -eq "$today_day" ]; then
+      w="${w}$(printf "(%2d)" "$d")"
+    else w="${w}$(printf " %2d " "$d")"; fi
+
+    if [ $(((day_of_week + d) % 7)) -eq 0 ] || [ "$d" -eq "$days_in_month" ]; then
+      while [ $(((day_of_week + d) % 7)) -ne 0 ]; do
+        w="${w}    "
+        ((d++))
       done
-      echo "${prefix}${week} | trim=false font=courier"
-      week=""
+      echo "${prefix}${w} | trim=false font=courier"
+      w=""
     fi
   done
 }
 
-year=$(date +%Y)
-month=$(date +%-m)
-today=$(date +%-e)
-
-# Previous month
-if [ "$month" -eq 1 ]; then
-  prev_year=$((year - 1))
-  prev_month=12
-else
-  prev_year=$year
-  prev_month=$((month - 1))
-fi
-
-# Next month
-if [ "$month" -eq 12 ]; then
-  next_year=$((year + 1))
-  next_month=1
-else
-  next_year=$year
-  next_month=$((month + 1))
-fi
-
-calendar "$prev_year" "$prev_month" "--" 0
+ymd=$(date +%Y-%m-01)
+calendar "$(date -j -v-1m -f "%Y-%m-%d" "$ymd" +%Y-%m-01)" "--"
 echo "---"
-calendar "$year" "$month" "" "$today"
+calendar "$ymd" ""
 echo "---"
-calendar "$next_year" "$next_month" "--" 0
+calendar "$(date -j -v+1m -f "%Y-%m-%d" "$ymd" +%Y-%m-01)" "--"
 
 echo "---"
 for i in "${!timezones[@]}"; do
-  IFS=: read -r zone flag city <<<"${timezones[$i]}"
-  echo "$flag ${times[$i]} $city | terminal=false"
+  echo "${flags[$i]} ${times[$i]} ${cities[$i]} | terminal=false"
 done
 echo "---"
 echo "Refresh | refresh=true"
