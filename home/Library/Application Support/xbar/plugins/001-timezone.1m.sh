@@ -6,11 +6,18 @@
 # <xbar.desc>Shows the current time in South Africa, updating every minute.</xbar.desc>
 # <xbar.dependencies>bash,date</xbar.dependencies>
 
-SA_TIME=$(TZ="Africa/Johannesburg" date +"%H:%M")
-LONDON_TIME=$(TZ="Europe/London" date +"%H:%M")
-MELBOURNE_TIME=$(TZ="Australia/Melbourne" date +"%H:%M")
+timezones=(
+  "Africa/Johannesburg:🇿🇦:Johannesburg"
+  "Europe/London:🇬🇧:London"
+  "Australia/Melbourne:🇦🇺:Melbourne"
+)
 
-echo "$SA_TIME"
+for tz in "${timezones[@]}"; do
+  IFS=: read -r zone flag city <<<"$tz"
+  times+=("$(TZ="$zone" date +"%H:%M")")
+done
+
+echo "${times[0]}"
 echo "---"
 
 calendar() {
@@ -78,8 +85,9 @@ echo "---"
 calendar "$next_year" "$next_month" "--" 0
 
 echo "---"
-echo "Johannesburg | terminal=false"
-echo "🇬🇧 ${LONDON_TIME} London | terminal=false"
-echo "🇦🇺 ${MELBOURNE_TIME} Melbourne | terminal=false"
+for i in "${!timezones[@]}"; do
+  IFS=: read -r zone flag city <<<"${timezones[$i]}"
+  echo "$flag ${times[$i]} $city | terminal=false"
+done
 echo "---"
 echo "Refresh | refresh=true"
