@@ -26,7 +26,6 @@ brews=(
   "carapace"
   "checkmake"
   "checkov"
-  "chezmoi"
   "clang-format"
   "cppcheck"
   "ctop"
