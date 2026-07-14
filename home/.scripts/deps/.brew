@@ -1,9 +1,5 @@
 #!/usr/bin/env bash
 
-taps=(
-  "codeclimate/formulae" # required for codeclimate
-)
-
 brews=(
   "git"
 
@@ -194,8 +190,47 @@ casks=(
   "xscope"
 )
 
-for tap in "${taps[@]}"; do
-  brew tap "$tap"
+# Homebrew 6.0.0+ requires explicit trust for non-official taps before their
+# formulae/casks/commands are loaded
+# https://docs.brew.sh/Tap-Trust
+taps_requiring_trust=(
+  "anomalyco/tap/opencode"
+  "ariga/tap/atlas"
+  "codeclimate/formulae/codeclimate"
+  "fsouza/prettierd/prettierd"
+  "jesseduffield/lazydocker/lazydocker"
+  "jesseduffield/lazynpm/lazynpm"
+  "koekeishiya/formulae/yabai"
+  "koekeishiya/formulae/skhd"
+  "oven-sh/bun/bun"
+  "peterldowns/tap/nix-search-cli"
+  "tursodatabase/tap/turso"
+)
+
+casks_requiring_trust=(
+  "lihaoyun6/tap/quickrecorder"
+  "xykong/tap/flux-markdown"
+)
+
+custom_taps=(
+  "codeclimate/formulae|https://github.com/qltysh-archive/homebrew-formulae.git"
+  "koekeishiya/formulae|https://github.com/asmvik/homebrew-formulae.git"
+)
+
+for entry in "${custom_taps[@]}"; do
+  tap="${entry%%|*}"
+  url="${entry#*|}"
+  brew tap "$tap" "$url"
+done
+
+for formula in "${taps_requiring_trust[@]}"; do
+  brew tap "${formula%/*}"        # idempotent
+  brew trust --formula "$formula" # idempotent
+done
+
+for cask in "${casks_requiring_trust[@]}"; do
+  brew tap "${cask%/*}"
+  brew trust --cask "$cask"
 done
 
 brew_lines=""
