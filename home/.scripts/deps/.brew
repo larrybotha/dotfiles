@@ -17,6 +17,7 @@ brews=(
   "atuin"
   "carapace"
   "cmake"
+  "difftastic" # diffing in lazygit
   "exercism"
   "fd"
   "ffmpeg"
