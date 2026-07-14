@@ -21,6 +21,7 @@ brews=(
   "fd"
   "ffmpeg"
   "fish"
+  "fnm"
   "fzf"
   "git-lfs"
   "htop"
