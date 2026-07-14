@@ -1,141 +1,123 @@
 #!/usr/bin/env bash
 
 brews=(
-  "git"
-
-  # Mac OS deps
+  # core
   "bash"      # bash 4
   "coreutils" # OS X GNU core utils are outdated
-  "findutils" # install GNU `find`, `locate`, `updatedb`, and `xargs`, g-prefixed
-  "libiconv"  # Mojave deps (TODO: determine if this is still needed)
-  "mysql"     # allow for running MySQL commands on machine
-  "openldap"  # Mojave deps (TODO: determine if this is still needed)
-  "wget"
-
-  "anomalyco/tap/opencode" # up-to-date version of opencode
-  "ansible"
-  "ansible-lint"
-  "ariga/tap/atlas" # Terraform-like orchestration for db schemas
-  "atuin"
-  "bat"
-  "bats-core"
-  "carapace"
-  "checkmake"
-  "checkov"
-  "clang-format"
-  "cppcheck"
-  "ctop"
-  "difftastic"
-  "dive"
-  "dust"
-  "editorconfig"
-  "elm"
-  "elm-format"
-  "fd"
-  "fluent-bit"
-  "fx" # jq alternative
-  "fzf"
-  "gemini-cli"
+  "curl"
+  "findutils" # GNU find, locate, updatedb, xargs (g-prefixed)
   "git"
-  "git-flow"
-  "gitlab-runner"
-  "go"
-  "go-task"
-  "gofumpt"
-  "golines"
-  "gopls"
-  "gpg"
+  "gnupg"
+  "openssl@3"
+  "openssl@4"
+  "pinentry" # pinentry for gpg
+
+  # shell / prompt / nav
+  "anyquery"
+  "atuin"
+  "carapace"
+  "cmake"
+  "exercism"
+  "fd"
+  "ffmpeg"
+  "fish"
+  "fzf"
+  "git-lfs"
   "htop"
-  "hurl"
-  "imagemagick"
-  "jesseduffield/lazydocker/lazydocker"
-  "jesseduffield/lazynpm/lazynpm"
-  "jid"
   "jq"
   "just"
   "lazygit"
-  "lynx"
-  "mpv"
+  "mdbook"
   "neovim"
-  "fnm"
-  "ollama"
-  "oven-sh/bun/bun"
-  "packer"
+  "nnn"
   "parallel"
   "pass"
-  "peterldowns/tap/nix-search-cli"
-  "pigz"
-  "pinentry-mac" # dep for gpg to use Mac's keychain for pass-phrases
-  "poppler"
-  "postgresql"
-  "posting"
-  "ptpython"
-  "pyenv"
-  "pyenv-virtualenv"
-  "python"
-  "qt"
-  "redis"
   "ripgrep"
-  "ruff"
   "sevenzip"
   "starship"
   "tealdeer"
-  "tfenv"  # nvm for Terraform
-  "tflint" # linter for Terraform
+  "tfenv" # nvm for Terraform
   "tmux"
   "tmuxinator"
-  "tokei"
+  "tmuxinator-completion"
   "tre-command"
-  "tree-sitter-cli" # nvim-treesitter dependency
-  "tursodatabase/tap/turso"
-  "uv"
   "vim"
-  "watchexec"
-  "webkit2png"
-  "xh" # httpie alternative
-  "yarn"
-  "zopfli"
+  "xcodegen"
   "zoxide"
+  "zsh"
 
-  # Lua
+  # languages / runtimes
+  "cargo-expand"
+  "elm"
+  "go"
   "lua"
   "luarocks" # required for neorg
-  "lua-language-server"
-
-  # Rust
-  "cargo-expand"
-
-  # Yabai
-  "koekeishiya/formulae/yabai"
-  "koekeishiya/formulae/skhd"
-
-  # zig
+  "pipenv"
+  "ptpython"
+  "python"
+  "rust"
+  "rust-analyzer"
+  "uv"
   "zig"
+
+  # databases
+  "postgresql@16"
+  "sqlite"
+
+  # cloud / infra
+  "ansible"
+  "ansible-lint"
+  "checkov"
+  "docker"
+  "docker-agent"
+  "docker-completion"
+  "doctl"
+  "flux"
+  "glab"
+  "newrelic-cli"
+  "ollama"
+  "openvpn"
+  "packer"
+  "sentry-cli"
+
+  # networking
+  "httpie"
+  "telnet"
+
+  # Diagnostics
+  "codespell"
+  "djlint"
+  "dotenv-linter"
+  "gopls"
+  "gopls"
+  "lua-language-server"
+  "markdownlint-cli2"
+  "ruff"
+  "rust-analyzer"
+  "shellcheck"
+  "shellharden"
+  "sleek" # diagnostics for sql
+  "tree-sitter"
+  "tree-sitter-cli" # nvim-treesitter dependency
+  "vint"
+  "yamllint"
   "zls"
 
   # Formatters
   "cbfmt"
+  "clang-format"
   "fsouza/prettierd/prettierd"
+  "gofumpt"
+  "golines"
   "rustfmt"
   "shellharden"
   "shfmt"
   "sqlfluff"
   "stylua"
 
-  # Diagnostics
-  "alejandra"   # nix formatter. TODO: install using flakes
-  "codeclimate" # requires tapping codeclimate/formulae
-  "codespell"
-  "djlint"
-  "dotenv-linter"
-  "golangci-lint"
-  "hadolint"
-  "markdownlint-cli2"
-  "rust-analyzer"
-  "shellcheck"
-  "sleek" # diagnostics for sql
-  "vint"
-  "yamllint"
+  # Yabai
+  "koekeishiya/formulae/yabai"
+  "koekeishiya/formulae/skhd"
 )
 
 casks=(
@@ -154,12 +136,12 @@ casks=(
   "docker-desktop"
   "figma"
   "firefox"
+  "firefox@developer-edition"
   "flameshot"
   "flux-app"
   "font-roboto-mono-nerd-font"
   "ghostty"
   "hammerspoon" # Yabai dependency
-  "homebrew/cask-versions/firefox-developer-edition"
   "karabiner-elements"
   "keycastr"
   "keymapp"
@@ -171,11 +153,10 @@ casks=(
   "proxyman"
   "qlImageSize"
   "qlcolorcode"
-  "xykong/tap/flux-markdown"
   "qlstephen"
-  "quicklook-video"
   "quicklook-csv"
   "quicklook-json"
+  "quicklook-video"
   "rescuetime"
   "safari-technology-preview"
   "skim"
@@ -188,6 +169,7 @@ casks=(
   "webpquicklook"
   "xbar"
   "xscope"
+  "xykong/tap/flux-markdown"
 )
 
 # Homebrew 6.0.0+ requires explicit trust for non-official taps before their
@@ -195,16 +177,13 @@ casks=(
 # https://docs.brew.sh/Tap-Trust
 taps_requiring_trust=(
   "anomalyco/tap/opencode"
-  "ariga/tap/atlas"
-  "codeclimate/formulae/codeclimate"
   "fsouza/prettierd/prettierd"
+  "hashicorp/tap/packer"
   "jesseduffield/lazydocker/lazydocker"
   "jesseduffield/lazynpm/lazynpm"
-  "koekeishiya/formulae/yabai"
   "koekeishiya/formulae/skhd"
-  "oven-sh/bun/bun"
-  "peterldowns/tap/nix-search-cli"
-  "tursodatabase/tap/turso"
+  "koekeishiya/formulae/yabai"
+  "terraform-linters/tap/tflint" # linter for Terraform
 )
 
 casks_requiring_trust=(
@@ -213,7 +192,6 @@ casks_requiring_trust=(
 )
 
 custom_taps=(
-  "codeclimate/formulae|https://github.com/qltysh-archive/homebrew-formulae.git"
   "koekeishiya/formulae|https://github.com/asmvik/homebrew-formulae.git"
 )
 
@@ -252,5 +230,7 @@ brew bundle --file=/dev/stdin <<EOF
   $brew_lines
   $cask_lines
 EOF
+
+echo -e "\nCleaning up..."
 
 brew cleanup
