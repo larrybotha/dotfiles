@@ -54,6 +54,7 @@ brews=(
   "go"
   "lua"
   "luarocks" # required for neorg
+  "php"      # required for Alfred workflows
   "pipenv"
   "ptpython"
   "python"
