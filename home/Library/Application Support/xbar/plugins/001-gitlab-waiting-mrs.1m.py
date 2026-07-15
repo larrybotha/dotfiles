@@ -317,6 +317,10 @@ def format_mr_details(mr, approval):
     )
     assignees = escape_xbar_chars(assignees)
 
+    # Branch info
+    source_branch = mr.get("source_branch") or ""
+    source_branch = escape_xbar_chars(source_branch)
+
     # Classify state
     review_state = classify_mr_state(mr, approval)
     color = STATE_COLOR_MAP.get(review_state, "gray")
@@ -332,7 +336,7 @@ def format_mr_details(mr, approval):
         ("labels", mr.get("labels")),
     ]
 
-    link_text = " - ".join([x for x in [ref, assignees] if x])
+    link_text_top = " - ".join([x for x in [ref, assignees] if x])
 
     # Approval info
     approved_by = approval.get("approved_by", []) if approval else []
@@ -351,8 +355,9 @@ def format_mr_details(mr, approval):
     return {
         "color": color,
         "details": details,
-        "link_text": link_text,
+        "link_text_top": link_text_top,
         "mr_iid": mr_iid,
+        "source_branch": source_branch,
         "title": title,
         "updated_at": updated_at.strip(),
         "url": url,
@@ -374,13 +379,20 @@ def display_merge_request(mr_data):
 
         print(f"--{k}: {v} | trim=false")
 
-    print(f"\t{mr_data['link_text']} | trim=false | href={mr_data['url']} | color=gray")
+    print(
+        f"\t{mr_data['link_text_top']} | trim=false | href={mr_data['url']} | color=gray"
+    )
+
+    if mr_data.get("source_branch"):
+        print(
+            f"\t{mr_data['source_branch']} | trim=false | href={mr_data['url']} | color=gray"
+        )
 
     if updated_at:
         dt = datetime.fromisoformat(updated_at)
 
         print(
-            f"\tupdated at {dt.strftime('%Y-%m-%d %H:%M:%S')} | trim=false | color=gray",
+            f"\tupdated at {dt.strftime('%Y-%m-%d %H:%M:%S')} | trim=false | href={mr_data['url']} | color=gray",
         )
 
 
