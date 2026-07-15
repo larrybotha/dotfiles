@@ -25,6 +25,7 @@ brews=(
   "fnm"
   "fzf"
   "git-lfs"
+  "herdr"
   "htop"
   "jq"
   "just"
