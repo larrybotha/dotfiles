@@ -140,7 +140,7 @@ casks=(
   "figma"
   "firefox"
   "firefox@developer-edition"
-  "flameshot"
+  "flameshot" # https://flameshot.org/docs/guide/troubleshooting/#all-opened-applications-go-away-and-only-the-blank-desktop-is-visible-for-selection
   "flux-app"
   "font-roboto-mono-nerd-font"
   "ghostty"
