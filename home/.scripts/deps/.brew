@@ -45,6 +45,7 @@ brews=(
   "tmuxinator-completion"
   "tre-command"
   "vim"
+  "watchexec"
   "xcodegen"
   "zoxide"
   "zsh"
