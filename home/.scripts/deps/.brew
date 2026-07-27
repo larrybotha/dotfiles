@@ -200,6 +200,10 @@ custom_taps=(
   "koekeishiya/formulae|https://github.com/asmvik/homebrew-formulae.git"
 )
 
+forced_links=(
+  "postgresql@18" # ensure pg_isready is available without manual linking
+)
+
 for entry in "${custom_taps[@]}"; do
   tap="${entry%%|*}"
   url="${entry#*|}"
@@ -235,6 +239,10 @@ brew bundle --file=/dev/stdin <<EOF
   $brew_lines
   $cask_lines
 EOF
+
+for brew_to_link in "${forced_links[@]}"; do
+  brew link --force --overwrite "$brew_to_link"
+done
 
 echo -e "\nCleaning up..."
 
