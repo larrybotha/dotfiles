@@ -66,7 +66,7 @@ brews=(
   "zig"
 
   # databases
-  "postgresql"
+  "postgresql@18"
   "sqlite"
 
   # cloud / infra
