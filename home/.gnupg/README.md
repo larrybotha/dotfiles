@@ -7,9 +7,9 @@ This guide covers creating a dedicated GPG key specifically for token access usi
 ### Generate GPG Key
 
 ```shell
-$ gpg --full-generate-key
-$ gpgconf --kill gpg-agent
-$ gpg --list-keys --keyid-format LONG
+gpg --full-generate-key
+gpgconf --kill gpg-agent
+gpg --list-keys --keyid-format LONG
 ```
 
 ## Multi-Machine Setup
@@ -42,7 +42,3 @@ pass init KEY_ID
 
 - https://dev.to/dnsinyukov/how-to-securely-store-passwords-with-gpg-pass-26d7
 - https://bmaingret.github.io/blog/2022-02-15-1Password-gpg-git-seamless-commits-signing
-
-
-
-
