@@ -11,7 +11,7 @@ DEFAULT_OUTPUT_DIR="$SCRIPT_DIR/../tmp/gpg"
 
 # Function to display usage
 usage() {
-    cat << EOF
+  cat <<EOF
 Usage: $0 <key_id> [output_directory]
 
 Export GPG public key, private key, and revocation certificate for a given key.
@@ -33,119 +33,119 @@ EOF
 }
 
 log() {
-    local level="${1:-INFO}"
-    local message="$2"
-    local timestamp
-    timestamp=$(date '+%Y-%m-%d %H:%M:%S')
-    echo "[$timestamp] [$level] $message"
+  local level="${1:-INFO}"
+  local message="$2"
+  local timestamp
+  timestamp=$(date '+%Y-%m-%d %H:%M:%S')
+  echo "[$timestamp] [$level] $message"
 }
 
 # Function to sanitize key ID for filename
 sanitize_filename() {
-    local input="$1"
-    # Replace spaces, special chars with dashes, remove multiple dashes
-    echo "$input" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'
+  local input="$1"
+  # Replace spaces, special chars with dashes, remove multiple dashes
+  echo "$input" | sed 's/[^a-zA-Z0-9._-]/-/g' | sed 's/--*/-/g' | sed 's/^-\|-$//g'
 }
 
 # Function to verify key exists
 verify_key_exists() {
-    local key_id="$1"
-    if ! gpg --list-keys "$key_id" >/dev/null 2>&1; then
-        log "ERROR" "Key '$key_id' not found in keyring"
-        exit 1
-    fi
+  local key_id="$1"
+  if ! gpg --list-keys "$key_id" >/dev/null 2>&1; then
+    log "ERROR" "Key '$key_id' not found in keyring"
+    exit 1
+  fi
 }
 
 # Function to export public key
 export_public_key() {
-    local key_id="$1"
-    local output_file="$2"
+  local key_id="$1"
+  local output_file="$2"
 
-    log "INFO" "Exporting public key to: $output_file"
-    if gpg --export --armor "$key_id" > "$output_file"; then
-        log "INFO" "Public key exported successfully"
-        chmod 644 "$output_file"
-    else
-        log "ERROR" "Failed to export public key"
-        exit 1
-    fi
+  log "INFO" "Exporting public key to: $output_file"
+  if gpg --export --armor "$key_id" >"$output_file"; then
+    log "INFO" "Public key exported successfully"
+    chmod 644 "$output_file"
+  else
+    log "ERROR" "Failed to export public key"
+    exit 1
+  fi
 }
 
 export_private_key() {
-    local key_id="$1"
-    local output_file="$2"
+  local key_id="$1"
+  local output_file="$2"
 
-    log "INFO" "Exporting private key to: $output_file"
-    if gpg --export-secret-keys --armor "$key_id" > "$output_file"; then
-        log "INFO" "Private key exported successfully"
-        chmod 600 "$output_file"
-    else
-        log "ERROR" "Failed to export private key"
-        exit 1
-    fi
+  log "INFO" "Exporting private key to: $output_file"
+  if gpg --export-secret-keys --armor "$key_id" >"$output_file"; then
+    log "INFO" "Private key exported successfully"
+    chmod 600 "$output_file"
+  else
+    log "ERROR" "Failed to export private key"
+    exit 1
+  fi
 }
 
 export_revocation_cert() {
-    local key_id="$1"
-    local output_file="$2"
+  local key_id="$1"
+  local output_file="$2"
 
-    log "INFO" "Generating revocation certificate to: $output_file"
-    if gpg --gen-revoke --armor --output "$output_file" "$key_id" <<< "y" 2>/dev/null; then
-        log "INFO" "Revocation certificate generated successfully"
-        chmod 600 "$output_file"
-    else
-        log "ERROR" "Failed to generate revocation certificate"
-        exit 1
-    fi
+  log "INFO" "Generating revocation certificate to: $output_file"
+  if gpg --gen-revoke --armor --output "$output_file" "$key_id" <<<"y" 2>/dev/null; then
+    log "INFO" "Revocation certificate generated successfully"
+    chmod 600 "$output_file"
+  else
+    log "ERROR" "Failed to generate revocation certificate"
+    exit 1
+  fi
 }
 
 main() {
-    # Check arguments
-    if [[ $# -lt 1 ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
-        usage
-        exit 0
-    fi
+  # Check arguments
+  if [[ $# -lt 1 ]] || [[ "${1:-}" == "-h" ]] || [[ "${1:-}" == "--help" ]]; then
+    usage
+    exit 0
+  fi
 
-    local key_id="$1"
-    local output_dir="${2:-$DEFAULT_OUTPUT_DIR}"
+  local key_id="$1"
+  local output_dir="${2:-$DEFAULT_OUTPUT_DIR}"
 
-    # Verify key exists
-    verify_key_exists "$key_id"
+  # Verify key exists
+  verify_key_exists "$key_id"
 
-    # Create output directory if it doesn't exist
-    if [[ ! -d "$output_dir" ]]; then
-        log "INFO" "Creating output directory: $output_dir"
-        mkdir -p "$output_dir"
-        chmod 700 "$output_dir"
-    fi
+  # Create output directory if it doesn't exist
+  if [[ ! -d "$output_dir" ]]; then
+    log "INFO" "Creating output directory: $output_dir"
+    mkdir -p "$output_dir"
+    chmod 700 "$output_dir"
+  fi
 
-    # Sanitize key ID for filename
-    local safe_key_id
-    safe_key_id=$(sanitize_filename "$key_id")
+  # Sanitize key ID for filename
+  local safe_key_id
+  safe_key_id=$(sanitize_filename "$key_id")
 
-    # Define output file paths
-    local public_key_file="$output_dir/${safe_key_id}-public.asc"
-    local private_key_file="$output_dir/${safe_key_id}-private.asc"
-    local revoke_cert_file="$output_dir/${safe_key_id}-revoke.asc"
+  # Define output file paths
+  local public_key_file="$output_dir/${safe_key_id}-public.asc"
+  local private_key_file="$output_dir/${safe_key_id}-private.asc"
+  local revoke_cert_file="$output_dir/${safe_key_id}-revoke.asc"
 
-    log "INFO" "Starting key export for: $key_id"
-    log "INFO" "Output directory: $output_dir"
+  log "INFO" "Starting key export for: $key_id"
+  log "INFO" "Output directory: $output_dir"
 
-    # Export keys
-    export_public_key "$key_id" "$public_key_file"
-    export_private_key "$key_id" "$private_key_file"
-    export_revocation_cert "$key_id" "$revoke_cert_file"
+  # Export keys
+  export_public_key "$key_id" "$public_key_file"
+  export_private_key "$key_id" "$private_key_file"
+  export_revocation_cert "$key_id" "$revoke_cert_file"
 
-    log "INFO" "Key export completed successfully"
-    echo
-    echo "Files created:"
-    echo "  Public key:     $public_key_file"
-    echo "  Private key:    $private_key_file"
-    echo "  Revocation:     $revoke_cert_file"
-    echo
-    echo "IMPORTANT: Store the private key and revocation certificate securely!"
+  log "INFO" "Key export completed successfully"
+  echo
+  echo "Files created:"
+  echo "  Public key:     $public_key_file"
+  echo "  Private key:    $private_key_file"
+  echo "  Revocation:     $revoke_cert_file"
+  echo
+  echo "IMPORTANT: Store the private key and revocation certificate securely!"
 
-    tar -czf "$output_dir/../gpg-keys.tar.gz" "$output_dir"
+  tar -czf "$output_dir/../gpg-keys.tar.gz" "$output_dir"
 }
 
 main "$@"
