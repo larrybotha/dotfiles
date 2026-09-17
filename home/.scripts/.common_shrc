@@ -52,6 +52,11 @@ if type -p "nnn" >/dev/null; then
   source ~/.config/nnn/custom/.nnn
 fi
 
+# init docker
+if type -p "docker" >/dev/null; then
+  export PATH="$PATH:$HOME/.docker/bin"
+fi
+
 # init zoxide
 if type zoxide>/dev/null; then
   if [ "${ZSH_VERSION:-}" != "" ]; then
