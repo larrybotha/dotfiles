@@ -186,6 +186,7 @@ taps_requiring_trust=(
   "anomalyco/tap/opencode"
   "fsouza/prettierd/prettierd"
   "hashicorp/tap/packer"
+  "hashicorp/tap/hashicorp-vagrant"
   "jesseduffield/lazydocker/lazydocker"
   "jesseduffield/lazynpm/lazynpm"
   "koekeishiya/formulae/skhd"
