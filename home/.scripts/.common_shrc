@@ -11,11 +11,11 @@ set -o vi
 # detaching / killing a session, commands in options tmuxinator's on_project_exit
 # won't be executed
 if type tmux >/dev/null; then
- [[ ! $TERM =~ screen ]] && [ "${TMUX+x}" = "" ] && tmux
- #        [1]                   [2]          [3]
- # 1 - ensure we're not running in a GNU Screen terminal multiplexer
- # 2 - ensure the $TMUX env var is empty - i.e. no current tmux session
- # 3 - start a tmux session
+  [[ ! $TERM =~ screen ]] && [ "${TMUX+x}" = "" ] && tmux
+  #        [1]                   [2]          [3]
+  # 1 - ensure we're not running in a GNU Screen terminal multiplexer
+  # 2 - ensure the $TMUX env var is empty - i.e. no current tmux session
+  # 3 - start a tmux session
 fi
 
 # init atuin
@@ -58,7 +58,7 @@ if type -p "docker" >/dev/null; then
 fi
 
 # init zoxide
-if type zoxide>/dev/null; then
+if type zoxide >/dev/null; then
   if [ "${ZSH_VERSION:-}" != "" ]; then
     eval "$(zoxide init zsh)"
   elif [ "${BASH_VERSION:-}" != "" ]; then
