@@ -30,6 +30,7 @@ brews=(
   "htop"
   "jq"
   "just"
+  "lazydocker"
   "lazygit"
   "mdbook"
   "neovim"
