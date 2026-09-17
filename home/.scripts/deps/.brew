@@ -238,7 +238,7 @@ if [[ "$(uname -s)" == "Darwin" ]]; then
   done
 fi
 
-brew bundle --file=/dev/stdin <<EOF
+brew bundle install --upgrade --jobs auto --verbose --file=/dev/stdin <<EOF
   $brew_lines
   $cask_lines
 EOF
