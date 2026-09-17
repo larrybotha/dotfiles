@@ -148,6 +148,7 @@ casks=(
   "font-roboto-mono-nerd-font"
   "ghostty"
   "hammerspoon" # Yabai dependency
+  "http-toolkit"
   "karabiner-elements"
   "keycastr"
   "keymapp"
