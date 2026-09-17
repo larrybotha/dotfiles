@@ -10,7 +10,7 @@ brews=(
   "gnupg"
   "openssl@3"
   "openssl@4"
-  "pinentry" # pinentry for gpg
+  "pinentry-mac" # pinentry for gpg
 
   # shell / prompt / nav
   "anyquery"
