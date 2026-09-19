@@ -9,5 +9,13 @@ return {
 	},
 	config = function()
 		require("jq").setup({})
+
+		vim.keymap.set("n", "<leader>jq", function()
+			require("jq").run()
+		end)
+
+		vim.keymap.set("v", "<leader>jq", function()
+			require("jq").run_visual()
+		end)
 	end,
 }
