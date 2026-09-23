@@ -1,10 +1,11 @@
 {
-  "lastChangelogVersion": "0.75.4",
+  "lastChangelogVersion": "0.87.1",
   "defaultThinkingLevel": "off",
   "defaultProvider": "opencode",
   "defaultModel": "glm-5.1",
   "packages": [
     "npm:pi-annotate"
   ],
-  "hideThinkingBlock": false
+  "hideThinkingBlock": false,
+  "theme": "dark"
 }
