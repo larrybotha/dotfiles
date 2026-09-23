@@ -11,8 +11,6 @@ common_modules=(
   server
   typescript
   yo
-  @zed-industries/claude-code-acp # codecompanion + claude code dep
-  @zed-industries/codex-acp       # codecompanion + codex cli
   # opencode/everything-claude-code
   # `npx ecc-install python must still be run`
   ecc-universal
