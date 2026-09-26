@@ -10,6 +10,7 @@
  * Usage:
  *   ./scripts/switch-tab.js <query>                  # Search by title or URL
  *   ./scripts/switch-tab.js --id <targetId>           # Switch by exact targetId
+ *   ./scripts/switch-tab.js --json                   # JSON evidence out (switch mode)
  *   ./scripts/switch-tab.js --list                    # List all tabs (like arc-tabs but browser-agnostic)
  *   ./scripts/switch-tab.js --list --json             # JSON output
  *   ./scripts/switch-tab.js --list --visible          # Only visible tabs
@@ -221,6 +222,29 @@ async function activateWindow(cdp, windowId, bounds) {
   }
 }
 
+// ── Shared success output (human text, or JSON evidence with --json) ──
+
+function printSwitched(tab) {
+  if (isJson) {
+    // single JSON object: the extension's TAB_SWITCH evidence
+    console.log(
+      JSON.stringify({
+        switched: true,
+        targetId: tab.targetId,
+        url: tab.url,
+        title: tab.title,
+        spaceTitle: tab.spaceTitle ?? null,
+        restoredWindow: !tab.visible && !!tab.bounds,
+      })
+    );
+    return;
+  }
+  console.log(`✓ Switched to: ${tab.title}`);
+  console.log(`  ${tab.url}`);
+  if (tab.spaceTitle) console.log(`  Space: ${tab.spaceTitle}`);
+  if (!tab.visible && tab.bounds) console.log(`  (restored hidden window)`);
+}
+
 // ── List mode ────────────────────────────────────────────────────────
 
 async function listMode() {
@@ -283,9 +307,7 @@ async function switchMode() {
     await activateWindow(cdp, match.windowId, match.bounds);
     await cdp.send("Target.activateTarget", { targetId: match.targetId }, null, 5000);
     writeActiveTab(match.targetId, match.url);
-    console.log(`✓ Switched to: ${match.title}`);
-    console.log(`  ${match.url}`);
-    if (match.spaceTitle) console.log(`  Space: ${match.spaceTitle}`);
+    printSwitched(match);
     cdp.close();
     return;
   }
@@ -339,12 +361,7 @@ async function switchMode() {
   await cdp.send("Target.activateTarget", { targetId: best.targetId }, null, 5000);
   writeActiveTab(best.targetId, best.url);
 
-  console.log(`✓ Switched to: ${best.title}`);
-  console.log(`  ${best.url}`);
-  if (best.spaceTitle) console.log(`  Space: ${best.spaceTitle}`);
-  if (!best.visible && best.bounds) {
-    console.log(`  (restored hidden window)`);
-  }
+  printSwitched(best);
 
   cdp.close();
 }
