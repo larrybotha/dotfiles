@@ -25,7 +25,12 @@ import { appendFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
-import { Text } from "@earendil-works/pi-tui";
+import {
+	type AutocompleteItem,
+	type AutocompleteProvider,
+	type AutocompleteSuggestions,
+	Text,
+} from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { createActor, type Actor, type AnyStateMachine } from "xstate";
 import {
@@ -92,6 +97,8 @@ type WebDetails = {
 let actor: Actor<typeof researchMachine> | null = null;
 let unsubscribeActor: { unsubscribe: () => void } | null = null;
 let uiCtx: { ui: { setStatus: (k: string, t: string | undefined) => void; theme?: { fg: (c: string, s: string) => string } } } | null = null;
+/** Footer status is opt-in: toggle with '/research footer'. */
+let statusEnabled = false;
 
 /** Compact live status for the TUI footer. */
 function statusText(c: ReturnType<typeof initialContext>): string {
@@ -99,9 +106,15 @@ function statusText(c: ReturnType<typeof initialContext>): string {
 }
 
 function refreshStatus() {
-	if (!uiCtx?.ui?.setStatus || !actor) return;
+	if (!uiCtx?.ui?.setStatus) return;
+	if (!statusEnabled) {
+		uiCtx.ui.setStatus("web-search", undefined);
+		return;
+	}
+	// getActor() lazily creates the actor so the footer works before any tool call
+	const a = getActor();
 	const theme = uiCtx.ui.theme;
-	const text = statusText(actor.getSnapshot().context);
+	const text = statusText(a.getSnapshot().context);
 	uiCtx.ui.setStatus("web-search", theme ? theme.fg("dim", text) : text);
 }
 
@@ -235,10 +248,45 @@ const text = (t: string) => [{ type: "text" as const, text: t }];
 // Extension
 // ---------------------------------------------------------------------------
 
+const SUBCOMMANDS: { value: string; description: string }[] = [
+	{ value: "status", description: "show research state and budgets" },
+	{ value: "reset", description: "clear research state" },
+	{ value: "footer", description: "toggle live footer status line" },
+];
+
+/** Tab completion for '/websearch <subcommand>' (delegates to current provider otherwise). */
+function createWebsearchAutocomplete(current: AutocompleteProvider): AutocompleteProvider {
+	return {
+		async getSuggestions(lines, cursorLine, cursorCol, options): Promise<AutocompleteSuggestions | null> {
+			const line = lines[cursorLine] ?? "";
+			const before = line.slice(0, cursorCol);
+			const m = /^\/websearch ?([a-z]*)$/.exec(before);
+			if (!m) return current.getSuggestions(lines, cursorLine, cursorCol, options);
+			const typed = m[1] ?? "";
+			const items: AutocompleteItem[] = SUBCOMMANDS.filter((s) => s.value.startsWith(typed)).map((s) => ({
+				value: s.value,
+				label: s.value,
+				description: s.description,
+			}));
+			if (items.length === 0) return current.getSuggestions(lines, cursorLine, cursorCol, options);
+			return { items, prefix: typed };
+		},
+		applyCompletion(lines, cursorLine, cursorCol, item, prefix) {
+			return current.applyCompletion(lines, cursorLine, cursorCol, item, prefix);
+		},
+		shouldTriggerFileCompletion(lines, cursorLine, cursorCol) {
+			return current.shouldTriggerFileCompletion?.(lines, cursorLine, cursorCol) ?? true;
+		},
+	};
+}
+
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		uiCtx = ctx as never;
 		reconstructState(ctx);
+		if (ctx.mode === "tui" && typeof (ctx.ui as never as { addAutocompleteProvider?: unknown }).addAutocompleteProvider === "function") {
+			ctx.ui.addAutocompleteProvider((current) => createWebsearchAutocomplete(current));
+		}
 	});
 	pi.on("session_tree", async (_event, ctx) => {
 		uiCtx = ctx as never;
@@ -518,10 +566,17 @@ export default function (pi: ExtensionAPI) {
 		},
 	});
 
-	pi.registerCommand("research", {
-		description: "Web research state machine: '/research status' shows state, '/research reset' clears it",
+	pi.registerCommand("websearch", {
+		description:
+			"Web search state machine: '/websearch status' shows state, '/websearch reset' clears it, '/websearch footer' toggles the live footer line (off by default)",
 		handler: async (args, ctx) => {
 			const sub = args.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+			if (sub === "footer") {
+				statusEnabled = !statusEnabled;
+				refreshStatus();
+				ctx.ui.notify(`Footer status ${statusEnabled ? "on" : "off"}`, "info");
+				return;
+			}
 			if (sub === "reset") {
 				getActor().send({ type: "RESET" });
 				ctx.ui.notify("Web research state reset", "info");
@@ -529,7 +584,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			if (sub !== "" && sub !== "status") {
 				ctx.ui.notify(
-					`Unknown subcommand '${sub}'. Use '/research status' or '/research reset'.`,
+					`Unknown subcommand '${sub}'. Use '/websearch status', '/websearch reset', or '/websearch footer'.`,
 					"error",
 				);
 				return;

@@ -30,7 +30,8 @@ results are sufficient — but can only act via legal machine events.
 | `web_report` | End research (requires ≥1 successful search) |
 | `web_reset` | Clear state, start over |
 
-`/research` (or `/research status`) shows state; `/research reset` clears it;
+`/websearch` (or `/websearch status`) shows state; `/websearch reset` clears it;
+`/websearch footer` toggles the live footer line (off by default);
 unknown subcommands error. Diagnostics log: `~/.cache/web-search/web-search.log`.
 
 Rejected actions return a normal result explaining why and what is allowed
@@ -72,7 +73,8 @@ bodies stripped — transcript already holds content), so research state follows
 the conversation branch (rewind/branch-safe; reconstructed on
 `session_start`/`session_tree`).
 
-Live status in the TUI footer via `ctx.ui.setStatus` + `actor.subscribe`.
+Live status in the TUI footer via `ctx.ui.setStatus` + `actor.subscribe` —
+opt-in (`/websearch footer`), off by default.
 
 ## Config (env)
 
