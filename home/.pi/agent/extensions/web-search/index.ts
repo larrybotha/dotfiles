@@ -1,8 +1,9 @@
 /**
- * Web Research extension — state-machine-enforced web search workflow.
+ * Web search extension — state-machine-enforced web search workflow.
  *
- * Wraps the brave-search skill (Docker-isolated Brave API + Readability
- * extraction) behind an XState machine. The model may only perform legal
+ * Docker-isolated search backend (Brave API + Readability extraction) is an
+ * implementation detail: executors/ ships with this extension and is swapped
+ * by replacing scripts with the same --json contract. The model may only perform legal
  * transitions, selected via tools:
  *
  *   web_search  — run a Brave search (budget: WEB_RESEARCH_MAX_SEARCHES)
@@ -43,18 +44,21 @@ import {
 // ---------------------------------------------------------------------------
 
 const LIMITS: Limits = {
-	maxSearches: Number(process.env.WEB_RESEARCH_MAX_SEARCHES ?? 5),
-	maxSearchAttempts: Number(process.env.WEB_RESEARCH_MAX_SEARCH_ATTEMPTS ?? 8),
-	maxFetches: Number(process.env.WEB_RESEARCH_MAX_FETCHES ?? 10),
+	maxSearches: Number(process.env.WEB_SEARCH_MAX_SEARCHES ?? 5),
+	maxSearchAttempts: Number(process.env.WEB_SEARCH_MAX_SEARCH_ATTEMPTS ?? 8),
+	maxFetches: Number(process.env.WEB_SEARCH_MAX_FETCHES ?? 10),
 };
-const CONTENT_TRUNCATE = Number(process.env.WEB_RESEARCH_CONTENT_TRUNCATE ?? 5000);
-const SCRIPT_TIMEOUT_MS = Number(process.env.WEB_RESEARCH_SCRIPT_TIMEOUT_MS ?? 120_000);
+const CONTENT_TRUNCATE = Number(process.env.WEB_SEARCH_CONTENT_TRUNCATE ?? 5000);
+const SCRIPT_TIMEOUT_MS = Number(process.env.WEB_SEARCH_SCRIPT_TIMEOUT_MS ?? 120_000);
 
-const SKILL_DIR = process.env.BRAVE_SEARCH_SKILL_DIR ?? join(homedir(), ".agents/skills/brave-search");
-const SEARCH_SCRIPT = join(SKILL_DIR, "scripts/search.sh");
-const CONTENT_SCRIPT = join(SKILL_DIR, "scripts/content.sh");
+// Search backend is an implementation detail: Docker-wrapped executors that
+// ship with this extension. Swap backend by changing these two scripts (same
+// --json contract) — machine and tools untouched.
+const EXEC_DIR = process.env.WEB_SEARCH_EXEC_DIR ?? join(homedir(), ".pi/agent/extensions/web-search/executors");
+const SEARCH_SCRIPT = join(EXEC_DIR, "search.sh");
+const CONTENT_SCRIPT = join(EXEC_DIR, "content.sh");
 
-const LOG_DIR = process.env.WEB_RESEARCH_LOG_DIR ?? join(homedir(), ".cache", "web-search");
+const LOG_DIR = process.env.WEB_SEARCH_LOG_DIR ?? join(homedir(), ".cache", "web-search");
 
 /** Best-effort diagnostics log; never throws, never blocks a tool. */
 function log(level: "INFO" | "WARN" | "ERROR", msg: string) {
@@ -146,7 +150,7 @@ function reconstructState(ctx: { sessionManager: { getBranch: () => Array<any> }
 }
 
 // ---------------------------------------------------------------------------
-// IO executors (Docker via brave-search skill; API key stays inside pass/Docker)
+// IO executors (Docker; API key stays inside pass/Docker, never in this process)
 // ---------------------------------------------------------------------------
 
 function run(script: string, args: string[]): Promise<string> {

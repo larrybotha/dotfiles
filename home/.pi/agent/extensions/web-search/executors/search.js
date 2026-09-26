@@ -13,6 +13,10 @@ const { gfm } = require(`${globalModules}/turndown-plugin-gfm`);
 
 const args = process.argv.slice(2);
 
+const jsonIndex = args.indexOf("--json");
+const jsonOutput = jsonIndex !== -1;
+if (jsonOutput) args.splice(jsonIndex, 1);
+
 const contentIndex = args.indexOf("--content");
 const fetchContent = contentIndex !== -1;
 if (fetchContent) args.splice(contentIndex, 1);
@@ -41,7 +45,7 @@ if (freshnessIndex !== -1 && args[freshnessIndex + 1]) {
 const query = args.join(" ");
 
 if (!query) {
-	console.log("Usage: brave-search.js <query> [-n <num>] [--content] [--country <code>] [--freshness <period>]");
+	console.log("Usage: brave-search.js <query> [-n <num>] [--content] [--json] [--country <code>] [--freshness <period>]");
 	console.log("\nOptions:");
 	console.log("  -n <num>              Number of results (default: 5, max: 20)");
 	console.log("  --content             Fetch readable content as markdown");
@@ -54,14 +58,14 @@ if (!query) {
 	console.log('  brave-search.js "rust programming" -n 10');
 	console.log('  brave-search.js "climate change" --content');
 	console.log('  brave-search.js "news today" --freshness pd');
-	process.exit(1);
+	process.exitCode = 1;
 }
 
 const apiKey = process.env.BRAVE_API_KEY;
 if (!apiKey) {
 	console.error("Error: BRAVE_API_KEY environment variable is required.");
 	console.error("Get your API key at: https://api-dashboard.search.brave.com/app/keys");
-	process.exit(1);
+	process.exitCode = 1;
 }
 
 async function fetchBraveResults(query, numResults, country, freshness) {
@@ -170,18 +174,22 @@ async function fetchPageContent(url) {
 try {
 	const results = await fetchBraveResults(query, numResults, country, freshness);
 
-	if (results.length === 0) {
-		console.error("No results found.");
-		process.exit(0);
-	}
-
-	if (fetchContent) {
-		for (const result of results) {
-			result.content = await fetchPageContent(result.link);
+	if (jsonOutput) {
+		// Machine-readable contract for the pi web-search extension: errors exit
+		// non-zero; stdout is always a JSON array of results.
+		console.log(JSON.stringify(results));
+	} else {
+		if (results.length === 0) {
+			console.error("No results found.");
 		}
-	}
 
-	for (let i = 0; i < results.length; i++) {
+		if (fetchContent) {
+			for (const result of results) {
+				result.content = await fetchPageContent(result.link);
+			}
+		}
+
+		for (let i = 0; i < results.length; i++) {
 		const r = results[i];
 		console.log(`--- Result ${i + 1} ---`);
 		console.log(`Title: ${r.title}`);
@@ -194,8 +202,9 @@ try {
 			console.log(`Content:\n${r.content}`);
 		}
 		console.log("");
+		}
 	}
 } catch (e) {
 	console.error(`Error: ${e.message}`);
-	process.exit(1);
+	process.exitCode = 1;
 }

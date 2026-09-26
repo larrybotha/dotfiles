@@ -8,13 +8,13 @@ if [ $# -lt 1 ]; then
   exit 1
 fi
 
-SKILL_DIR="$(cd "$(dirname "$0")/.." && pwd)"
+EXEC_DIR="$(cd "$(dirname "$0")" && pwd)"
 IMAGE_NAME="pi-brave-search"
 
 # Build image if not cached
 if ! docker image inspect "$IMAGE_NAME" &>/dev/null; then
   echo "Building Docker image (first run only)..." >&2
-  docker build -t "$IMAGE_NAME" -f "$SKILL_DIR/Dockerfile" "$SKILL_DIR" >&2
+  docker build -t "$IMAGE_NAME" -f "$EXEC_DIR/Dockerfile" "$EXEC_DIR" >&2
 fi
 
 docker run --rm \
