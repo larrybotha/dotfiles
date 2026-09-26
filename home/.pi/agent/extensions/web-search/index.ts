@@ -32,7 +32,8 @@ import {
 	Text,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { createActor, type Actor, type AnyStateMachine } from "xstate";
+import { createActor, type Actor } from "xstate";
+import { makeViz, type VizResult } from "../_viz/viz-kit.ts";
 import {
 	fetchViolation,
 	initialContext,
@@ -55,6 +56,10 @@ const LIMITS: Limits = {
 };
 const CONTENT_TRUNCATE = Number(process.env.WEB_SEARCH_CONTENT_TRUNCATE ?? 5000);
 const SCRIPT_TIMEOUT_MS = Number(process.env.WEB_SEARCH_SCRIPT_TIMEOUT_MS ?? 120_000);
+const INSPECT_PORT = (() => {
+	const n = Number(process.env.WEB_SEARCH_INSPECT_PORT ?? 8080);
+	return Number.isInteger(n) && n > 0 && n < 65536 ? n : 8080;
+})();
 
 // Search backend is an implementation detail: Docker-wrapped executors that
 // ship with this extension. Swap backend by changing these two scripts (same
@@ -97,8 +102,30 @@ type WebDetails = {
 let actor: Actor<typeof researchMachine> | null = null;
 let unsubscribeActor: { unsubscribe: () => void } | null = null;
 let uiCtx: { ui: { setStatus: (k: string, t: string | undefined) => void; theme?: { fg: (c: string, s: string) => string } } } | null = null;
-/** Footer status is opt-in: toggle with '/research footer'. */
+/** Footer status is opt-in: toggle with '/websearch footer'. */
 let statusEnabled = false;
+
+// ---------------------------------------------------------------------------
+// Inspector (opt-in live visualisation: /websearch viz or WEB_SEARCH_INSPECT=1)
+// Transport lives in ../_viz/viz-kit.ts: `::` port pre-check (a listen failure
+// inside createInspectorServer surfaces as an unhandled 'error' event and
+// kills the pi process), clean-stop WS adapter (the stock createWebSocket
+// inspector retries forever, leaking timers past shutdown), and port
+// auto-allocation (tmux viz defaults to 8080 too).
+// ---------------------------------------------------------------------------
+
+const viz = makeViz({ name: "web-search", preferredPort: INSPECT_PORT });
+
+/**
+ * Attach mid-session: XState `inspect` is a creation-time option, so attach =
+ * re-create the actor from its persisted snapshot with inspect wired. State is
+ * pure data — budgets, results, fetched links carry over exactly.
+ */
+async function attachInspector(): Promise<VizResult> {
+	const r = await viz.enable({ open: true });
+	if (r.ok) createResearchActor({ snapshot: getActor().getPersistedSnapshot() });
+	return r;
+}
 
 /** Compact live status for the TUI footer. */
 function statusText(c: ReturnType<typeof initialContext>): string {
@@ -126,11 +153,26 @@ function setActor(a: Actor<typeof researchMachine>) {
 	refreshStatus();
 }
 
-function freshActor(): Actor<typeof researchMachine> {
-	const a = createActor(researchMachine, { input: { limits: LIMITS } });
+/**
+ * Single actor-creation site — fresh input or persisted-snapshot restore —
+ * with the opt-in inspector wired when running. The `as never` cast for the
+ * persisted snapshot is centralised here.
+ */
+function createResearchActor(
+	opts: { input: { limits: Limits } } | { snapshot: unknown },
+): Actor<typeof researchMachine> {
+	const a = createActor(researchMachine, {
+		...(opts as { input?: { limits: Limits }; snapshot?: unknown }),
+		snapshot: "snapshot" in opts ? (opts.snapshot as never) : undefined,
+		...viz.option(),
+	} as never) as Actor<typeof researchMachine>;
 	a.start();
 	setActor(a);
 	return a;
+}
+
+function freshActor(): Actor<typeof researchMachine> {
+	return createResearchActor({ input: { limits: LIMITS } });
 }
 
 function getActor(): Actor<typeof researchMachine> {
@@ -149,11 +191,7 @@ function reconstructState(ctx: { sessionManager: { getBranch: () => Array<any> }
 		const snap = details?.snapshot as PersistedSnapshot | undefined;
 		if (snap?.context) {
 			// Restore from persisted snapshot (branch-correct)
-			const restored = createActor(researchMachine as AnyStateMachine, {
-				snapshot: details!.snapshot as never,
-			});
-			restored.start();
-			setActor(restored as Actor<typeof researchMachine>);
+			createResearchActor({ snapshot: details!.snapshot });
 			return;
 		}
 	}
@@ -252,6 +290,7 @@ const SUBCOMMANDS: { value: string; description: string }[] = [
 	{ value: "status", description: "show research state and budgets" },
 	{ value: "reset", description: "clear research state" },
 	{ value: "footer", description: "toggle live footer status line" },
+	{ value: "viz", description: "attach the Stately inspector (live visualisation)" },
 ];
 
 /** Tab completion for '/websearch <subcommand>' (delegates to current provider otherwise). */
@@ -283,6 +322,14 @@ function createWebsearchAutocomplete(current: AutocompleteProvider): Autocomplet
 export default function (pi: ExtensionAPI) {
 	pi.on("session_start", async (_event, ctx) => {
 		uiCtx = ctx as never;
+		// WEB_SEARCH_INSPECT=1: start inspector infra BEFORE any actor exists, so
+		// fresh/restored actors get inspect wired at creation. Never call
+		// attachInspector() here — it would recurse through getActor() when no
+		// actor exists yet.
+		if (process.env.WEB_SEARCH_INSPECT) {
+			const r = await viz.enable({ open: true });
+			if (!r.ok) log("ERROR", `inspector not started: ${r.message}`);
+		}
 		reconstructState(ctx);
 		if (ctx.mode === "tui" && typeof (ctx.ui as never as { addAutocompleteProvider?: unknown }).addAutocompleteProvider === "function") {
 			ctx.ui.addAutocompleteProvider((current) => createWebsearchAutocomplete(current));
@@ -291,6 +338,11 @@ export default function (pi: ExtensionAPI) {
 	pi.on("session_tree", async (_event, ctx) => {
 		uiCtx = ctx as never;
 		reconstructState(ctx);
+	});
+	pi.on("session_shutdown", async () => {
+		// Idempotent teardown: WS client + relay server (clean-stop adapter —
+		// the stock one retries forever, leaking timers past shutdown).
+		viz.stop();
 	});
 
 	pi.registerTool({
@@ -311,8 +363,7 @@ export default function (pi: ExtensionAPI) {
 		}),
 
 		async execute(_toolCallId, params) {
-			const a = getActor();
-			const snap = a.getSnapshot();
+			const snap = getActor().getSnapshot();
 
 			const violation = searchViolation(snap.context);
 			if (violation) {
@@ -340,7 +391,7 @@ export default function (pi: ExtensionAPI) {
 			if (params.country) args.push("--country", searchParams.country);
 			if (searchParams.freshness) args.push("--freshness", searchParams.freshness);
 
-			a.send({ type: "BEGIN_SEARCH", query: params.query, params: searchParams });
+			getActor().send({ type: "BEGIN_SEARCH", query: params.query, params: searchParams });
 
 			try {
 				const out = await run(SEARCH_SCRIPT, args);
@@ -352,7 +403,7 @@ export default function (pi: ExtensionAPI) {
 				}
 				log("INFO", `search ok: ${results.length} result(s)`);
 				if (results.length === 0) {
-					a.send({
+					getActor().send({
 						type: "SEARCH_DONE",
 						query: params.query,
 						params: searchParams,
@@ -361,13 +412,13 @@ export default function (pi: ExtensionAPI) {
 					});
 					return {
 						content: text(
-							`No results found for: ${params.query}\n${budgetLine(a.getSnapshot().context)}\n` +
+							`No results found for: ${params.query}\n${budgetLine(getActor().getSnapshot().context)}\n` +
 								"Refine the query (different terms, site: operator, or drop restrictive freshness filter).",
 						),
 						details: detailsFor("search", { error: "no results" }),
 					};
 				}
-				a.send({
+				getActor().send({
 					type: "SEARCH_DONE",
 					query: params.query,
 					params: searchParams,
@@ -376,14 +427,14 @@ export default function (pi: ExtensionAPI) {
 				});
 				return {
 					content: text(
-						`${formatResults(results)}\n\n${budgetLine(a.getSnapshot().context)}\n` +
+						`${formatResults(results)}\n\n${budgetLine(getActor().getSnapshot().context)}\n` +
 							"Use web_fetch on links worth reading in full, or web_report to finish.",
 					),
 					details: detailsFor("search"),
 				};
 			} catch (e) {
 				log("ERROR", `search failed: ${(e as Error).message?.split("\n")[0]}`);
-				a.send({
+				getActor().send({
 					type: "SEARCH_DONE",
 					query: params.query,
 					params: searchParams,
@@ -418,8 +469,7 @@ export default function (pi: ExtensionAPI) {
 		}),
 
 		async execute(_toolCallId, params) {
-			const a = getActor();
-			const snap = a.getSnapshot();
+			const snap = getActor().getSnapshot();
 			const links = params.links;
 
 			const violation = fetchViolation(snap.context, links);
@@ -434,7 +484,7 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
-			a.send({ type: "BEGIN_FETCH", links });
+			getActor().send({ type: "BEGIN_FETCH", links });
 
 			log("INFO", `fetch request: ${links.length} link(s)`);
 
@@ -451,7 +501,7 @@ export default function (pi: ExtensionAPI) {
 				}
 			}
 
-			a.send({ type: "FETCH_DONE", contents, failed });
+			getActor().send({ type: "FETCH_DONE", contents, failed });
 
 			if (contents.length === 0) {
 				throw new Error(`All fetches failed: ${failed.map((f) => `${f.link} (${f.error})`).join("; ")}`);
@@ -464,7 +514,7 @@ export default function (pi: ExtensionAPI) {
 			for (const f of failed) {
 				parts.push(`=== ${f.link} ===\n(fetch failed: ${f.error})`);
 			}
-			parts.push(budgetLine(a.getSnapshot().context));
+			parts.push(budgetLine(getActor().getSnapshot().context));
 			parts.push("Use web_report when you have enough material.");
 			return { content: text(parts.join("\n\n")), details: detailsFor("fetch") };
 		},
@@ -490,8 +540,7 @@ export default function (pi: ExtensionAPI) {
 		parameters: Type.Object({}),
 
 		async execute() {
-			const a = getActor();
-			const snap = a.getSnapshot();
+			const snap = getActor().getSnapshot();
 			if (!snap.can({ type: "SATISFIED" })) {
 				log("WARN", "report rejected: no successful searches");
 				return {
@@ -503,12 +552,12 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
-			a.send({ type: "SATISFIED" });
+			getActor().send({ type: "SATISFIED" });
 			log(
 				"INFO",
-				`report: ${a.getSnapshot().context.queries.length} query(ies), ${a.getSnapshot().context.results.length} result(s), ${a.getSnapshot().context.fetchCount} fetched`,
+				`report: ${getActor().getSnapshot().context.queries.length} query(ies), ${getActor().getSnapshot().context.results.length} result(s), ${getActor().getSnapshot().context.fetchCount} fetched`,
 			);
-			const ctx = a.getSnapshot().context;
+			const ctx = getActor().getSnapshot().context;
 
 			const lines = ["Research complete. Synthesize your answer from the material above.", ""];
 			lines.push("Queries:");
@@ -547,12 +596,11 @@ export default function (pi: ExtensionAPI) {
 		parameters: Type.Object({}),
 
 		async execute() {
-			const a = getActor();
-			const ctx = a.getSnapshot().context;
+			const ctx = getActor().getSnapshot().context;
 			const prior = `Queries: ${ctx.searchCount} searches, ${ctx.fetchCount} fetches, ${ctx.results.length} results, machine state ${stateValue()}`;
-			a.send({ type: "RESET" });
+			getActor().send({ type: "RESET" });
 			return {
-				content: text(`Research state cleared (was: ${prior}).\n${budgetLine(a.getSnapshot().context)}`),
+				content: text(`Research state cleared (was: ${prior}).\n${budgetLine(getActor().getSnapshot().context)}`),
 				details: detailsFor("reset"),
 			};
 		},
@@ -568,7 +616,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.registerCommand("websearch", {
 		description:
-			"Web search state machine: '/websearch status' shows state, '/websearch reset' clears it, '/websearch footer' toggles the live footer line (off by default)",
+			"Web search state machine: '/websearch status' shows state, '/websearch reset' clears it, '/websearch footer' toggles the live footer line (off by default), '/websearch viz' live-visualises the machine",
 		handler: async (args, ctx) => {
 			const sub = args.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
 			if (sub === "footer") {
@@ -582,9 +630,15 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.notify("Web research state reset", "info");
 				return;
 			}
+			if (sub === "viz") {
+				const r = await attachInspector();
+				ctx.ui.notify(r.message, r.ok ? "info" : "error");
+				if (!r.ok) log("ERROR", `inspector attach failed: ${r.message}`);
+				return;
+			}
 			if (sub !== "" && sub !== "status") {
 				ctx.ui.notify(
-					`Unknown subcommand '${sub}'. Use '/websearch status', '/websearch reset', or '/websearch footer'.`,
+					`Unknown subcommand '${sub}'. Use '/websearch status', '/websearch reset', '/websearch footer', or '/websearch viz'.`,
 					"error",
 				);
 				return;

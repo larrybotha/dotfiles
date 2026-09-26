@@ -32,6 +32,7 @@ results are sufficient — but can only act via legal machine events.
 
 `/websearch` (or `/websearch status`) shows state; `/websearch reset` clears it;
 `/websearch footer` toggles the live footer line (off by default);
+`/websearch viz` live-visualises the running machine (see below);
 unknown subcommands error. Diagnostics log: `~/.cache/web-search/web-search.log`.
 
 Rejected actions return a normal result explaining why and what is allowed
@@ -66,7 +67,8 @@ Swap the backend by replacing `executors/` scripts; keep the contract.
 
 `idle → researching → done`, with `RESET → idle` from researching/done.
 Full control flow lives in `machine.ts`; paste the `createMachine({...})`
-config into [Stately Studio](https://stately.ai) to visualize.
+config into [Stately Studio](https://stately.ai) to visualize, or watch the
+running machine live: `/websearch viz`.
 
 Tool-result `details` carry the persisted machine snapshot (fetched markdown
 bodies stripped — transcript already holds content), so research state follows
@@ -85,3 +87,46 @@ opt-in (`/websearch footer`), off by default.
 - `WEB_SEARCH_SCRIPT_TIMEOUT_MS` (default 120000)
 - `WEB_SEARCH_EXEC_DIR` (default this extension's `executors/`)
 - `WEB_SEARCH_LOG_DIR` (default `~/.cache/web-search`)
+- `WEB_SEARCH_INSPECT` (set to attach the Stately inspector at session start)
+- `WEB_SEARCH_INSPECT_PORT` (default 8080; validated — walks to the first free
+  port if busy, e.g. when the tmux extension's viz is already live on 8080)
+
+## Live visualisation (`/websearch viz`)
+
+Opt-in, anytime — mid-research included. The actor is re-created from its
+persisted snapshot with the inspector wired (XState `inspect` is a
+creation-time option), so budgets and results carry over exactly; in-flight
+tool results land on the fresh actor. The diagram shows the current state
+immediately on attach. `WEB_SEARCH_INSPECT=1` attaches at session start; the
+relay server stops at session end. Extension deps (`xstate`,
+`@statelyai/inspect`) resolve from `~/.pi/agent/extensions/node_modules`
+(gitignored — `npm install` there on a fresh machine).
+
+Inspector transport is shared with the tmux extension (`../_viz/viz-kit.ts`):
+`::` port pre-check (the relay binds all interfaces — a 127.0.0.1 probe
+passes while the port is held on `::` and the relay would then crash with an
+unhandled listen `error`), a clean-stop WS adapter (the stock
+`createWebSocketInspector` retries forever, leaking timers past shutdown),
+and port auto-allocation (both extensions default to 8080; the second one
+attaching in the same session walks to the next free port).
+
+Privacy — read before using:
+
+- The relay serves a bridge page that **iframes the remote
+  `https://stately.ai/inspect` UI** and postMessages every machine event into
+  it. Full live context streams to Stately's page — search queries (they
+  reveal what you are working on) and fetched page markdown in full (the
+  snapshot trimming in tool results does not apply to the inspector stream).
+  Loading the inspector UI needs network access to stately.ai.
+- The relay binds **all interfaces** (the package exposes no host/bind
+  option) — reachable from the LAN, not just localhost. No auth: any local
+  process can connect and read the live stream plus a replay of the last 200
+  events; a website in your browser can plausibly connect to
+  `ws://localhost:PORT` too (browser-dependent).
+- Inbound is display-only: the inspector cannot send events into the machine;
+  a local WS client can only spoof what the inspector *displays* —
+  `/websearch status` stays ground truth.
+- Mitigations: opt-in is the control (nothing runs unless you ask); for
+  sensitive research topics don't use `viz`; `sanitizeContext` / `filter`
+  exist as options on the WS inspector; an obscure `WEB_SEARCH_INSPECT_PORT`
+  reduces accidental exposure.
