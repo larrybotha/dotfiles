@@ -10,6 +10,13 @@ shift
 
 case "$MODE" in
 ascii)
+  # Authoritative validation with mmdc (the same parser the svg render uses)
+  # before the lenient beautiful-mermaid preview — a lenient preview must not
+  # pass invalid syntax (dangling edges, unclosed brackets rendered fine).
+  # Last argument = input file (POSIX: no ${@: -1}).
+  for INPUT; do :; done
+  printf '%s\n' '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' >/tmp/puppeteer.json
+  mmdc -i "$INPUT" -o /tmp/validate.svg -p /tmp/puppeteer.json || exit 1
   exec node /usr/local/bin/ascii-preview.mjs "$@"
   ;;
 svg)
@@ -21,4 +28,3 @@ svg)
   exit 1
   ;;
 esac
-
