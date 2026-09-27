@@ -15,6 +15,10 @@
  * RESTORE (branch restore) fills caches only — browser info is always
  * re-derived from a live probe, never resurrected from a snapshot.
  * Emulation preference survives STOP: it is a preference, not lifecycle.
+ *
+ * Errors are a bounded ring (last MAX_ERRORS): repeated STOP calls, failed
+ * launches, and drift cannot grow context without bound. Slim snapshots
+ * persist only the tail (slimContext in index.ts).
  */
 import { assign, setup } from "xstate";
 
@@ -100,6 +104,14 @@ export function initialContext(devices: string[] = DEFAULT_DEVICES): BrowserCont
 		errors: [],
 		devices: devices.length > 0 ? [...devices] : [...DEFAULT_DEVICES],
 	};
+}
+
+/** Error ring bound: keep the last MAX_ERRORS entries. */
+export const MAX_ERRORS = 50;
+
+function appendError(errors: string[], entry: string): string[] {
+	const next = [...errors, entry];
+	return next.length > MAX_ERRORS ? next.slice(next.length - MAX_ERRORS) : next;
 }
 
 // ---- pure validators: shared by guards and tool prechecks ----
@@ -302,14 +314,14 @@ export const browserMachine = setup({
 		}),
 		recordLaunchError: assign(({ context, event }) => {
 			if (event.type !== "LAUNCH_DONE" || !event.error) return {};
-			return { errors: [...context.errors, `launch ${event.mode}: ${event.error}`] };
+			return { errors: appendError(context.errors, `launch ${event.mode}: ${event.error}`) };
 		}),
 		recordDrift: assign(({ context, event }) => {
 			if (event.type !== "PROBE" || event.up) return {};
 			const had = context.browser
 				? `browser gone (was ${context.browser.mode} on :${context.browser.port})`
 				: "browser gone";
-			return { errors: [...context.errors, had], browser: null, activeTab: null };
+			return { errors: appendError(context.errors, had), browser: null, activeTab: null };
 		}),
 		setActiveTab: assign(({ event }) => {
 			if (event.type === "NAV") {
@@ -341,7 +353,7 @@ export const browserMachine = setup({
 			return {
 				browser: null,
 				activeTab: null,
-				errors: [...context.errors, `stopped: ${event.reason}`],
+				errors: appendError(context.errors, `stopped: ${event.reason}`),
 			};
 		}),
 		restoreCaches: assign(({ context, event }) => {

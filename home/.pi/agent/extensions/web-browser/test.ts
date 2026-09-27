@@ -7,6 +7,7 @@ import {
   DEFAULT_DEVICES,
   emulateViolation,
   launchViolation,
+  MAX_ERRORS,
   notRunningReason,
   resolveAuto,
   type DetectBuckets,
@@ -399,6 +400,17 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
     );
     ok(r.action.kind === "attach" && r.action.port === 9222, "attachable wins over blocked default", r);
   }
+}
+
+// 16. errors ring bounded: STOP spam cannot grow context without bound
+{
+  const a = freshActor();
+  for (let i = 0; i < 80; i++) {
+    a.send({ type: "STOP", reason: `spam ${i}` });
+  }
+  ok(ctx(a).errors.length === MAX_ERRORS, `errors capped at ${MAX_ERRORS}`, ctx(a).errors.length);
+  ok(ctx(a).errors[MAX_ERRORS - 1] === "stopped: spam 79", "latest entry kept");
+  ok(ctx(a).errors[0] === `stopped: spam ${80 - MAX_ERRORS}`, "oldest entries dropped");
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

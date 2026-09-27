@@ -17,6 +17,9 @@ browser actions; tools stay thin.
   (browser died underneath).
 - `RESTORE` (branch restore) fills caches only — browser info is always
   re-derived from a probe, never resurrected from a snapshot.
+- Errors are a bounded ring (last `MAX_ERRORS` = 50): repeated STOP calls,
+  failed launches, and drift cannot grow context without bound (persisted
+  snapshots slim it further — last 5).
 - Pure validators shared between guards and tool prechecks:
   `launchViolation`, `emulateViolation`, `notRunningReason`.
 - `resolveAuto` (pure, in machine.ts) owns the smart-start decision table
