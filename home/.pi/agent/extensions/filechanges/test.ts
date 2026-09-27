@@ -294,6 +294,31 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
   ok(zero.added === 0 && zero.removed === 0, "identical content -> zero added/removed");
   const rm = countDiffLines(patchFromBaseline("f.ts", "x\ny\n", ""));
   ok(rm.removed === 2, "deleted file diff counts removals");
+  // regression: a removed line whose content starts with "-- " diffs as
+  // "--- flag…" — that is an in-hunk removal, not a diff header
+  const dashDash = countDiffLines(
+    patchFromBaseline("f.ts", "-- flag\nx\n", "x\n"),
+  );
+  ok(
+    dashDash.removed === 1 && dashDash.added === 0,
+    'removed line starting "-- " counts as removed (was: 0)',
+  );
+  // regression: added line starting "-- " also counts ("--- " in hunk)
+  const dashDashAdd = countDiffLines(
+    patchFromBaseline("f.ts", "x\n", "x\n-- flag\n"),
+  );
+  ok(
+    dashDashAdd.added === 1 && dashDashAdd.removed === 0,
+    'added line starting "-- " counts as added',
+  );
+  // hunk headers still skipped everywhere
+  const multi = countDiffLines(
+    patchFromBaseline("f.ts", "a\nb\nc\n", "a\nB\nc\n"),
+  );
+  ok(
+    multi.added === 1 && multi.removed === 1,
+    "multi-line diff counts exactly",
+  );
 }
 
 // 25. validators return readable reasons

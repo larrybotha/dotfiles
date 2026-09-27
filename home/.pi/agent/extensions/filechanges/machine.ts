@@ -124,13 +124,16 @@ export function countDiffLines(unifiedDiff: string): {
 } {
 	let added = 0;
 	let removed = 0;
+	// header region (--- a/x, +++ b/x, file labels) only exists before the
+	// first hunk: a removed line whose content starts with "-- " diffs as
+	// "--- flag…" and must still count as removed (in-hunk), not as a header
+	let inHunks = false;
 	for (const line of unifiedDiff.split("\n")) {
-		if (
-			line.startsWith("+++ ") ||
-			line.startsWith("--- ") ||
-			line.startsWith("@@")
-		)
+		if (line.startsWith("@@")) {
+			inHunks = true;
 			continue;
+		}
+		if (!inHunks) continue;
 		if (line.startsWith("+")) added++;
 		else if (line.startsWith("-")) removed++;
 	}

@@ -1,3 +1,4 @@
+import { isUtf8 } from "node:buffer";
 import { mkdir, readFile, rm, writeFile } from "node:fs/promises";
 import { dirname } from "node:path";
 import type {
@@ -50,12 +51,26 @@ function debugLog(reason: string): void {
   }
 }
 
-async function readTextOrNull(absPath: string): Promise<string | null> {
+// Capture guard: files that are not valid UTF-8 text or exceed the size cap
+// are NOT tracked — decline rewrites originalContent as utf-8, which would
+// permanently corrupt binary/latin-1 content, and oversized baselines bloat
+// the session log (append-only full-content entries). null = file missing.
+const MAX_BASELINE_BYTES = Number(
+  process.env.FILECHANGES_MAX_BASELINE_BYTES ?? 1_048_576,
+);
+
+async function readTextOrNull(
+  absPath: string,
+): Promise<string | null | "skip"> {
+  let buf: Buffer;
   try {
-    return await readFile(absPath, "utf-8");
+    buf = await readFile(absPath);
   } catch {
     return null;
   }
+  if (buf.length > MAX_BASELINE_BYTES) return "skip";
+  if (buf.length > 0 && !isUtf8(buf)) return "skip";
+  return buf.toString("utf-8");
 }
 
 function formatAddedRemovedPlain(added: number, removed: number): string {
@@ -194,6 +209,23 @@ export default function (pi: ExtensionAPI) {
     const current = await readTextOrNull(baseline.absPath);
     if (current === baseline.originalContent) return null;
 
+    // current content went binary/oversized out-of-band: keep the item
+    // tracked (decline must still offer the revert) but no diff is computable
+    if (current === "skip") {
+      return {
+        path: baseline.path,
+        absPath: baseline.absPath,
+        displayPath: baseline.path,
+        originalContent: baseline.originalContent,
+        currentContent: "",
+        diff: `(current content is binary or exceeds ${MAX_BASELINE_BYTES} bytes — not diffable)`,
+        added: 0,
+        removed: 0,
+        kind: baseline.originalContent === null ? "new" : "edited",
+        updatedAt: Date.now(),
+      };
+    }
+
     const displayPath = baseline.path;
     const diff = patchFromBaseline(
       displayPath,
@@ -251,6 +283,10 @@ export default function (pi: ExtensionAPI) {
     let reverted = 0;
     const errors: string[] = [];
 
+    // Per-item bookkeeping: only a successfully reverted file is removed from
+    // the log (UNTRACK, persisted). A failed revert leaves the item fully
+    // tracked (baseline kept) — the log is never cleared on partial failure,
+    // so failed items stay recoverable via /filechanges.
     for (const item of items) {
       try {
         if (item.originalContent === null) {
@@ -260,27 +296,48 @@ export default function (pi: ExtensionAPI) {
           await ensureParentDir(item.absPath);
           await writeFile(item.absPath, item.originalContent, "utf-8");
         }
+        getActor().send({ type: "UNTRACK", path: item.path });
+        pi.appendEntry(ENTRY_UNTRACK, {
+          path: item.path,
+          timestamp: Date.now(),
+        });
         reverted++;
       } catch (e: any) {
         errors.push(`${item.displayPath}: ${e?.message ?? String(e)}`);
       }
     }
 
-    await clearLog(ctx, "decline");
-
-    if (ctx.hasUI) {
-      if (errors.length === 0) {
+    if (errors.length === 0) {
+      // every item reverted (and untracked) — the log is now empty; persist
+      // the decline marker for history
+      await clearLog(ctx, "decline");
+      if (ctx.hasUI) {
         ctx.ui.notify(
           `filechanges: declined changes for ${reverted} file(s).`,
           "info",
         );
-      } else {
-        ctx.ui.notify(
-          `filechanges: declined with ${errors.length} error(s). Run /filechanges to inspect; see console for details.`,
-          "warning",
-        );
-        console.warn("[filechanges] decline errors:\n" + errors.join("\n"));
       }
+      return;
+    }
+
+    // partial failure must be visible in every mode: notify in UI mode,
+    // throw in non-UI mode (print/--no-session: the caller sees the error)
+    if (ctx.hasUI) {
+      ctx.ui.notify(
+        `filechanges: declined ${reverted} file(s); ${errors.length} still tracked (revert failed): ${
+          errors.join("; ")
+        }. Run /filechanges to inspect.`,
+        "warning",
+      );
+      console.warn("[filechanges] decline errors:\n" + errors.join("\n"));
+      updateUi(ctx);
+    } else {
+      console.warn("[filechanges] decline errors:\n" + errors.join("\n"));
+      throw new Error(
+        `filechanges: declined ${reverted} file(s); ${errors.length} still tracked (revert failed): ${
+          errors.join("; ")
+        }. Run /filechanges to inspect.`,
+      );
     }
   }
 
@@ -585,12 +642,19 @@ export default function (pi: ExtensionAPI) {
       isToolCallEventType("edit", event) ||
       isToolCallEventType("write", event)
     ) {
-      const { absPath, relPath } = normalizeToolPath(ctx.cwd, event.input.path);
-      const before = await readTextOrNull(absPath);
-
       const violation = startViolation(registry(), event.toolCallId);
       if (violation) {
         debugLog(violation);
+        return;
+      }
+      const { absPath, relPath } = normalizeToolPath(ctx.cwd, event.input.path);
+      const before = await readTextOrNull(absPath);
+      if (before === "skip") {
+        // capture guard: binary/oversized content — decline cannot revert it
+        // safely (utf-8 rewrite corrupts it), so it is never tracked
+        debugLog(
+          `not tracking ${relPath}: binary or over ${MAX_BASELINE_BYTES} bytes`,
+        );
         return;
       }
       getActor().send({
