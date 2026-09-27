@@ -14,7 +14,10 @@ import {
 	type BuildServiceInput,
 	type BuildServiceOutput,
 	countSlides,
+	extractNavTargets,
+	extractSlideIds,
 	initialContext,
+	navSlideViolation,
 	planViolation,
 	researchViolation,
 	type SlideDeckContext,
@@ -395,6 +398,93 @@ await ok("unwired machine: entering building lands in fixing with a readable err
 	await waitFor(a, (s) => s.matches("done") || s.matches("fixing"));
 	assert.equal(a.getSnapshot().value, "fixing");
 	assert.match(a.getSnapshot().context.errors[0], /not wired/);
+});
+
+// --- prebuild fast-fail (nav↔slide 1:1, duplicates, plan conformance) ----------
+
+await ok("extract helpers: ids/targets via regex; single-quoted attrs missed (validate owns those)", () => {
+	assert.deepEqual(extractSlideIds(CONTENT.slidesHtml), ["a"]);
+	assert.deepEqual(extractNavTargets(CONTENT.navHtml), ["a"]);
+	// single-quoted attrs: precheck-lenient (missed), validate.py authoritative
+	assert.deepEqual(extractNavTargets("<a data-slide='b'>x</a>"), []);
+});
+
+await ok("navSlideViolation: duplicates, missing, orphan — readable reasons", () => {
+	assert.match(String(navSlideViolation('<a data-slide="a">x</a>', '<div id="slide-a"></div><div id="slide-a"></div>')), /duplicate slide ids/);
+	assert.match(String(navSlideViolation('<a data-slide="a"></a><a data-slide="a"></a>', '<div id="slide-a"></div>')), /duplicate nav data-slide/);
+	assert.match(String(navSlideViolation('<a data-slide="ghost">x</a>', CONTENT.slidesHtml)), /no matching slide id/);
+	assert.match(String(navSlideViolation(CONTENT.navHtml, '<div id="slide-a"></div><div id="slide-b"></div>')), /no matching nav item/);
+	assert.equal(navSlideViolation(CONTENT.navHtml, CONTENT.slidesHtml), null);
+});
+
+await ok("buildViolation: nav↔slide mismatch rejected BEFORE the Docker roundtrip", () => {
+	const ctx = initialContext(LIMITS);
+	const reason = buildViolation(ctx, {
+		...CONTENT,
+		navHtml: '<a class="nav-item" data-slide="ghost">Ghost</a>',
+	});
+	assert.match(String(reason), /no matching slide id/);
+	assert.match(String(reason), /fix navHtml\/slidesHtml before building/);
+});
+
+await ok("plan conformance: unplanned slide rejected; trimming (subset) allowed", () => {
+	const ctx: SlideDeckContext = { ...initialContext(LIMITS), plannedSlides: ["a", "b"] };
+	const reason = buildViolation(ctx, {
+		...CONTENT,
+		navHtml:
+			'<a class="nav-item" data-slide="a">A</a><a class="nav-item" data-slide="c">C</a>',
+		slidesHtml:
+			'<div class="slide" id="slide-a"><p>x</p></div><div class="slide" id="slide-c"><p>y</p></div>',
+	});
+	assert.match(String(reason), /not in the recorded plan/);
+	assert.match(String(reason), /plan: c —/);
+	// planned a+b, built only a: trimming is legal drift
+	const trimmed = buildViolation(ctx, CONTENT);
+	assert.equal(trimmed, null);
+	// no plan recorded (fast path): no conformance check
+	assert.equal(buildViolation(initialContext(LIMITS), CONTENT), null);
+});
+
+await ok("PLAN_DONE replans from writing and fixing (plan is load-bearing)", async () => {
+	const stubs = makeStubs({
+		validate: async () => {
+			throw { errors: ["✗ broken"], cause: "deck" };
+		},
+	});
+	const a = makeActor(stubs);
+	a.send({ type: "START", topic: "t" });
+	a.send({ type: "RESEARCH_DONE", sources: ["s"] });
+	a.send({ type: "PLAN_DONE", slides: ["a"] });
+	assert.equal(a.getSnapshot().value, "writing");
+	// replan mid-authoring: adds "b"
+	a.send({ type: "PLAN_DONE", slides: ["a", "b"] });
+	assert.equal(a.getSnapshot().value, "writing");
+	assert.deepEqual(a.getSnapshot().context.plannedSlides, ["a", "b"]);
+	a.send(beginBuild({
+		slidesHtml:
+			'<div class="slide" id="slide-a"><p>x</p></div><div class="slide" id="slide-b"><p>y</p></div>',
+		navHtml:
+			'<a class="nav-item" data-slide="a">A</a><a class="nav-item" data-slide="b">B</a>',
+	}));
+	await waitFor(a, (s) => s.matches("done") || s.matches("fixing"));
+	assert.equal(a.getSnapshot().value, "fixing");
+	// replan mid-fix
+	a.send({ type: "PLAN_DONE", slides: ["a"] });
+	assert.equal(a.getSnapshot().value, "fixing");
+	assert.deepEqual(a.getSnapshot().context.plannedSlides, ["a"]);
+});
+
+await ok("overwrite flows through the event into the build service input", async () => {
+	const stubs = makeStubs();
+	const a = makeActor(stubs);
+	a.send({ ...beginBuild(), overwrite: true });
+	await waitFor(a, (s) => s.matches("done") || s.matches("fixing"));
+	assert.equal(a.getSnapshot().value, "done");
+	assert.equal(stubs.buildInputs[0].overwrite, true);
+	// absent by default
+	a.send(beginBuild({ title: "Second" }));
+	await waitFor(a, (s) => s.matches("done") || s.matches("fixing"));
+	assert.equal(stubs.buildInputs[1].overwrite, undefined);
 });
 
 // -------------------------------------------------------------------------------

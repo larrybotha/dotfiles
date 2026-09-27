@@ -60,6 +60,8 @@ export interface DeckContent {
   slidesHtml: string;
   /** Absolute output path for the built deck. */
   outPath: string;
+  /** Replace an existing output file (tool layer computes it: explicit param, or a path this machine itself built). */
+  overwrite?: boolean;
 }
 
 export interface SlideDeckLimits {
@@ -180,6 +182,69 @@ export function countSlides(slidesHtml: string): number {
   return m ? m.length : 0;
 }
 
+/** Slide ids (bare slugs) from submitted slide HTML — regex, double-quoted ids (template convention). */
+export function extractSlideIds(slidesHtml: string): string[] {
+  const out: string[] = [];
+  const re = /<div[^>]*\bid="slide-([^"]+)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(slidesHtml)) !== null) out.push(m[1]);
+  return out;
+}
+
+/** Nav targets (bare slugs) from submitted nav HTML — regex, double-quoted attrs (template convention). */
+export function extractNavTargets(navHtml: string): string[] {
+  const out: string[] = [];
+  const re = /data-slide="([^"]+)"/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(navHtml)) !== null) out.push(m[1]);
+  return out;
+}
+
+/**
+ * Cheap structural precheck on the submitted strings (fast-fail BEFORE the
+ * Docker roundtrip): duplicate slide ids, duplicate nav targets, nav↔slide
+ * 1:1 in both directions. Regex-lenient by design — single-quoted attrs are
+ * missed here and caught by the validate service (html5lib DOM truth), so
+ * the precheck can never wrongly reject, only save a cycle. Single source of
+ * truth stays validate.py; this is the fast subset.
+ */
+export function navSlideViolation(
+  navHtml: string,
+  slidesHtml: string,
+): string | null {
+  const ids = extractSlideIds(slidesHtml);
+  const targets = extractNavTargets(navHtml);
+  const dupIds = duplicates(ids);
+  if (dupIds.length > 0) {
+    return `duplicate slide ids (goToSlide only ever finds the first): ${dupIds.join(", ")}`;
+  }
+  const dupTargets = duplicates(targets);
+  if (dupTargets.length > 0) {
+    return `duplicate nav data-slide values: ${dupTargets.join(", ")}`;
+  }
+  const idSet = new Set(ids);
+  const missing = targets.filter((t) => !idSet.has(t));
+  if (missing.length > 0) {
+    return `nav data-slide with no matching slide id slide-<slug>: ${missing.join(", ")} (ids carry the slide- prefix)`;
+  }
+  const targetSet = new Set(targets);
+  const orphan = ids.filter((id) => !targetSet.has(id));
+  if (orphan.length > 0) {
+    return `slide id with no matching nav item (nav↔slide must be 1:1): ${orphan.join(", ")}`;
+  }
+  return null;
+}
+
+function duplicates(values: string[]): string[] {
+  const seen = new Set<string>();
+  const dupes = new Set<string>();
+  for (const v of values) {
+    if (seen.has(v)) dupes.add(v);
+    seen.add(v);
+  }
+  return [...dupes];
+}
+
 export function buildViolation(
   ctx: SlideDeckContext,
   content: DeckContent,
@@ -217,6 +282,22 @@ export function buildViolation(
   }
   if (!/data-slide=/.test(content.navHtml)) {
     return "navHtml contains no data-slide attribute — every nav-item needs data-slide matching a slide id";
+  }
+  const navSlide = navSlideViolation(content.navHtml, content.slidesHtml);
+  if (navSlide) {
+    return `${navSlide} — fix navHtml/slidesHtml before building`;
+  }
+  // Plan conformance (when the plan ceremony was used): every built slide
+  // was planned. Missing planned slides are allowed (trimming); unplanned
+  // slides are drift — replan first (slide_deck_plan is legal from
+  // planning|writing|fixing).
+  if (ctx.plannedSlides.length > 0) {
+    const ids = extractSlideIds(content.slidesHtml);
+    const planSet = new Set(ctx.plannedSlides);
+    const unplanned = ids.filter((id) => !planSet.has(id));
+    if (unplanned.length > 0) {
+      return `slide ids not in the recorded plan: ${unplanned.join(", ")} — record them with slide_deck_plan first, or remove them from slidesHtml`;
+    }
   }
   if (!/\.(html?|htm)$/i.test(content.outPath)) {
     return `outPath must end in .html (got ${content.outPath})`;
@@ -387,6 +468,9 @@ export const slideDeckMachine = setup({
     writing: {
       on: {
         BEGIN_BUILD: { guard: "buildLegal", target: "building", actions: "beginBuild" },
+        // Replan mid-authoring: the plan is load-bearing (buildLegal checks
+        // built ids against it), so changing it must stay legal here
+        PLAN_DONE: { guard: "planLegal", target: "writing", actions: "recordPlan" },
         RESET: { target: "idle", actions: "resetContext" },
       },
     },
@@ -403,6 +487,7 @@ export const slideDeckMachine = setup({
             navHtml: event.navHtml,
             slidesHtml: event.slidesHtml,
             outPath: event.outPath,
+            overwrite: event.overwrite,
           };
         },
         onDone: { target: "validating", actions: "buildDone" },
@@ -435,6 +520,8 @@ export const slideDeckMachine = setup({
         // Retry loop: resubmit content (fixed) — guarded by buildLegal,
         // which caps failed deck validations until RESET
         BEGIN_BUILD: { guard: "buildLegal", target: "building", actions: "beginBuild" },
+        // Replan mid-fix: same rationale as `writing`
+        PLAN_DONE: { guard: "planLegal", target: "fixing", actions: "recordPlan" },
         RESET: { target: "idle", actions: "resetContext" },
       },
     },

@@ -25,7 +25,14 @@ INPUT_ABS="$(cd "$(dirname "$INPUT")" && pwd)/$(basename "$INPUT")"
 INPUT_DIR="$(dirname "$INPUT_ABS")"
 
 EXEC_DIR="$(cd "$(dirname "$0")" && pwd)"
+TEMPLATE="$EXEC_DIR/../templates/sidebar-deck.html"
 IMAGE_NAME="pi-slide-deck-validate"
+
+# The class/tag whitelist check needs the template inside the container
+if [ ! -f "$TEMPLATE" ]; then
+  echo "Error: template not found: $TEMPLATE (infra — the deck was NOT validated)" >&2
+  exit 2
+fi
 
 # Always build — cached layers make this ~1s, and a changed validate.py
 # invalidates only its COPY layer. (Cache-if-absent never picks up validator
@@ -37,6 +44,8 @@ fi
 
 docker run --rm \
   --mount type=bind,source="$INPUT_DIR",target=/input,readonly \
+  --mount type=bind,source="$TEMPLATE",target=/template/sidebar-deck.html,readonly \
+  --env SLIDE_DECK_TEMPLATE_PATH=/template/sidebar-deck.html \
   "$IMAGE_NAME" \
   "/input/$(basename "$INPUT_ABS")"
 RC=$?

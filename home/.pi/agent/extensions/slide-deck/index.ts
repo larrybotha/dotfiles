@@ -608,12 +608,15 @@ function createSlideDeckAutocomplete(
 };
 
 /** Editorial content rules (prompt-side ownership — structural checks are machine-side). */
-const CONTENT_RULES = `Content rules (editorial — the machine checks structure only):
-- Read ${join(EXT_DIR, "templates", "sidebar-deck.html")} first: every CSS class, layout, and JS hook is there — copy its nesting patterns exactly, invent nothing.
-- One <div class="slide" id="slide-<slug>"> per topic; nav items use data-slide="<slug>" (bare slug; ids carry the slide- prefix) with a 1:1 mapping.
-- Every slide opens with <div class="description"> explaining what and why, before anything else.
-- Actionable examples in <div class="prompts">; real runnable code in <div class="code-block"> (no ellipsis); 2-4 key takeaways in <div class="key-points">; category tag <span class="ext-tag tag-<category>"> on every slide.
-- <div class="sources"> with at least one <a href> link on every slide.
+const CONTENT_RULES = `Content rules (editorial wording is yours; structure is machine-checked):
+- Read ${join(EXT_DIR, "templates", "sidebar-deck.html")} first: every CSS class, layout, and JS hook is there — copy its nesting patterns exactly.
+- One <div class="slide" id="slide-<slug>"> per topic; nav items use data-slide="<slug>" (bare slug; ids carry the slide- prefix) and onclick="goToSlide('<slug>')" matching data-slide — the validator rejects mismatches (dead clicks) and duplicates.
+- Title-page slides (class="slide slide-title-page": hero-icon + subtitle + feature-grid) are exempt from the tag/description rules.
+- Every other slide opens with <div class="description"> (what and why, before prompts/key-points/code-block) and carries <span class="ext-tag tag-<category>">.
+- Tag categories are the template's curated set ONLY: safety, tool, command, ui, render, prompt, git, session, game, system, provider — any other tag-* renders unstyled and fails validation.
+- Classes outside the template CSS render unstyled — the build reports them as notes; prefer the template's vocabulary.
+- Actionable examples in <div class="prompts">; real runnable code in <div class="code-block"> (no ellipsis, escape < & in samples); 2-4 key takeaways in <div class="key-points">.
+- <div class="sources"> with at least one <a href> link on EVERY slide (title slides included).
 - No external dependencies of any kind (no CDN, @import, Google Fonts); no new CSS custom properties; strong highlights the noun, not the verb.`;
 
 export default function (pi: ExtensionAPI) {
@@ -823,22 +826,33 @@ export default function (pi: ExtensionAPI) {
 			outPath: Type.Optional(
 				Type.String({
 					description:
-					 "Output .html path (default: decks/{date}-{slug}.html in the extension dir)",
+					"Output .html path (default: decks/{date}-{slug}.html in the extension dir)",
+				}),
+			),
+			overwrite: Type.Optional(
+				Type.Boolean({
+					description:
+					"Replace an existing output file. Default: a foreign existing file is rejected (readable error); a path this workflow itself built and validated is implicitly replaceable (rebuild-tweaks flow).",
 				}),
 			),
 		}),
 
 		async execute(_toolCallId, params, _signal, onUpdate) {
 			return withToolLock(async () => {
+				const snap = getActor().getSnapshot();
+				const outPath = absPath(params.outPath ?? defaultOutPath(params.title));
+				// Silent-overwrite guard: explicit param, or a path this machine
+				// itself built and validated (rebuild-tweaks flow stays free)
+				const overwrite =
+					params.overwrite === true || snap.context.builds.includes(outPath);
 				const content: DeckContent = {
 					title: params.title,
 					subtitle: params.subtitle,
 					navHtml: params.navHtml,
 					slidesHtml: params.slidesHtml,
-					outPath: absPath(params.outPath ?? defaultOutPath(params.title)),
+					outPath,
+					overwrite,
 				};
-
-				const snap = getActor().getSnapshot();
 				const violation = buildViolation(snap.context, content);
 				const canBuild = snap.can({
 					type: "BEGIN_BUILD",

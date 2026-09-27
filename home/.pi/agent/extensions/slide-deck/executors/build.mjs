@@ -17,7 +17,7 @@
  *   <div class="nav-list" id="navList">      — navHtml inserted after
  *   <div class="main" id="mainContent">       — slidesHtml inserted after
  */
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { existsSync, readFileSync, writeFileSync, mkdirSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -37,7 +37,7 @@ function escapeHtml(s) {
 
 try {
 	const input = JSON.parse(readFileSync(0, "utf8"));
-	const { title, subtitle, navHtml, slidesHtml, outPath } = input;
+	const { title, subtitle, navHtml, slidesHtml, outPath, overwrite } = input;
 	if (!title || !subtitle || !navHtml || !slidesHtml || !outPath) {
 		out({ ok: false, error: "build.mjs: missing title/subtitle/navHtml/slidesHtml/outPath" });
 		process.exit(0);
@@ -81,14 +81,25 @@ try {
 	html = html.replace(MAIN_ANCHOR, `${MAIN_ANCHOR}\n${slidesHtml}`);
 
 	// Count from the submitted slides (the template's HTML-comment placeholders
-// are not slides — validate.py parses with html5lib, which ignores comments)
-const slideCount =
-	(slidesHtml.match(/<div[^>]*class="[^"]*\bslide\b[^"]*"/g) || []).length;
+	// are not slides — validate.py parses with html5lib, which ignores comments)
+	const slideCount =
+		(slidesHtml.match(/<div[^>]*class="[^"]*\bslide\b[^"]*"/g) || []).length;
 
-	mkdirSync(dirname(resolve(outPath)), { recursive: true });
-	writeFileSync(outPath, html);
+	// Silent-overwrite guard: an existing foreign file is never replaced
+	// without the caller's explicit overwrite (the tool layer computes it)
+	const outAbs = resolve(outPath);
+	if (existsSync(outAbs) && !overwrite) {
+		out({
+			ok: false,
+			error: `output exists: ${outAbs} — pass overwrite:true to replace it (a foreign file is never silently overwritten)`,
+		});
+		process.exit(0);
+	}
 
-	out({ ok: true, outPath: resolve(outPath), slideCount, bytes: Buffer.byteLength(html) });
+	mkdirSync(dirname(outAbs), { recursive: true });
+	writeFileSync(outAbs, html);
+
+	out({ ok: true, outPath: outAbs, slideCount, bytes: Buffer.byteLength(html) });
 } catch (e) {
 	out({ ok: false, error: `build.mjs: ${e.message}` });
 }
