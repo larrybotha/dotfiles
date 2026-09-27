@@ -59,11 +59,23 @@ ok("drafting: BEGIN_VALIDATE allowed; BEGIN_RENDER/BEGIN_EMBED rejected", () => 
 	assert.equal(a.getSnapshot().can(beginEmbed()), false);
 });
 
-ok("drafting: RESET allowed, stays drafting, clears context", () => {
+// (The old "drafting: RESET" test was vacuous — drafting has no RESET handler
+// and a fresh actor's context already equals initialContext, so it asserted
+// nothing. Replaced by the real gap test below: reset wins over an in-flight
+// validation.)
+ok("RESET during validating wins; late VALIDATE_DONE is dropped, state not resurrected", () => {
 	const a = makeActor();
+	a.send({ type: "BEGIN_VALIDATE" });
+	assert.equal(a.getSnapshot().value, "validating");
 	a.send({ type: "RESET" });
 	assert.equal(a.getSnapshot().value, "drafting");
 	assert.deepEqual(a.getSnapshot().context, initialContext(LIMITS));
+	// the in-flight result arrives after the reset: no handler in drafting,
+	// dropped — the machine does not resurrect `validated`
+	a.send({ type: "VALIDATE_DONE", path: PATH, hash: HASH, ok: true, errors: [] });
+	assert.equal(a.getSnapshot().value, "drafting");
+	assert.equal(a.getSnapshot().context.validated, null);
+	assert.equal(a.getSnapshot().can(beginRender()), false);
 });
 
 // --- validation ---------------------------------------------------------------
@@ -130,12 +142,12 @@ ok("renderViolation: no validated source -> readable reason", () => {
 	assert.match(renderViolation(a.getSnapshot().context, PATH, HASH) ?? "", /no validated source/);
 });
 
-ok("RENDER_DONE ok -> rendered (render recorded); re-render allowed", () => {
+ok("RENDER_DONE ok -> validated (render recorded in context); re-render allowed", () => {
 	const a = makeActor();
 	toValidated(a);
 	a.send(beginRender());
 	a.send({ type: "RENDER_DONE", ok: true, outPath: "/tmp/diagram.svg", error: null });
-	assert.equal(a.getSnapshot().value, "rendered");
+	assert.equal(a.getSnapshot().value, "validated"); // no separate `rendered` state — renders[] is the history
 	assert.deepEqual(a.getSnapshot().context.renders, ["/tmp/diagram.svg"]);
 	a.send(beginRender(PATH, HASH, "/tmp/diagram2.svg"));
 	assert.equal(a.getSnapshot().value, "rendering");
@@ -143,13 +155,36 @@ ok("RENDER_DONE ok -> rendered (render recorded); re-render allowed", () => {
 	assert.deepEqual(a.getSnapshot().context.renders, ["/tmp/diagram.svg", "/tmp/diagram2.svg"]);
 });
 
-ok("RENDER_DONE fail -> fixing with error recorded", () => {
+ok("RENDER_DONE fail (diagram) -> fixing, pass cleared, retry render rejected", () => {
+	const a = makeActor();
+	toValidated(a);
+	a.send(beginRender());
+	a.send({ type: "RENDER_DONE", ok: false, outPath: "/tmp/diagram.svg", error: "mmdc rejected", cause: "diagram" });
+	assert.equal(a.getSnapshot().value, "fixing");
+	assert.equal(a.getSnapshot().context.validated, null); // fixing has no pass
+	assert.deepEqual(a.getSnapshot().context.errors, ["mmdc rejected"]);
+	assert.equal(a.getSnapshot().can(beginRender()), false); // must re-validate first
+});
+
+ok("RENDER_DONE fail (diagram, no cause) defaults to diagram", () => {
 	const a = makeActor();
 	toValidated(a);
 	a.send(beginRender());
 	a.send({ type: "RENDER_DONE", ok: false, outPath: "/tmp/diagram.svg", error: "mmdc crashed" });
 	assert.equal(a.getSnapshot().value, "fixing");
-	assert.deepEqual(a.getSnapshot().context.errors, ["mmdc crashed"]);
+	assert.equal(a.getSnapshot().context.validated, null);
+});
+
+ok("RENDER_DONE fail (infra) -> validated, pass kept, retry render legal immediately", () => {
+	const a = makeActor();
+	toValidated(a);
+	a.send(beginRender());
+	a.send({ type: "RENDER_DONE", ok: false, outPath: "/tmp/diagram.svg", error: "docker daemon down", cause: "infra" });
+	assert.equal(a.getSnapshot().value, "validated");
+	assert.deepEqual(a.getSnapshot().context.validated, { path: PATH, hash: HASH }); // pass untouched
+	assert.deepEqual(a.getSnapshot().context.errors, ["docker daemon down"]);
+	assert.equal(a.getSnapshot().can(beginRender()), true); // retry without re-validate
+	assert.equal(a.getSnapshot().context.validateAttempts, 0); // infra never burns attempts
 });
 
 // --- embed gating ---------------------------------------------------------------
@@ -193,11 +228,12 @@ ok("EMBED_DONE fail records error; source stays validated (embedding is replace-
 	assert.equal(a.getSnapshot().can(beginEmbed()), true);
 });
 
-ok("embed legal from rendered too (multiple embeds, render optional)", () => {
+ok("embed legal after a render (multiple embeds, render optional)", () => {
 	const a = makeActor();
 	toValidated(a);
 	a.send(beginRender());
 	a.send({ type: "RENDER_DONE", ok: true, outPath: "/tmp/diagram.svg", error: null });
+	assert.equal(a.getSnapshot().value, "validated");
 	assert.equal(a.getSnapshot().can(beginEmbed()), true);
 });
 
@@ -231,7 +267,38 @@ ok("failed re-validation clears the previous pass", () => {
 });
 
 // --- reset -----------------------------------------------------------------------
-ok("RESET from rendered -> drafting, context cleared, limits kept", () => {
+ok("VALIDATE_DONE fail (infra) with prior pass -> validated, pass kept, no attempt bump", () => {
+	const a = makeActor();
+	toValidated(a);
+	a.send({ type: "BEGIN_VALIDATE" });
+	a.send({ type: "VALIDATE_DONE", path: PATH, hash: HASH2, ok: false, errors: ["docker build failed"], cause: "infra" });
+	assert.equal(a.getSnapshot().value, "validated");
+	assert.deepEqual(a.getSnapshot().context.validated, { path: PATH, hash: HASH }); // prior pass kept
+	assert.equal(a.getSnapshot().context.validateAttempts, 0); // infra never burns attempts
+	assert.deepEqual(a.getSnapshot().context.errors, ["docker build failed"]);
+});
+
+ok("VALIDATE_DONE fail (infra) without prior pass -> drafting, no attempt bump", () => {
+	const a = makeActor();
+	a.send({ type: "BEGIN_VALIDATE" });
+	a.send({ type: "VALIDATE_DONE", path: PATH, hash: HASH, ok: false, errors: ["docker daemon down"], cause: "infra" });
+	assert.equal(a.getSnapshot().value, "drafting");
+	assert.equal(a.getSnapshot().context.validated, null);
+	assert.equal(a.getSnapshot().context.validateAttempts, 0);
+	assert.equal(a.getSnapshot().can({ type: "BEGIN_VALIDATE" }), true); // retry legal immediately
+});
+
+ok("VALIDATE_DONE fail (diagram) still bumps attempts and clears pass", () => {
+	const a = makeActor();
+	toValidated(a);
+	a.send({ type: "BEGIN_VALIDATE" });
+	a.send({ type: "VALIDATE_DONE", path: PATH, hash: HASH2, ok: false, errors: ["Parse error"], cause: "diagram" });
+	assert.equal(a.getSnapshot().value, "fixing");
+	assert.equal(a.getSnapshot().context.validated, null);
+	assert.equal(a.getSnapshot().context.validateAttempts, 1);
+});
+
+ok("RESET from validated with renders+embeds -> drafting, context cleared, limits kept", () => {
 	const a = makeActor();
 	toValidated(a);
 	a.send(beginRender());
@@ -259,7 +326,7 @@ ok("persisted snapshot restores value, context, and legality", () => {
 
 	const b = createActor(mermaidMachine, { input: { limits: LIMITS }, snapshot: persisted as never });
 	b.start();
-	assert.equal(b.getSnapshot().value, "rendered");
+	assert.equal(b.getSnapshot().value, "validated");
 	assert.deepEqual(b.getSnapshot().context.validated, { path: PATH, hash: HASH });
 	assert.deepEqual(b.getSnapshot().context.renders, ["/tmp/diagram.svg"]);
 	assert.equal(b.getSnapshot().can(beginEmbed()), true);

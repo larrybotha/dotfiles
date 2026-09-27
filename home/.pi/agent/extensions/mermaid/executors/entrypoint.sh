@@ -17,7 +17,12 @@ ascii)
   for INPUT; do :; done
   printf '%s\n' '{"args":["--no-sandbox","--disable-setuid-sandbox"]}' >/tmp/puppeteer.json
   mmdc -i "$INPUT" -o /tmp/validate.svg -p /tmp/puppeteer.json || exit 1
-  exec node /usr/local/bin/ascii-preview.mjs "$@"
+  # Preview is best-effort: mmdc already validated. A preview crash is not
+  # an invalid diagram — note it on stderr and exit 0 (stdout stays empty).
+  if ! node /usr/local/bin/ascii-preview.mjs "$@"; then
+    echo "note: ASCII preview failed (diagram is valid; mmdc passed)" >&2
+    exit 0
+  fi
   ;;
 svg)
   # @mermaid-js/mermaid-cli binary is mmdc
