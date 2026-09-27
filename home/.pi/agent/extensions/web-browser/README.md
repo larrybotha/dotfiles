@@ -19,14 +19,26 @@ browser actions; tools stay thin.
   re-derived from a probe, never resurrected from a snapshot.
 - Pure validators shared between guards and tool prechecks:
   `launchViolation`, `emulateViolation`, `notRunningReason`.
+- `resolveAuto` (pure, in machine.ts) owns the smart-start decision table
+  for `browser_start` mode `auto`: 1 CDP-attachable → attach, no ask; n →
+  prompt; 0 + default usable → launch default; 0 + default blocked (global
+  singleton like Arc running without CDP) → demote + warning; 0 + 1
+  candidate → launch it; 0 + n candidates → prompt (default preselected);
+  0 usable → readable error. Chromium-class browsers running without CDP do
+  not block an isolated launch (separate user-data-dir singleton) — warning
+  only.
 
 ## Executors
 
 All local to `executors/`:
 
-- `probe.mjs` / `stop.mjs` — extension probes, JSON out, failure-as-data.
-  `stop.mjs` kills only browsers this extension launched
+- `probe.mjs` / `stop.mjs` / `detect.mjs` — extension probes, JSON out,
+  failure-as-data. `stop.mjs` kills only browsers this extension launched
   (fresh/profile/reset_profile); attach/foreign instances are never killed.
+  `detect.mjs` buckets running browsers: `attachable` (CDP port answers),
+  `runningNoCdp` (singleton/warning evidence), `installed` (CDP-capable
+  binaries), `default` (macOS Launch Services https handler; Safari/Firefox
+  excluded — no CDP).
 - Action scripts: `start.js`, `nav.js`, `eval.js`, `screenshot.js`,
   `pick.js`, `switch-tab.js`, `emulate.js` + libs (`cdp.js`, `devices.js`,
   `active-tab.js`, `emulation-state.js`). Run as child processes,
@@ -39,10 +51,30 @@ All local to `executors/`:
 
 ## Tools
 
-`browser_start` (fresh | profile | reset_profile | attach) ·
+`browser_start` (auto default | fresh | profile | reset_profile | attach) ·
 `browser_navigate` · `browser_eval` · `browser_screenshot` · `browser_pick` ·
 `browser_tabs` · `browser_switch_tab` · `browser_emulate` · `browser_status` ·
 `browser_stop`
+
+- `auto` (browser_start default): detect running browsers (detect.mjs),
+  resolve via the pure table (machine.ts), and only ask (TUI select) when the
+  choice is forced — n attachable, or n launchable with no usable default.
+  Prompts are executor-side UX; the machine only ever sees the resolved
+  attach/fresh mode. Non-TUI picks the first candidate and says so; Esc
+  rejects with a readable note. `bin` param bypasses detection.
+- Foreign attach policy: on an attached (`attach`/`foreign`) browser,
+  `browser_navigate` never overwrites an existing tab — it always opens a
+  new one, then verifies it landed in a visible window (Arc Spaces: a new
+  tab may land in a hidden-Space window) and warns with the next step.
+- Recorded-target policy: `browser_eval` / `browser_screenshot` /
+  `browser_pick` require an extension-recorded active tab
+  (`~/.cache/agent-web/browser/active-tab.json`, written by navigate /
+  switch-tab) — the single source of truth for target legality, checked by
+  the tool precheck and the executors (`cdp.getRecordedPage()`). Without a
+  recorded tab (or when it is gone) they reject — they never fall back to a
+  visible-window heuristic, which on an adopted foreign browser resolves to
+  the user's focused personal tab. The machine's `activeTab` cache is
+  display/status state only.
 
 Command: `/browser status | stop | footer [on|off] | viz [off]` — subcommand
 autocomplete in TUI mode. Viz via `_viz/viz-kit.ts`, preferred port 8081
@@ -50,7 +82,8 @@ autocomplete in TUI mode. Viz via `_viz/viz-kit.ts`, preferred port 8081
 
 ## Config (env)
 
-- `BROWSER_DEBUG_PORT` (default 9222)
+- `BROWSER_DEBUG_PORT` (default 9222; `auto` attach follows a detected port,
+  and the machine re-probes the port it last saw)
 - `BROWSER_BIN` (browser binary path; default: auto-detected Chrome/Chromium/Arc)
 - `BROWSER_VIZ=1` (attach the Stately inspector at session start)
 - `BROWSER_VIZ_PORT` (default 8081)
@@ -68,5 +101,5 @@ autocomplete in TUI mode. Viz via `_viz/viz-kit.ts`, preferred port 8081
 
 ## Tests
 
-`node test.ts` — machine transitions + validators only; no LLM, no browser,
-no CDP.
+`node test.ts` — machine transitions + validators + the resolveAuto decision
+table; no LLM, no browser, no CDP.

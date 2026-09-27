@@ -24,6 +24,7 @@
 
 import { execFile } from "node:child_process";
 import * as path from "node:path";
+import { readActiveTab } from "./executors/active-tab.js";
 import { pathToFileURL } from "node:url";
 import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
@@ -48,9 +49,12 @@ import {
 	emulateViolation,
 	launchViolation,
 	notRunningReason,
+	resolveAuto,
+	type AutoResolution,
 	type BrowserContext,
 	type BrowserEvent,
 	type BrowserMode,
+	type DetectBuckets,
 	type EmulationPref,
 	type ActiveTab,
 	type LaunchMode,
@@ -83,6 +87,7 @@ const T_TABS = 30_000;
 const T_SWITCH = 30_000;
 const T_EMULATE = 25_000;
 const T_PROBE = 10_000;
+const T_DETECT = 15_000; // auto start: ps + plutil + per-port CDP probes
 const T_STOP = 15_000;
 
 // ---------------------------------------------------------------------------
@@ -142,9 +147,24 @@ interface ProbeOut {
 	startedAt: string | null;
 }
 
-async function probeOnce(): Promise<ProbeOut | null> {
-	const r = await runExecutor<ProbeOut>("probe.mjs", [String(DEBUG_PORT)], T_PROBE);
+async function probeOnce(port: number = DEBUG_PORT): Promise<ProbeOut | null> {
+	const r = await runExecutor<ProbeOut>("probe.mjs", [String(port)], T_PROBE);
 	if ("error" in r || typeof r.up !== "boolean") return null;
+	return r;
+}
+
+/** Auto-start detection (detect.mjs): attachable / runningNoCdp / installed / default. */
+async function detectOnce(): Promise<DetectBuckets | { error: string }> {
+	const r = await runExecutor<DetectBuckets>("detect.mjs", [], T_DETECT);
+	if ("error" in r) return r;
+	if (
+		!Array.isArray(r.attachable) ||
+		!Array.isArray(r.runningNoCdp) ||
+		!Array.isArray(r.installed) ||
+		(r.default !== null && typeof r.default !== "object")
+	) {
+		return { error: `unexpected detect output: ${JSON.stringify(r).slice(0, 200)}` };
+	}
 	return r;
 }
 
@@ -235,7 +255,7 @@ function restoreFromBranch(extCtx: ExtensionContext): void {
 /** Probe + PROBE event: adopt a live browser from stopped, mark drift from running. */
 async function probeAndReconcile(extCtx: ExtensionContext): Promise<void> {
 	const before = stateValue();
-	const p = await probeOnce();
+	const p = await probeOnce(ctx().browser?.port ?? DEBUG_PORT);
 	if (!p) {
 		if (extCtx.hasUI) extCtx.ui.notify("browser probe failed (executor error)", "warning");
 		return;
@@ -252,7 +272,10 @@ async function probeAndReconcile(extCtx: ExtensionContext): Promise<void> {
 	});
 	if (extCtx.hasUI) {
 		if (before === "stopped" && stateValue() === "running") {
-			extCtx.ui.notify(`browser: adopted live browser (${p.mode} on :${p.port})`, "info");
+			extCtx.ui.notify(
+				`browser: adopted live browser (${p.mode} on :${p.port}) — pi never kills it; page ops need browser_navigate first`,
+				"info",
+			);
 		} else if (before === "running" && stateValue() === "stopped") {
 			extCtx.ui.notify("browser: gone since last probe (marked stopped)", "warning");
 		}
@@ -293,9 +316,198 @@ function requireRunning(action: string): ToolResult | null {
 	return rej(action, notRunningReason(stateValue()));
 }
 
+/** Precheck for read/interact ops: an extension-recorded active tab must
+ *  exist (same truth the executors read — the active-tab state file). Without
+ *  it, eval/screenshot/pick would silently target whatever tab the human user
+ *  last focused on an adopted foreign browser — never acceptable. */
+function requireActiveTab(action: string): ToolResult | null {
+	if (readActiveTab()) return null;
+	return rej(
+		action,
+		"no active tab recorded — browser_navigate or browser_switch_tab first " +
+			"(this tool never auto-targets a tab pi did not choose, especially on an adopted foreign browser)",
+	);
+}
+
 function truncatePreview(s: string, n = 48): string {
 	const one = s.replace(/\n/g, "\\n");
 	return one.length > n ? `${one.slice(0, n)}…` : one;
+}
+
+// ---------------------------------------------------------------------------
+// auto start — resolution → prompt → launch plan (executor-side UX; the
+// machine is untouched: prompts never gate legality, and the resolved mode
+// flows through the same BEGIN_LAUNCH → LAUNCH_DONE path as explicit modes)
+// ---------------------------------------------------------------------------
+
+/** TUI select when available: pick string | null (Esc/skip) | undefined (no TUI). */
+async function autoSelect(
+	extCtx: unknown,
+	title: string,
+	options: string[],
+): Promise<string | null | undefined> {
+	const uiAny = extCtx as
+		| { mode?: string; ui?: { select?: (t: string, o: string[]) => Promise<string | null> } }
+		| undefined;
+	if (uiAny?.mode === "tui" && typeof uiAny.ui?.select === "function") {
+		return uiAny.ui.select(title, options);
+	}
+	return undefined; // non-TUI — caller picks the first option
+}
+
+interface LaunchPlan {
+	mode: LaunchMode;
+	env: Record<string, string>;
+	note: string;
+}
+
+/** Prompt intent → concrete launch plan, or a readable rejection string. */
+async function resolveAutoAction(
+	res: AutoResolution,
+	d: DetectBuckets,
+	extCtx: unknown,
+): Promise<LaunchPlan | string> {
+	if (res.action.kind === "error") {
+		return `auto: ${res.note}${res.warnings.length > 0 ? `\n${res.warnings.join("\n")}` : ""}`;
+	}
+	if (res.action.kind === "attach") {
+		return {
+			mode: "attach",
+			env: { BROWSER_DEBUG_PORT: String(res.action.port) },
+			note: `auto: ${res.note}`,
+		};
+	}
+	if (res.action.kind === "launch") {
+		return { mode: "fresh", env: { BROWSER_BIN: res.action.bin }, note: `auto: ${res.note}` };
+	}
+	if (res.action.kind === "prompt-attach") {
+		const options = d.attachable.map((a) => `${a.name} (:${a.port})`);
+		const pick = await autoSelect(
+			extCtx,
+			"browser auto-start — several browsers with CDP, attach which?",
+			options,
+		);
+		if (pick === undefined) {
+			const first = d.attachable[0]!;
+			return {
+				mode: "attach",
+				env: { BROWSER_DEBUG_PORT: String(first.port) },
+				note: `auto: ${res.note} — no TUI prompt, picked ${first.name} (:${first.port})`,
+			};
+		}
+		if (pick === null) {
+			return `auto: ${res.note}\nskipped the prompt — browser_start again or pass an explicit mode`;
+		}
+		const a = d.attachable.find((x) => `${x.name} (:${x.port})` === pick);
+		if (!a) return `auto: unrecognized prompt choice "${pick}"`;
+		return {
+			mode: "attach",
+			env: { BROWSER_DEBUG_PORT: String(a.port) },
+			note: `auto: attached to ${a.name} (:${a.port})`,
+		};
+	}
+
+	// prompt-launch: default preselected (first) when usable; blocked browsers
+	// stay in the options with a warning suffix — the user may want to quit one
+	const singletonRunning = new Set(
+		d.runningNoCdp
+			.filter((r) => d.installed.some((i) => i.name === r.name && i.globalSingleton))
+			.map((r) => r.name),
+	);
+	const ordered = [
+		...(d.default && !singletonRunning.has(d.default.name) ? [d.default] : []),
+		...d.installed.filter((i) => !(d.default && i.name === d.default.name)),
+	];
+	const options = ordered.map(
+		(i) =>
+			`${i.name}${singletonRunning.has(i.name) ? " — running without CDP, quit it first or attach" : ""}`,
+	);
+	const pick = await autoSelect(extCtx, "browser auto-start — no browser with CDP, launch which?", options);
+	if (pick === null) {
+		return `auto: ${res.note}\nskipped the prompt — browser_start again or pass an explicit mode`;
+	}
+	const firstCandidate = ordered.find((i) => !singletonRunning.has(i.name)) ?? ordered[0]!;
+	const chosen =
+		pick === undefined
+			? firstCandidate
+			: ordered.find((x) => pick === x.name || pick.startsWith(`${x.name} —`));
+	if (!chosen) return `auto: unrecognized prompt choice "${pick}"`;
+	return {
+		mode: "fresh",
+		env: { BROWSER_BIN: chosen.bin },
+		note: `auto: ${res.note}${pick === undefined ? ` — no TUI prompt, picked ${chosen.name}` : ""}`,
+	};
+}
+
+/** Single launch/attach path shared by auto + explicit modes. */
+async function runLaunch(
+	mode: LaunchMode,
+	extraEnv: Record<string, string>,
+	note: string,
+	warnings: string[],
+): Promise<ToolResult> {
+	send({ type: "BEGIN_LAUNCH", mode });
+
+	const flags =
+		mode === "profile"
+			? ["--profile"]
+			: mode === "reset-profile"
+				? ["--reset-profile"]
+				: mode === "attach"
+					? ["--attach"]
+				: [];
+	const port = extraEnv.BROWSER_DEBUG_PORT ? Number(extraEnv.BROWSER_DEBUG_PORT) : DEBUG_PORT;
+
+	const r = await runSkill("start.js", flags, T_START, extraEnv);
+	if (r.code !== 0) {
+		const error = r.stderr || r.stdout || "start.js failed";
+		send({
+			type: "LAUNCH_DONE",
+			mode,
+			port,
+			pid: null,
+			userDataDir: null,
+			browser: null,
+			error,
+		});
+		return rej(
+			"browser_start",
+			`failed to start browser (${mode}):${note ? `\n${note}` : ""}\n${error}`,
+		);
+	}
+
+	// fresh evidence — probe fills pid / mode / product string
+	const p = await probeOnce(port);
+	if (!p || !p.up) {
+		send({
+			type: "LAUNCH_DONE",
+			mode,
+			port,
+			pid: null,
+			userDataDir: null,
+			browser: null,
+			error: "started but the debug endpoint did not answer the follow-up probe",
+		});
+		return rej(
+			"browser_start",
+			`${r.stdout}\nprobe could not confirm the debug endpoint on :${port} — try browser_status`,
+		);
+	}
+	send({
+		type: "LAUNCH_DONE",
+		mode: p.mode === "foreign" ? mode : (p.mode as typeof mode),
+		port: p.port,
+		pid: p.pid,
+		userDataDir: p.userDataDir,
+		browser: p.browser,
+		error: null,
+	});
+	const c = ctx();
+	const warnText = warnings.length > 0 ? `\n${warnings.join("\n")}` : "";
+	return ok(
+		"browser_start",
+		`${note ? `${note}\n` : ""}${r.stdout}\nbrowser running (${c.browser?.mode} on :${c.browser?.port}${c.browser?.pid ? `, pid ${c.browser.pid}` : ""})${warnText}`,
+	);
 }
 
 // ---------------------------------------------------------------------------
@@ -307,7 +519,7 @@ let footerTimer: ReturnType<typeof setInterval> | null = null;
 
 async function updateFooter(extCtx: ExtensionContext): Promise<void> {
 	if (!extCtx.hasUI) return;
-	const p = await probeOnce();
+	const p = await probeOnce(ctx().browser?.port ?? DEBUG_PORT);
 	if (!p || !p.up) {
 		extCtx.ui.setStatus("browser", undefined);
 		return;
@@ -377,7 +589,7 @@ function emulationLine(c: BrowserContext): string {
 }
 
 async function buildStatus(): Promise<{ text: string; error?: string }> {
-	const p = await probeOnce();
+	const p = await probeOnce(ctx().browser?.port ?? DEBUG_PORT);
 	if (!p) return { text: "browser probe failed (executor error)", error: "probe failed" };
 	send({
 		type: "PROBE",
@@ -394,7 +606,7 @@ async function buildStatus(): Promise<{ text: string; error?: string }> {
 	const lines: string[] = [];
 	lines.push(`state: ${stateValue()}`);
 	if (!p.up) {
-		lines.push(`debug endpoint :${p.port} is down — browser_start to launch (fresh | profile | reset_profile | attach)`);
+		lines.push(`debug endpoint :${p.port} is down — browser_start to launch (auto | fresh | profile | reset_profile | attach)`);
 	} else {
 		lines.push(`browser: ${p.mode} on :${p.port}${p.browser ? ` (${p.browser})` : ""}`);
 		if (p.pid) lines.push(`pid: ${p.pid}`);
@@ -468,97 +680,56 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
 		name: "browser_start",
 		label: "browser start",
 		description:
-			"Launch or attach a browser with CDP and wait for the debug endpoint. Modes: fresh (isolated reusable profile, default), " +
-			"profile (copy your Chrome profile into an isolated cache), reset_profile (clear the cached profile first), " +
-			"attach (connect to an already-running browser with remote debugging — never killed by this extension). " +
+			"Launch or attach a browser with CDP and wait for the debug endpoint. Modes: auto (default — evaluates running " +
+			"browsers: attach the single CDP browser, prompt to choose between several, launch your default browser when none " +
+			"runs — demoting a running global-singleton browser like Arc without CDP; an attached browser is never auto-navigated " +
+			"in existing tabs), fresh (isolated reusable profile), profile (copy your Chrome profile into an isolated cache), " +
+			"reset_profile (clear the cached profile first), attach (connect to an already-running browser with remote " +
+			"debugging — never killed by this extension). " +
 			"Refuses to reuse an unknown instance on the port. Use browser_navigate / browser_eval / browser_screenshot / browser_pick once running.",
 		parameters: Type.Object({
-			mode: Type.Union(
-				[
-					Type.Literal("fresh"),
-					Type.Literal("profile"),
-					Type.Literal("reset_profile"),
-					Type.Literal("attach"),
-				],
-				{ description: "fresh | profile | reset_profile | attach" },
+			mode: Type.Optional(
+				Type.Union(
+					[
+						Type.Literal("auto"),
+						Type.Literal("fresh"),
+						Type.Literal("profile"),
+						Type.Literal("reset_profile"),
+						Type.Literal("attach"),
+					],
+					{ description: "auto (default) | fresh | profile | reset_profile | attach" },
+				),
 			),
 			bin: Type.Optional(
-				Type.String({ description: "browser binary path (default: auto-detected Chrome/Chromium/Arc)" }),
+					Type.String({ description: "browser binary path (default: auto-detected / your default browser in auto mode)" }),
 			),
 		}),
 		executionMode: "sequential",
 
-		async execute(_toolCallId, params): Promise<ToolResult> {
+		async execute(_toolCallId, params, _signal, _onUpdate, extCtx): Promise<ToolResult> {
 			const v = launchViolation(ctx());
 			if (v) return rej("browser_start", v);
 
+			// auto (default): detect → resolveAuto (pure, machine.ts) → prompt
+			// (executor-side UX; machine untouched) → runLaunch. The machine sees
+			// only the resolved attach/fresh mode — the same path as explicit modes.
+			if (!params.mode || params.mode === "auto") {
+				const d = await detectOnce();
+				if ("error" in d) return rej("browser_start", `auto detect failed: ${d.error}`);
+				const res = resolveAuto(d);
+				const plan = await resolveAutoAction(res, d, extCtx);
+				if (typeof plan === "string") return rej("browser_start", plan);
+				return runLaunch(plan.mode, plan.env, plan.note, res.warnings);
+			}
+
 			// pi param style is reset_profile; the skill flag is --reset-profile
-			const mode: LaunchMode =
-				params.mode === "reset_profile" ? "reset-profile" : params.mode;
-			send({ type: "BEGIN_LAUNCH", mode });
-
-			const flags =
-				mode === "profile"
-					? ["--profile"]
-					: mode === "reset-profile"
-						? ["--reset-profile"]
-						: mode === "attach"
-							? ["--attach"]
-							: [];
-			const env: Record<string, string> = {};
-			if (params.bin) env.BROWSER_BIN = params.bin;
-
-			const r = await runSkill("start.js", flags, T_START, env);
-			if (r.code !== 0) {
-				const error = r.stderr || r.stdout || "start.js failed";
-				send({
-					type: "LAUNCH_DONE",
-					mode,
-					port: DEBUG_PORT,
-					pid: null,
-					userDataDir: null,
-					browser: null,
-					error,
-				});
-				return rej("browser_start", `failed to start browser (${mode}):\n${error}`);
-			}
-
-			// fresh evidence — probe fills pid / mode / product string
-			const p = await probeOnce();
-			if (!p || !p.up) {
-				send({
-					type: "LAUNCH_DONE",
-					mode,
-					port: DEBUG_PORT,
-					pid: null,
-					userDataDir: null,
-					browser: null,
-					error: "started but the debug endpoint did not answer the follow-up probe",
-				});
-				return rej(
-					"browser_start",
-					`${r.stdout}\nprobe could not confirm the debug endpoint on :${DEBUG_PORT} — try browser_status`,
-				);
-			}
-			send({
-				type: "LAUNCH_DONE",
-				mode: p.mode === "foreign" ? mode : (p.mode as typeof mode),
-				port: p.port,
-				pid: p.pid,
-				userDataDir: p.userDataDir,
-				browser: p.browser,
-				error: null,
-			});
-			const c = ctx();
-			return ok(
-				"browser_start",
-				`${r.stdout}\nbrowser running (${c.browser?.mode} on :${c.browser?.port}${c.browser?.pid ? `, pid ${c.browser.pid}` : ""})`,
-			);
+			const mode: LaunchMode = params.mode === "reset_profile" ? "reset-profile" : params.mode;
+			return runLaunch(mode, params.bin ? { BROWSER_BIN: params.bin } : {}, "", []);
 		},
 
 		renderCall(args, theme) {
 			return new Text(
-				theme.fg("toolTitle", theme.bold("browser_start ")) + theme.fg("muted", args.mode),
+				theme.fg("toolTitle", theme.bold("browser_start ")) + theme.fg("muted", args.mode ?? "auto"),
 				0,
 				0,
 			);
@@ -585,10 +756,32 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
 			const pre = requireRunning("browser_navigate");
 			if (pre) return pre;
 
-			const r = await runSkill("nav.js", [params.url, ...(params.new_tab ? ["--new"] : [])], T_NAV);
+			// foreign attach policy: never overwrite a tab in the user's browser —
+			// navigate always opens a new one, then verify it landed in a visible
+			// window (Arc Spaces: a new tab may land in a hidden-Space window)
+			const c = ctx();
+			const foreign = c.browser?.mode === "attach" || c.browser?.mode === "foreign";
+			const newTab = params.new_tab === true || foreign;
+			const notes: string[] = [];
+			if (foreign && params.new_tab !== true) {
+				notes.push("auto: attached browser — opened a new tab (never overwrites existing tabs)");
+			}
+
+			const r = await runSkill("nav.js", [params.url, ...(newTab ? ["--new"] : [])], T_NAV);
 			if (r.code !== 0) return rej("browser_navigate", r.stderr || r.stdout);
-			send({ type: "NAV", url: params.url, newTab: params.new_tab === true });
-			return ok("browser_navigate", r.stdout || `navigated to ${params.url}`);
+			send({ type: "NAV", url: params.url, newTab });
+
+			if (foreign) {
+				const tabs = await listTabs(false);
+				const t = tabs?.filter((x) => x.url === params.url).at(-1);
+				if (t && !t.visible) {
+					notes.push(
+						"warning: the new tab landed in a hidden window (Arc Space?) — browser_switch_tab can target/restore it, or browser_tabs visible to see the visible set",
+					);
+				}
+			}
+			const text = r.stdout || `navigated to ${params.url}`;
+			return ok("browser_navigate", notes.length > 0 ? `${text}\n${notes.join("\n")}` : text);
 		},
 
 		renderCall(args, theme) {
@@ -610,15 +803,16 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
 		name: "browser_eval",
 		label: "browser eval",
 		description:
-			"Evaluate JavaScript in the active tab (async context, returnByValue). Applies the active emulation preset. " +
-			"Best with single quotes around the code.",
+			"Evaluate JavaScript in the active tab (async context, returnByValue). Requires an extension-recorded " +
+			"active tab (browser_navigate / browser_switch_tab first — never auto-targets an unchosen tab). " +
+			"Applies the active emulation preset. Best with single quotes around the code.",
 		parameters: Type.Object({
 			code: Type.String({ description: "JavaScript expression to evaluate" }),
 		}),
 		executionMode: "sequential",
 
 		async execute(_toolCallId, params): Promise<ToolResult> {
-			const pre = requireRunning("browser_eval");
+			const pre = requireRunning("browser_eval") ?? requireActiveTab("browser_eval");
 			if (pre) return pre;
 
 			const r = await runSkill("eval.js", [params.code], T_EVAL);
@@ -644,7 +838,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
 		name: "browser_screenshot",
 		label: "browser screenshot",
 		description:
-			"Screenshot the active tab. Default: current viewport. full_page captures the whole document; " +
+			"Screenshot the active tab — requires an extension-recorded active tab (browser_navigate / " +
+			"browser_switch_tab first — never auto-targets an unchosen tab). Default: current viewport. full_page captures the whole document; " +
 			"device emulates a preset for this screenshot only; selector clips to a CSS-matched element. " +
 			"Returns the screenshot file path.",
 		parameters: Type.Object({
@@ -662,7 +857,7 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
 		executionMode: "sequential",
 
 		async execute(_toolCallId, params): Promise<ToolResult> {
-			const pre = requireRunning("browser_screenshot");
+			const pre = requireRunning("browser_screenshot") ?? requireActiveTab("browser_screenshot");
 			if (pre) return pre;
 			if (params.landscape && !params.device) {
 				return rej("browser_screenshot", "landscape requires device (a device preset)");
@@ -706,7 +901,7 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
 		executionMode: "sequential",
 
 		async execute(_toolCallId, params, signal): Promise<ToolResult> {
-			const pre = requireRunning("browser_pick");
+			const pre = requireRunning("browser_pick") ?? requireActiveTab("browser_pick");
 			if (pre) return pre;
 
 			if (signal?.aborted) return rej("browser_pick", "aborted before pick");

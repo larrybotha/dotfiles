@@ -224,6 +224,31 @@ class CDP {
   }
 
   /**
+   * Recorded-active-tab only: the state file's tab, resolved against live
+   * pages. Never falls back to a heuristic/visible-window pick — read/interact
+   * ops (eval/screenshot/pick) must never land on a tab pi did not choose
+   * (the user's focused tab on an adopted foreign browser).
+   * Returns { page } on success or { error } with a readable reason.
+   */
+  async getRecordedPage() {
+    const state = readActiveTab();
+    if (!state || !state.targetId) {
+      return {
+        error:
+          "no active tab recorded — browser_navigate or browser_switch_tab first (this op never auto-targets an unchosen tab)",
+      };
+    }
+    const pages = await this.getPages();
+    const match = pages.find((p) => p.targetId === state.targetId);
+    if (!match) {
+      return {
+        error: `recorded active tab is gone (was ${state.url}) — browser_navigate or browser_switch_tab again`,
+      };
+    }
+    return { page: { ...match, stateUrl: state.url } };
+  }
+
+  /**
    * Wait for at least one page target to exist, then return the active page.
    * Useful right after browser launch when no tabs exist yet.
    */

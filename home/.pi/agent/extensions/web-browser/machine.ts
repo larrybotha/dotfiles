@@ -124,7 +124,142 @@ export function notRunningReason(value: string): string {
 	if (value === "starting") {
 		return "browser still starting — wait for the browser_start result before page ops";
 	}
-	return "browser not running — browser_start first (fresh | profile | reset_profile | attach), or browser_status to probe";
+	return "browser not running — browser_start first (auto | fresh | profile | reset_profile | attach), or browser_status to probe";
+}
+
+// ---- smart start (mode "auto"): pure resolution over detect buckets ----
+//
+// detect.mjs (executor) owns the probing; resolveAuto is the decision table
+// shared by the browser_start tool and tests (single source of truth):
+//   1 CDP-attachable  -> attach, no ask
+//   n CDP-attachable  -> prompt-attach
+//   0 + default usable -> launch default, no ask
+//   0 + default blocked (global singleton running without CDP — e.g. Arc) -> demote
+//   0 + 1 candidate    -> launch it, no ask
+//   0 + n candidates   -> prompt-launch (default preselected if usable)
+//   0 + 0 usable       -> error
+// Chromium-class browsers running without CDP do NOT block an isolated
+// launch (their singleton lock lives in the user-data-dir, ours is separate);
+// Arc's lock is global — a running Arc without CDP blocks any Arc launch.
+
+export interface AttachableEntry {
+	name: string;
+	port: number;
+	browser: string | null;
+	pid: number | null;
+}
+
+export interface RunningNoCdpEntry {
+	name: string;
+	pid: number;
+}
+
+export interface InstalledEntry {
+	name: string;
+	bin: string;
+	globalSingleton: boolean;
+}
+
+export interface DefaultEntry extends InstalledEntry {}
+
+export interface DetectBuckets {
+	attachable: AttachableEntry[];
+	runningNoCdp: RunningNoCdpEntry[];
+	installed: InstalledEntry[];
+	default: DefaultEntry | null;
+}
+
+export type AutoAction =
+	| { kind: "attach"; port: number }
+	| { kind: "prompt-attach" }
+	| { kind: "launch"; bin: string }
+	| { kind: "prompt-launch" }
+	| { kind: "error" };
+
+export interface AutoResolution {
+	action: AutoAction;
+	note: string;
+	warnings: string[];
+}
+
+export function resolveAuto(b: DetectBuckets): AutoResolution {
+	const warnings: string[] = [];
+	const running = new Set(b.runningNoCdp.map((r) => r.name));
+	// informational: user's Chromium-class instance running — isolated launch
+	// is a separate instance, not their session
+	for (const i of b.installed) {
+		if (running.has(i.name) && !i.globalSingleton) {
+			warnings.push(
+				`your ${i.name} is running without a debug port — launch uses an isolated profile (separate instance, not your session)`,
+			);
+		}
+	}
+	// hard blocker: global singleton (Arc) running without CDP — neither
+	// attach (no port) nor launch (lock) is possible for it. One warning per
+	// blocked browser name (default + installed would otherwise duplicate)
+	const blockedNames = new Set<string>();
+	for (const e of [b.default, ...b.installed]) {
+		if (e && running.has(e.name) && e.globalSingleton && !blockedNames.has(e.name)) {
+			blockedNames.add(e.name);
+			warnings.push(
+				`${e.name} is running without a debug port — global singleton lock: quit it first (then auto can launch it), or relaunch it with --remote-debugging-port to attach`,
+			);
+		}
+	}
+	const blocked = (e: InstalledEntry) => blockedNames.has(e.name);
+
+	if (b.attachable.length === 1) {
+		const a = b.attachable[0]!;
+		return {
+			action: { kind: "attach", port: a.port },
+			note: `one browser with CDP running (${a.name} on :${a.port}) — attaching, no ask`,
+			warnings,
+		};
+	}
+	if (b.attachable.length > 1) {
+		return {
+			action: { kind: "prompt-attach" },
+			note: `${b.attachable.length} browsers with CDP running`,
+			warnings,
+		};
+	}
+
+	// no attachable browser — launch path
+	if (b.default && !blocked(b.default)) {
+		return {
+			action: { kind: "launch", bin: b.default.bin },
+			note: `no browser with CDP — launching your default browser (${b.default.name}), no ask`,
+			warnings,
+		};
+	}
+	const candidates = b.installed.filter((i) => !blocked(i));
+	if (b.installed.length === 0) {
+		return {
+			action: { kind: "error" },
+			note: "no CDP-capable browser installed (Chrome/Chromium/Arc/Brave/Edge) — set BROWSER_BIN=/path/to/browser and retry",
+			warnings,
+		};
+	}
+	if (candidates.length === 0) {
+		const names = b.installed.map((i) => i.name).join(", ");
+		return {
+			action: { kind: "error" },
+			note: `every installed browser is blocked by a running singleton without CDP (${names}) — quit it or relaunch it with --remote-debugging-port, then browser_start auto again`,
+			warnings,
+		};
+	}
+	if (candidates.length === 1) {
+		return {
+			action: { kind: "launch", bin: candidates[0]!.bin },
+			note: `no browser with CDP${b.default && blocked(b.default) ? ` — default (${b.default.name}) blocked, demoted` : ""} — launching the only usable browser (${candidates[0]!.name}), no ask`,
+			warnings,
+		};
+	}
+	return {
+		action: { kind: "prompt-launch" },
+		note: `no browser with CDP${b.default && blocked(b.default) ? ` — default (${b.default.name}) blocked, demoted` : ""} — ${candidates.length} usable browsers`,
+		warnings,
+	};
 }
 
 // ---- machine ----

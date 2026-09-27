@@ -122,17 +122,14 @@ try {
   log("connecting...");
   const cdp = await connect(5000);
 
-  log("getting active page...");
-  const page = await cdp.waitForActivePage();
+  log("getting recorded active page...");
+  const rec = await cdp.getRecordedPage();
 
-  if (!page) {
-    console.error("✗ No active tab found");
+  if (rec.error) {
+    console.error(`✗ ${rec.error}`);
     process.exit(1);
   }
-
-  if (page.stale) {
-    console.error(`⚠ State stale: expected "${page.stateUrl}", resolved "${page.url}"`);
-  }
+  const page = rec.page;
 
   log("attaching to page...");
   const sessionId = await cdp.attachToPage(page.targetId);

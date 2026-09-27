@@ -8,6 +8,9 @@ import {
   emulateViolation,
   launchViolation,
   notRunningReason,
+  resolveAuto,
+  type DetectBuckets,
+  type InstalledEntry,
   type ActiveTab,
   type BrowserContext,
   type BrowserMode,
@@ -280,6 +283,122 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
   a.send({ type: "LAUNCH_DONE", mode: "attach", port: 9222, pid: null, userDataDir: null, browser: "Arc/1.0", error: null });
   ok(value(a) === "running", "attach launch reaches running without pid");
   ok(ctx(a).browser?.mode === "attach", "attach mode recorded");
+}
+
+// 20. resolveAuto: smart-start decision table (pure — no IO, no TUI)
+{
+  const chrome: InstalledEntry = { name: "Chrome", bin: "/x/Chrome", globalSingleton: false };
+  const arc: InstalledEntry = { name: "Arc", bin: "/x/Arc", globalSingleton: true };
+  const chromium: InstalledEntry = { name: "Chromium", bin: "/x/Chromium", globalSingleton: false };
+
+  const buckets = (over: Partial<DetectBuckets> = {}): DetectBuckets => ({
+    attachable: [],
+    runningNoCdp: [],
+    installed: [chrome, arc],
+    default: null,
+    ...over,
+  });
+
+  // 1 CDP-attachable -> attach, no ask
+  {
+    const r = resolveAuto(buckets({ attachable: [{ name: "Arc", port: 9223, browser: "Arc/1.0", pid: 42 }] }));
+    ok(r.action.kind === "attach" && r.action.port === 9223, "1 attachable -> attach on its port", r);
+    ok(r.note.includes("attaching, no ask"), "1 attachable note: no ask", r.note);
+    ok(r.warnings.length === 0, "1 attachable: no warnings", r);
+  }
+
+  // n CDP-attachable -> prompt-attach
+  {
+    const r = resolveAuto(buckets({
+      attachable: [
+        { name: "Arc", port: 9223, browser: "Arc/1.0", pid: 1 },
+        { name: "Chrome", port: 9333, browser: "Chrome/126.0", pid: 2 },
+      ],
+    }));
+    ok(r.action.kind === "prompt-attach", "2 attachable -> prompt", r);
+  }
+
+  // 0 + default usable -> launch default, no ask
+  {
+    const r = resolveAuto(buckets({ default: { name: "Chrome", bin: "/x/Chrome", globalSingleton: false } }));
+    ok(r.action.kind === "launch" && r.action.bin === "/x/Chrome", "0 attachable + default -> launch default", r);
+    ok(r.note.includes("default browser (Chrome)"), "default note names browser", r.note);
+  }
+
+  // 0 + default blocked (Arc singleton running) -> demote; single candidate -> launch it
+  {
+    const r = resolveAuto(
+      buckets({
+        runningNoCdp: [{ name: "Arc", pid: 5 }],
+        default: { name: "Arc", bin: "/x/Arc", globalSingleton: true },
+      }),
+    );
+    ok(r.action.kind === "launch" && r.action.bin === "/x/Chrome", "blocked default demoted -> launch other candidate", r);
+    ok(r.note.includes("demoted"), "demote note present", r.note);
+    ok(r.warnings.some((w) => w.includes("singleton lock")), "singleton warning present", r.warnings);
+  }
+
+  // 0 + default blocked + multiple candidates -> prompt-launch
+  {
+    const r = resolveAuto(
+      buckets({
+        installed: [chrome, arc, chromium],
+        runningNoCdp: [{ name: "Arc", pid: 5 }],
+        default: { name: "Arc", bin: "/x/Arc", globalSingleton: true },
+      }),
+    );
+    ok(r.action.kind === "prompt-launch", "blocked default + 2 candidates -> prompt", r);
+    ok(r.note.includes("demoted"), "demote note present (prompt path)", r.note);
+  }
+
+  // 0 + no default + 1 candidate -> launch it, no ask
+  {
+    const r = resolveAuto(buckets({ installed: [chromium], default: null }));
+    ok(r.action.kind === "launch" && r.action.bin === "/x/Chromium", "no default + 1 installed -> launch it", r);
+    ok(r.note.includes("only usable browser"), "single-candidate note", r.note);
+  }
+
+  // 0 + no default + 2 candidates -> prompt-launch
+  {
+    const r = resolveAuto(buckets());
+    ok(r.action.kind === "prompt-launch", "no default + 2 installed -> prompt", r);
+  }
+
+  // 0 installed -> error with BROWSER_BIN hint
+  {
+    const r = resolveAuto(buckets({ installed: [], default: null }));
+    ok(r.action.kind === "error" && r.note.includes("BROWSER_BIN"), "nothing installed -> error + hint", r);
+  }
+
+  // everything blocked -> error naming the singleton
+  {
+    const r = resolveAuto(buckets({ installed: [arc], default: { name: "Arc", bin: "/x/Arc", globalSingleton: true }, runningNoCdp: [{ name: "Arc", pid: 9 }] }));
+    ok(r.action.kind === "error" && r.note.includes("quit it or relaunch"), "all blocked -> error naming singleton", r);
+  }
+
+  // Chromium-class running without CDP: informational warning, NOT blocked
+  {
+    const r = resolveAuto(
+      buckets({
+        runningNoCdp: [{ name: "Chrome", pid: 7 }],
+        default: { name: "Chrome", bin: "/x/Chrome", globalSingleton: false },
+      }),
+    );
+    ok(r.action.kind === "launch" && r.action.bin === "/x/Chrome", "Chromium-class running: default NOT demoted", r);
+    ok(r.warnings.some((w) => w.includes("isolated profile")), "isolated-instance warning present", r.warnings);
+  }
+
+  // attachable beats running default (attach wins over launch)
+  {
+    const r = resolveAuto(
+      buckets({
+      attachable: [{ name: "Chrome", port: 9222, browser: "Chrome/126.0", pid: 3 }],
+        runningNoCdp: [{ name: "Arc", pid: 5 }],
+        default: { name: "Arc", bin: "/x/Arc", globalSingleton: true },
+      }),
+    );
+    ok(r.action.kind === "attach" && r.action.port === 9222, "attachable wins over blocked default", r);
+  }
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
