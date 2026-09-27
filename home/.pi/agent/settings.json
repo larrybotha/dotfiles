@@ -7,5 +7,14 @@
     "npm:pi-annotate"
   ],
   "hideThinkingBlock": false,
-  "theme": "dark"
+  "theme": "dark",
+  "defaultTools": [
+    "read",
+    "bash",
+    "edit",
+    "write",
+    "grep",
+    "find",
+    "ls"
+  ]
 }
