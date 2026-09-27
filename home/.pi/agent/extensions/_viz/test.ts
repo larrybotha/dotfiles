@@ -151,6 +151,35 @@ console.log("viz-kit");
 	for (const h of holders) h.close();
 }
 
+// 9. end-to-end: inspection events must reach a WS client of the relay.
+// Regression: enable() used to skip inspector.start(), so the pi-side
+// adapter never connected and zero events ever reached the relay/bridge.
+{
+	const p = await freePort();
+	const viz = makeViz({ name: "e2e", preferredPort: p });
+	const r = await viz.enable({ open: false });
+	ok(r.ok, `e2e: enable (${r.message})`);
+
+	const actor = createActor(toggleMachine, { ...viz.option() });
+	actor.start();
+
+	const ws = new WebSocket(`ws://127.0.0.1:${p}`);
+	const msgs: string[] = [];
+	ws.addEventListener("message", (e) => {
+		msgs.push(String(e.data));
+	});
+	await new Promise((res) => ws.addEventListener("open", res));
+	// grace for the pi-side adapter's WS to open (queue flushes onopen)
+	await new Promise((res) => setTimeout(res, 150));
+	actor.send({ type: "TOGGLE" });
+	ok(
+		await eventually(() => Promise.resolve(msgs.length > 0)),
+		"e2e: inspection events reach relay WS client",
+	);
+	ws.close();
+	viz.stop();
+}
+
 console.log(`\n${passed} passed, ${failed} failed`);
 if (failed > 0) {
 	process.exit(1);

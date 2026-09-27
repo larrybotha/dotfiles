@@ -200,6 +200,10 @@ export function makeViz(opts: {
 			}
 			server = createInspectorServer({ port: free, autoOpen: enableOpts?.open ?? true });
 			inspector = createInspector(new CleanWebSocketAdapter(`ws://localhost:${free}`));
+			// plain createInspector does NOT auto-start its adapter (only
+			// createWebSocketInspector/createBrowserInspector do) — without this
+			// the adapter never connects and every event queues forever.
+			inspector.start();
 			on = true;
 			port = free;
 			const walked = free !== preferredPort ? ` (preferred port ${preferredPort} busy)` : "";
