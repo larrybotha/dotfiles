@@ -11,6 +11,13 @@
  *   BEGIN_FETCH  -> (IO) -> FETCH_DONE   { contents, failed }
  *   SATISFIED (guard: >=1 successful search) -> done
  *   RESET -> idle (context cleared)
+ *
+ * BEGIN reserves budget: BEGIN_SEARCH/BEGIN_FETCH bump reserved counters
+ * (guards count them, so N concurrent calls cannot all pass the precheck
+ * against the same budget window — no TOCTOU over-run). Reservations are
+ * never persisted: slim snapshots strip them; a late DONE landing on a
+ * restored actor clamps at 0. Failed fetches count toward fetchAttempts
+ * (cap) — a dead link cannot be re-fetched forever: each attempt is real IO.
  */
 import { assign, setup } from "xstate";
 
@@ -42,6 +49,7 @@ export type Limits = {
 	maxSearches: number;
 	maxSearchAttempts: number;
 	maxFetches: number;
+	maxFetchAttempts: number;
 };
 
 export type ResearchContext = {
@@ -51,6 +59,9 @@ export type ResearchContext = {
 	searchCount: number;
 	searchAttempts: number;
 	fetchCount: number;
+	fetchAttempts: number; // failed fetches (bounded by maxFetchAttempts)
+	reservedSearches: number; // in-flight BEGIN_SEARCH (budget reservation)
+	reservedFetches: number; // in-flight BEGIN_FETCH links (budget reservation)
 	errors: string[];
 	limits: Limits;
 };
@@ -73,6 +84,13 @@ export type ResearchEvent =
 	| { type: "SATISFIED" }
 	| { type: "RESET" };
 
+export const DEFAULT_LIMITS: Limits = {
+	maxSearches: 5,
+	maxSearchAttempts: 8,
+	maxFetches: 10,
+	maxFetchAttempts: 8,
+};
+
 export function initialContext(limits: Limits): ResearchContext {
 	return {
 		queries: [],
@@ -81,6 +99,9 @@ export function initialContext(limits: Limits): ResearchContext {
 		searchCount: 0,
 		searchAttempts: 0,
 		fetchCount: 0,
+		fetchAttempts: 0,
+		reservedSearches: 0,
+		reservedFetches: 0,
 		errors: [],
 		limits,
 	};
@@ -91,8 +112,10 @@ export function initialContext(limits: Limits): ResearchContext {
  * produce human/model-readable rejection reasons. Single source of truth.
  */
 export function searchViolation(ctx: ResearchContext): string | null {
-	if (ctx.searchCount >= ctx.limits.maxSearches) {
-		return `search budget exhausted (${ctx.searchCount}/${ctx.limits.maxSearches} searches used)`;
+	if (ctx.searchCount + ctx.reservedSearches >= ctx.limits.maxSearches) {
+		return `search budget exhausted (${ctx.searchCount}/${ctx.limits.maxSearches} searches used${
+			ctx.reservedSearches > 0 ? `, ${ctx.reservedSearches} in flight` : ""
+		})`;
 	}
 	if (ctx.searchAttempts >= ctx.limits.maxSearchAttempts) {
 		return `too many failed search attempts (${ctx.searchAttempts}/${ctx.limits.maxSearchAttempts})`;
@@ -103,8 +126,13 @@ export function searchViolation(ctx: ResearchContext): string | null {
 export function fetchViolation(ctx: ResearchContext, links: string[]): string | null {
 	if (links.length === 0) return "no links provided";
 	if (new Set(links).size !== links.length) return "duplicate links in request";
-	if (ctx.fetchCount + links.length > ctx.limits.maxFetches) {
-		return `fetch budget exceeded (${ctx.fetchCount}/${ctx.limits.maxFetches} fetched, ${links.length} requested)`;
+	if (ctx.fetchAttempts >= ctx.limits.maxFetchAttempts) {
+		return `too many failed fetch attempts (${ctx.fetchAttempts}/${ctx.limits.maxFetchAttempts}) — use web_report with what you have, or web_reset`;
+	}
+	if (ctx.fetchCount + ctx.reservedFetches + links.length > ctx.limits.maxFetches) {
+		return `fetch budget exceeded (${ctx.fetchCount}/${ctx.limits.maxFetches} fetched, ${links.length} requested${
+			ctx.reservedFetches > 0 ? `, ${ctx.reservedFetches} in flight` : ""
+		})`;
 	}
 	const known = new Set(ctx.results.map((r) => r.link));
 	const unknown = links.filter((l) => !known.has(l));
@@ -132,11 +160,19 @@ export const researchMachine = setup({
 		hasResearch: ({ context }) => context.searchCount > 0,
 	},
 	actions: {
+		// budget reservation: BEGIN holds, DONE releases (max(0, …) — a late
+		// DONE landing on a restored actor with no reservation clamps at 0)
+		reserveSearch: assign({ reservedSearches: ({ context }) => context.reservedSearches + 1 }),
+		reserveFetch: assign(({ context, event }) => ({
+			reservedFetches:
+				event.type === "BEGIN_FETCH" ? context.reservedFetches + event.links.length : context.reservedFetches,
+		})),
 		applySearchDone: assign(({ context, event }) => {
 			if (event.type !== "SEARCH_DONE") return {};
 			if (event.error) {
 				return {
 					searchAttempts: context.searchAttempts + 1,
+					reservedSearches: Math.max(0, context.reservedSearches - 1),
 					errors: [...context.errors, `search "${event.query}" failed: ${event.error}`],
 				};
 			}
@@ -152,6 +188,7 @@ export const researchMachine = setup({
 				],
 				results: [...merged.values()],
 				searchCount: context.searchCount + 1,
+				reservedSearches: Math.max(0, context.reservedSearches - 1),
 			};
 		}),
 		applyFetchDone: assign(({ context, event }) => {
@@ -159,6 +196,11 @@ export const researchMachine = setup({
 			return {
 				fetched: [...context.fetched, ...event.contents],
 				fetchCount: context.fetchCount + event.contents.length,
+				fetchAttempts: context.fetchAttempts + event.failed.length,
+				reservedFetches: Math.max(
+					0,
+					context.reservedFetches - event.contents.length - event.failed.length,
+				),
 				errors: [...context.errors, ...event.failed.map((f) => `fetch ${f.link}: ${f.error}`)],
 			};
 		}),
@@ -166,18 +208,18 @@ export const researchMachine = setup({
 	},
 }).createMachine({
 	id: "webResearch",
-	context: ({ input }) => initialContext(input?.limits ?? { maxSearches: 5, maxSearchAttempts: 8, maxFetches: 10 }),
+	context: ({ input }) => initialContext(input?.limits ?? DEFAULT_LIMITS),
 	initial: "idle",
 	states: {
 		idle: {
 			on: {
-				BEGIN_SEARCH: { guard: "searchLegal", target: "researching" },
+				BEGIN_SEARCH: { guard: "searchLegal", target: "researching", actions: "reserveSearch" },
 			},
 		},
 		researching: {
 			on: {
-				BEGIN_SEARCH: { guard: "searchLegal", target: "researching" },
-				BEGIN_FETCH: { guard: "fetchLegal", target: "researching" },
+				BEGIN_SEARCH: { guard: "searchLegal", target: "researching", actions: "reserveSearch" },
+				BEGIN_FETCH: { guard: "fetchLegal", target: "researching", actions: "reserveFetch" },
 				SEARCH_DONE: { actions: "applySearchDone" },
 				FETCH_DONE: { actions: "applyFetchDone" },
 				SATISFIED: { guard: "hasResearch", target: "done" },

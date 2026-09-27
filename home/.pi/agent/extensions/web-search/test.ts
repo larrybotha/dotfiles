@@ -13,7 +13,7 @@ import {
 	type SearchResult,
 } from "./machine.ts";
 
-const LIMITS: Limits = { maxSearches: 2, maxSearchAttempts: 3, maxFetches: 2 };
+const LIMITS: Limits = { maxSearches: 2, maxSearchAttempts: 3, maxFetches: 2, maxFetchAttempts: 3 };
 
 function makeActor(): Actor<typeof researchMachine> {
 	const a = createActor(researchMachine, { input: { limits: LIMITS } });
@@ -151,6 +151,88 @@ ok("persisted snapshot restores context and legality", () => {
 	assert.equal(b.getSnapshot().can({ type: "BEGIN_FETCH", links: ["https://a.com"] }), false);
 	assert.equal(b.getSnapshot().can({ type: "BEGIN_FETCH", links: [] }), false); // empty links
 	assert.equal(b.getSnapshot().can(searchEvt("x")), true);
+});
+
+// --- budget reservations (BEGIN holds, DONE releases) -------------------------
+ok("reserved searches block concurrent over-run (TOCTOU)", () => {
+	const a = makeActor();
+	// 2 searches allowed (maxSearches=2): two BEGINs without DONEs reserve both
+	a.send({ type: "BEGIN_SEARCH", query: "q1", params: { num: 5, country: "US", freshness: null } });
+	a.send({ type: "BEGIN_SEARCH", query: "q2", params: { num: 5, country: "US", freshness: null } });
+	assert.equal(a.getSnapshot().context.reservedSearches, 2);
+	assert.equal(a.getSnapshot().can(searchEvt("x")), false, "reservation must block a third BEGIN");
+	assert.match(searchViolation(a.getSnapshot().context) ?? "", /in flight/);
+	// a FAILED DONE releases one too -> one slot free again (0 used + 1 reserved < 2)
+	a.send({ type: "SEARCH_DONE", query: "q1", params: { num: 5, country: "US", freshness: null }, results: [], error: "boom" });
+	assert.equal(a.getSnapshot().context.reservedSearches, 1);
+	assert.equal(a.getSnapshot().context.searchAttempts, 1);
+	assert.equal(a.getSnapshot().can(searchEvt("x")), true);
+});
+
+ok("reserved fetches block concurrent over-run", () => {
+	const a = makeActor();
+	doSearch(a, ["https://a.com", "https://b.com"]);
+	// maxFetches=2: one BEGIN_FETCH for 1 link reserves 1; a second 2-link
+	// request must now exceed the budget (1 done + 1 reserved + 2 requested)
+	a.send({ type: "BEGIN_FETCH", links: ["https://a.com"] });
+	assert.equal(a.getSnapshot().can({ type: "BEGIN_FETCH", links: ["https://a.com", "https://b.com"] }), false);
+	assert.equal(a.getSnapshot().can({ type: "BEGIN_FETCH", links: ["https://b.com"] }), true);
+	a.send({ type: "FETCH_DONE", contents: [{ link: "https://a.com", markdown: "md" }], failed: [] });
+	assert.equal(a.getSnapshot().context.reservedFetches, 0);
+});
+
+ok("late DONE on a restored actor clamps reservations at 0 (no negative, no NaN)", () => {
+	const a = makeActor();
+	// fresh actor with no reservation receives a DONE from pre-restore IO
+	a.send({ type: "BEGIN_SEARCH", query: "q", params: { num: 5, country: "US", freshness: null } });
+	a.send({ type: "RESET" });
+	a.send({
+		type: "SEARCH_DONE",
+		query: "q",
+		params: { num: 5, country: "US", freshness: null },
+		results: [{ title: "t", link: "https://a.com", snippet: "s", age: "" }],
+		error: null,
+	});
+	const c = a.getSnapshot().context;
+	assert.equal(a.getSnapshot().value, "idle");
+	assert.equal(c.searchCount, 0, "late DONE after RESET is dropped");
+	assert.equal(c.reservedSearches, 0);
+	assert.ok(Number.isFinite(c.reservedSearches));
+});
+
+ok("RESET during in-flight BEGIN clears reservations", () => {
+	const a = makeActor();
+	a.send({ type: "BEGIN_SEARCH", query: "q", params: { num: 5, country: "US", freshness: null } });
+	assert.equal(a.getSnapshot().context.reservedSearches, 1);
+	a.send({ type: "RESET" });
+	assert.equal(a.getSnapshot().context.reservedSearches, 0);
+	assert.equal(a.getSnapshot().can(searchEvt("x")), true);
+});
+
+// --- failed fetch attempts (bounded retries) ---------------------------------
+ok("failed fetch attempts are counted and capped", () => {
+	const a = makeActor();
+	doSearch(a, ["https://dead.link"]);
+	for (let i = 0; i < LIMITS.maxFetchAttempts; i++) {
+		assert.equal(a.getSnapshot().can({ type: "BEGIN_FETCH", links: ["https://dead.link"] }), true, `attempt ${i} allowed`);
+		a.send({ type: "BEGIN_FETCH", links: ["https://dead.link"] });
+		a.send({ type: "FETCH_DONE", contents: [], failed: [{ link: "https://dead.link", error: "HTTP 404" }] });
+	}
+	assert.equal(a.getSnapshot().context.fetchAttempts, LIMITS.maxFetchAttempts);
+	assert.equal(a.getSnapshot().can({ type: "BEGIN_FETCH", links: ["https://dead.link"] }), false);
+	assert.match(fetchViolation(a.getSnapshot().context, ["https://dead.link"]) ?? "", /failed fetch attempts/);
+	// successes still count separately (fetchCount untouched by failures)
+	assert.equal(a.getSnapshot().context.fetchCount, 0);
+});
+
+ok("failed fetch releases its reservation", () => {
+	const a = makeActor();
+	doSearch(a, ["https://a.com"]);
+	a.send({ type: "BEGIN_FETCH", links: ["https://a.com"] });
+	a.send({ type: "FETCH_DONE", contents: [], failed: [{ link: "https://a.com", error: "HTTP 403" }] });
+	assert.equal(a.getSnapshot().context.reservedFetches, 0);
+	// the failed link is retryable (attempts cap bounds it)
+	assert.equal(a.getSnapshot().can({ type: "BEGIN_FETCH", links: ["https://a.com"] }), true);
 });
 
 console.log(`\n${passed} tests passed`);

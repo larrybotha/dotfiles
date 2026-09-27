@@ -53,6 +53,7 @@ const LIMITS: Limits = {
 	maxSearches: Number(process.env.WEB_SEARCH_MAX_SEARCHES ?? 5),
 	maxSearchAttempts: Number(process.env.WEB_SEARCH_MAX_SEARCH_ATTEMPTS ?? 8),
 	maxFetches: Number(process.env.WEB_SEARCH_MAX_FETCHES ?? 10),
+	maxFetchAttempts: Number(process.env.WEB_SEARCH_MAX_FETCH_ATTEMPTS ?? 8),
 };
 const CONTENT_TRUNCATE = Number(process.env.WEB_SEARCH_CONTENT_TRUNCATE ?? 5000);
 const SCRIPT_TIMEOUT_MS = Number(process.env.WEB_SEARCH_SCRIPT_TIMEOUT_MS ?? 120_000);
@@ -158,9 +159,28 @@ function setActor(a: Actor<typeof researchMachine>) {
  * with the opt-in inspector wired when running. The `as never` cast for the
  * persisted snapshot is centralised here.
  */
+/** Older persisted snapshots (pre reservation / attempt-cap) lack newer
+ *  context fields — patch defaults so restored arithmetic never sees undefined.
+ *  In-flight reservations are never restored (post-restore actors are fresh;
+ *  late DONEs clamp at 0). */
+function normalizeSnapshotInPlace(snap: PersistedSnapshot): void {
+	const c = snap.context;
+	if (!c) return;
+	c.fetchAttempts ??= 0;
+	c.reservedSearches = 0;
+	c.reservedFetches = 0;
+	c.limits = {
+		maxSearches: c.limits?.maxSearches ?? LIMITS.maxSearches,
+		maxSearchAttempts: c.limits?.maxSearchAttempts ?? LIMITS.maxSearchAttempts,
+		maxFetches: c.limits?.maxFetches ?? LIMITS.maxFetches,
+		maxFetchAttempts: c.limits?.maxFetchAttempts ?? LIMITS.maxFetchAttempts,
+	};
+}
+
 function createResearchActor(
 	opts: { input: { limits: Limits } } | { snapshot: unknown },
 ): Actor<typeof researchMachine> {
+	if ("snapshot" in opts) normalizeSnapshotInPlace(opts.snapshot as PersistedSnapshot);
 	const a = createActor(researchMachine, {
 		...(opts as { input?: { limits: Limits }; snapshot?: unknown }),
 		snapshot: "snapshot" in opts ? (opts.snapshot as never) : undefined,
@@ -252,7 +272,15 @@ function formatResults(results: SearchResult[]): string {
 }
 
 function budgetLine(ctx: ReturnType<typeof initialContext>): string {
-	return `Budget: searches ${ctx.searchCount}/${ctx.limits.maxSearches}, failed attempts ${ctx.searchAttempts}/${ctx.limits.maxSearchAttempts}, fetches ${ctx.fetchCount}/${ctx.limits.maxFetches}. Machine state: ${stateValue()}.`;
+	const inFlight =
+		ctx.reservedSearches > 0 || ctx.reservedFetches > 0
+			? `, in flight: ${ctx.reservedSearches} search(es), ${ctx.reservedFetches} fetch(es)`
+			: "";
+	return (
+		`Budget: searches ${ctx.searchCount}/${ctx.limits.maxSearches}, failed search attempts ${ctx.searchAttempts}/${ctx.limits.maxSearchAttempts}, ` +
+		`fetches ${ctx.fetchCount}/${ctx.limits.maxFetches}, failed fetch attempts ${ctx.fetchAttempts}/${ctx.limits.maxFetchAttempts}${inFlight}. ` +
+		`Machine state: ${stateValue()}.`
+	);
 }
 
 function stateValue(): string {
@@ -268,6 +296,12 @@ function stateValue(): string {
 function slimSnapshot(snapshot: unknown): unknown {
 	const slim = JSON.parse(JSON.stringify(snapshot)) as PersistedSnapshot;
 	for (const f of slim?.context?.fetched ?? []) f.markdown = "";
+	// reservations are in-flight, not state: a snapshot taken mid-IO restores
+	// to a fresh actor (late DONEs clamp at 0)
+	if (slim?.context) {
+		slim.context.reservedSearches = 0;
+		slim.context.reservedFetches = 0;
+	}
 	return slim;
 }
 
@@ -351,6 +385,7 @@ export default function (pi: ExtensionAPI) {
 		description:
 			"Run a Brave web search as part of a research workflow. Results are tracked by a state machine: " +
 			`budgets are enforced (${LIMITS.maxSearches} searches, ${LIMITS.maxFetches} page fetches per research run). ` +
+			"After web_report ends the run, further searches and fetches are rejected until web_reset. " +
 			"After searching, use web_fetch on interesting links, then web_report when done. " +
 			"Options: num (1-20, default 5), country (2-letter code), freshness (pd|pw|pm|py or YYYY-MM-DDtoYYYY-MM-DD).",
 		parameters: Type.Object({
@@ -365,7 +400,21 @@ export default function (pi: ExtensionAPI) {
 		async execute(_toolCallId, params) {
 			const snap = getActor().getSnapshot();
 
-			const violation = searchViolation(snap.context);
+			const searchParams: SearchParams = {
+				num: Math.min(Math.max(Math.trunc(params.num ?? 5), 1), 20),
+				country: (params.country ?? "US").toUpperCase(),
+				freshness: params.freshness ?? null,
+			};
+
+			// state-order legality too (not just budgets): a machine-rejected
+			// BEGIN_SEARCH must never reach the executor — snap.can() is the
+			// single gate (same pattern as web_report), reason derived from
+			// state/violation for readability
+			const violation = !snap.can({ type: "BEGIN_SEARCH", query: params.query, params: searchParams })
+				? snap.matches("done")
+					? "research run already reported — use web_reset to start a new research run"
+					: searchViolation(snap.context) ?? "search not legal now"
+				: null;
 			if (violation) {
 				log("WARN", `search rejected: ${violation}`);
 				return {
@@ -377,11 +426,6 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
-			const searchParams: SearchParams = {
-				num: Math.min(Math.max(Math.trunc(params.num ?? 5), 1), 20),
-				country: (params.country ?? "US").toUpperCase(),
-				freshness: params.freshness ?? null,
-			};
 			log(
 				"INFO",
 				`search request: ${JSON.stringify({ query: params.query, ...searchParams })}`,
@@ -463,6 +507,7 @@ export default function (pi: ExtensionAPI) {
 		description:
 			"Extract readable page content as markdown for links returned by web_search. " +
 			"Only known, not-yet-fetched links are allowed; duplicates and unknown URLs are rejected. " +
+			"After web_report ends the run, fetches are rejected until web_reset. " +
 			"Budget enforced by the state machine.",
 		parameters: Type.Object({
 			links: Type.Array(Type.String(), { description: "Links previously returned by web_search" }),
@@ -472,7 +517,13 @@ export default function (pi: ExtensionAPI) {
 			const snap = getActor().getSnapshot();
 			const links = params.links;
 
-			const violation = fetchViolation(snap.context, links);
+			// state-order legality too: snap.can() is the single gate (machine
+			// state + guards + reservations); reason derived for readability
+			const violation = !snap.can({ type: "BEGIN_FETCH", links })
+				? snap.matches("done")
+					? "research run already reported — use web_reset to start a new research run"
+					: fetchViolation(snap.context, links) ?? "fetch not legal now"
+				: null;
 			if (violation) {
 				log("WARN", `fetch rejected: ${violation}`);
 				return {
@@ -596,7 +647,18 @@ export default function (pi: ExtensionAPI) {
 		parameters: Type.Object({}),
 
 		async execute() {
-			const ctx = getActor().getSnapshot().context;
+			const snap = getActor().getSnapshot();
+			// honest reset: RESET is machine-illegal from idle — say so instead of
+			// reporting a clear that never happened
+			if (!snap.can({ type: "RESET" })) {
+				return {
+					content: text(
+						`Nothing to clear — research state is already idle.\n${budgetLine(snap.context)}`,
+					),
+					details: detailsFor("reset", { rejected: "already idle" }),
+				};
+			}
+			const ctx = snap.context;
 			const prior = `Queries: ${ctx.searchCount} searches, ${ctx.fetchCount} fetches, ${ctx.results.length} results, machine state ${stateValue()}`;
 			getActor().send({ type: "RESET" });
 			return {
@@ -626,6 +688,10 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 			if (sub === "reset") {
+				if (!getActor().getSnapshot().can({ type: "RESET" })) {
+					ctx.ui.notify("Nothing to clear — research state is already idle", "info");
+					return;
+				}
 				getActor().send({ type: "RESET" });
 				ctx.ui.notify("Web research state reset", "info");
 				return;

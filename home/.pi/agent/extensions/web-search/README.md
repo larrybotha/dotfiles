@@ -14,8 +14,9 @@ state ordering are enforced in code, not requested in a prompt. The model
 keeps the judgment calls — query formulation, which links to fetch, when
 results are sufficient — but can only act via legal machine events.
 
-- **Deterministic (machine-owned):** budgets, retry caps, dedupe, state
-  order, truncation, output format
+- **Deterministic (machine-owned):** budgets, retry caps (search + fetch
+  attempts), dedupe, state order, budget reservations (BEGIN holds budget,
+  DONE releases — concurrent calls cannot over-run), truncation, output format
 - **Judgment (model-owned, via legal events):** query wording, link
   selection, sufficiency
 - **IO (Docker executors):** Brave API, Readability → markdown; API key
@@ -66,6 +67,12 @@ Swap the backend by replacing `executors/` scripts; keep the contract.
 ## Machine
 
 `idle → researching → done`, with `RESET → idle` from researching/done.
+BEGIN_SEARCH/BEGIN_FETCH reserve budget (in-flight, never persisted — late
+DONEs on a restored actor clamp at 0); DONEs release it. Failed fetches count
+toward `fetchAttempts` (capped) — a dead link cannot be re-fetched forever.
+State-order legality is checked via `snap.can()` in every tool precheck
+(not context-only validators): after `web_report`, searches and fetches are
+rejected until `web_reset` — the machine is the single gate.
 Full control flow lives in `machine.ts`; paste the `createMachine({...})`
 config into [Stately Studio](https://stately.ai) to visualize, or watch the
 running machine live: `/websearch viz`.
@@ -83,6 +90,8 @@ opt-in (`/websearch footer`), off by default.
 - `WEB_SEARCH_MAX_SEARCHES` (default 5)
 - `WEB_SEARCH_MAX_SEARCH_ATTEMPTS` (default 8, failed searches don't consume search budget)
 - `WEB_SEARCH_MAX_FETCHES` (default 10)
+- `WEB_SEARCH_MAX_FETCH_ATTEMPTS` (default 8, failed fetches don't consume
+  fetch budget but are capped separately — bounded retries, real IO each)
 - `WEB_SEARCH_CONTENT_TRUNCATE` (default 5000 chars/page)
 - `WEB_SEARCH_SCRIPT_TIMEOUT_MS` (default 120000)
 - `WEB_SEARCH_EXEC_DIR` (default this extension's `executors/`)
