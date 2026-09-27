@@ -35,7 +35,7 @@ If `ctx.hasUI` is false (print/json mode), accept/decline require explicit confi
 
 State-machine enforced (same pattern as the `web-search`/`tmux` extensions):
 
-- `machine.ts` — XState machine owning registry legality: `pending` / `baselines` / `tracked` maps + event order. Guards reject duplicate `toolCallId` starts, orphan results (e.g. a `CLEAR` mid-flight), and orphan recomputes. Pure validators (`startViolation` / `commitViolation` / `recomputeViolation`) are shared between guards and executor prechecks — single source of truth.
+- `machine.ts` — XState machine owning registry legality: `pending` / `baselines` / `tracked` maps + event order. Guards reject duplicate `toolCallId` starts, orphan results (e.g. a `CLEAR` mid-flight), and orphan recomputes. Breaker: new-path tracking is rejected at `maxTracked` baselines (default 256, env `FILECHANGES_MAX_TRACKED`) — the registry cannot grow without bound; UNTRACK/CLEAR make room, BASELINE (restore replay) stays legal past the cap (replay tolerance). Pure validators (`startViolation` / `commitViolation` / `recomputeViolation` / `trackViolation`) are shared between guards and executor prechecks — single source of truth.
 - `index.ts` — thin executors: file IO, diffs (via pure helpers in `machine.ts`), session entries, UI. No map is mutated outside machine actions.
 - The session custom entries (`filechanges:baseline` / `clear` / `untrack`) are the persisted event log — rebuild on `session_start` / `session_tree` is event replay into a fresh actor, not snapshot restore.
 - `test.ts` — machine + validator tests only (no IO). Run: `node test.ts`.

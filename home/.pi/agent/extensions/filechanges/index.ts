@@ -30,6 +30,8 @@ import {
   patchFromBaseline,
   recomputeViolation,
   startViolation,
+  trackViolation,
+  DEFAULT_LIMITS,
   type Baseline,
   type FileChangesRegistry,
   type TrackedFile,
@@ -51,10 +53,12 @@ function debugLog(reason: string): void {
   }
 }
 
-// Capture guard: files that are not valid UTF-8 text or exceed the size cap
+// Capture guards: files that are not valid UTF-8 text or exceed the size cap
 // are NOT tracked — decline rewrites originalContent as utf-8, which would
 // permanently corrupt binary/latin-1 content, and oversized baselines bloat
 // the session log (append-only full-content entries). null = file missing.
+// The tracking cap (trackViolation) skips tracking new paths when the
+// registry is full — same silent skip, reason in the debug log.
 const MAX_BASELINE_BYTES = Number(
   process.env.FILECHANGES_MAX_BASELINE_BYTES ?? 1_048_576,
 );
@@ -176,14 +180,14 @@ export default function (pi: ExtensionAPI) {
 
   function getActor(): Actor<typeof fileChangesMachine> {
     if (!actor) {
-      actor = createActor(fileChangesMachine);
+      actor = createActor(fileChangesMachine, { input: { limits: DEFAULT_LIMITS } });
       actor.start();
     }
     return actor;
   }
 
   function resetActor(): Actor<typeof fileChangesMachine> {
-    actor = createActor(fileChangesMachine);
+    actor = createActor(fileChangesMachine, { input: { limits: DEFAULT_LIMITS } });
     actor.start();
     return actor;
   }
@@ -648,6 +652,11 @@ export default function (pi: ExtensionAPI) {
         return;
       }
       const { absPath, relPath } = normalizeToolPath(ctx.cwd, event.input.path);
+      const track = trackViolation(registry(), relPath);
+      if (track) {
+        debugLog(track);
+        return;
+      }
       const before = await readTextOrNull(absPath);
       if (before === "skip") {
         // capture guard: binary/oversized content — decline cannot revert it

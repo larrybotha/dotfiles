@@ -10,6 +10,8 @@ import {
   startViolation,
   commitViolation,
   recomputeViolation,
+  trackViolation,
+  DEFAULT_LIMITS,
   type FileChangesRegistry,
   type TrackedFile,
 } from "./machine.ts";
@@ -30,7 +32,7 @@ function ok(cond: boolean, name: string, detail?: unknown): void {
 type A = Actor<typeof fileChangesMachine>;
 
 function freshActor(): A {
-  const a = createActor(fileChangesMachine);
+  const a = createActor(fileChangesMachine, { input: { limits: DEFAULT_LIMITS } });
   a.start();
   return a;
 }
@@ -331,6 +333,42 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
   ok(typeof cv === "string" && cv.includes("ghost"), "commitViolation names the toolCallId");
   const rv = recomputeViolation(ctx(a), "ghost.ts");
   ok(typeof rv === "string" && rv.includes("ghost.ts"), "recomputeViolation names the path");
+}
+
+// 26. tracking cap breaker (maxTracked)
+{
+  const a = createActor(fileChangesMachine, { input: { limits: { maxTracked: 2 } } });
+  a.start();
+  start(a, "tc1", "a.ts", "A");
+  succeed(a, "tc1");
+  start(a, "tc2", "b.ts", "B");
+  succeed(a, "tc2");
+  ok(ctx(a).baselines.size === 2, "cap setup: two baselines recorded");
+  // new path rejected at cap — guard + precheck share the reason
+  start(a, "tc3", "c.ts", "C");
+  ok(!ctx(a).pending.has("tc3"), "cap: TOOL_CALL_STARTED for new path rejected");
+  ok(!ctx(a).baselines.has("c.ts") && ctx(a).baselines.size === 2, "cap: no new baseline");
+  const tv = trackViolation(ctx(a), "c.ts");
+  ok(
+    typeof tv === "string" && tv.includes("c.ts") && tv.includes("tracking cap reached"),
+    "trackViolation names path + cap",
+  );
+  // already-tracked path stays legal (re-edits do not grow the registry)
+  start(a, "tc4", "a.ts", "A2");
+  ok(ctx(a).pending.has("tc4"), "cap: tracked path re-edit stays legal");
+  succeed(a, "tc4");
+  ok(ctx(a).baselines.size === 2, "cap: re-edit does not grow registry");
+  // UNTRACK makes room; the freed slot admits a new path
+  a.send({ type: "UNTRACK", path: "a.ts" });
+  start(a, "tc5", "c.ts", "C");
+  ok(ctx(a).pending.has("tc5"), "cap: untrack frees room, new path legal");
+  succeed(a, "tc5");
+  ok(ctx(a).baselines.has("c.ts"), "cap: c.ts baselined after room freed");
+  // BASELINE (restore replay) stays legal past the cap — replay tolerance
+  baseline(a, "d.ts", "D");
+  baseline(a, "e.ts", "E");
+  baseline(a, "f.ts", "F");
+  ok(ctx(a).baselines.size === 5, "replay tolerance: BASELINE legal past cap");
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);
