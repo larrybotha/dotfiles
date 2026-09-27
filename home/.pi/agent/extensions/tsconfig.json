@@ -4,8 +4,19 @@
 		"module": "ESNext",
 		"moduleResolution": "bundler",
 		"strict": true,
+		"allowImportingTsExtensions": true,
 		"skipLibCheck": true,
 		"noEmit": true
 	},
-	"include": ["./*.ts"]
+	"include": [
+		"./*.ts",
+		"filechanges/*.ts",
+		"mermaid/*.ts",
+		"pi-typesafe/*.ts",
+		"web-browser/*.ts",
+		"web-search/*.ts",
+		"tmux/*.ts",
+		"tmux-delegate/*.ts",
+		"slide-deck/*.ts"
+	]
 }

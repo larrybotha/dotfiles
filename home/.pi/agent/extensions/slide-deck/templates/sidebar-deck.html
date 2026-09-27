@@ -1,0 +1,517 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>DECK_TITLE</title>
+<style>
+  :root {
+    --bg-deep: #0a0e17;
+    --bg-surface: #111827;
+    --bg-card: #1a2235;
+    --bg-card-hover: #1f2a40;
+    --bg-code: #0d1321;
+    --border: #2a3548;
+    --border-accent: #3b82f6;
+    --text-primary: #e2e8f0;
+    --text-secondary: #94a3b8;
+    --text-dim: #64748b;
+    --accent-blue: #60a5fa;
+    --accent-purple: #a78bfa;
+    --accent-green: #34d399;
+    --accent-orange: #fb923c;
+    --accent-pink: #f472b6;
+    --accent-red: #f87171;
+    --accent-yellow: #fbbf24;
+    --accent-cyan: #22d3ee;
+    --accent-indigo: #818cf8;
+    --sidebar-width: 320px;
+    --transition: 0.2s ease;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+    background: var(--bg-deep);
+    color: var(--text-primary);
+    line-height: 1.6;
+    overflow: hidden;
+    height: 100vh;
+  }
+
+  /* ===== SIDEBAR ===== */
+  .sidebar {
+    position: fixed;
+    left: 0; top: 0; bottom: 0;
+    width: var(--sidebar-width);
+    background: var(--bg-surface);
+    border-right: 1px solid var(--border);
+    display: flex;
+    flex-direction: column;
+    z-index: 100;
+  }
+
+  .sidebar-header {
+    padding: 24px 20px 16px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .sidebar-header h1 {
+    font-size: 20px;
+    font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+  }
+
+  .sidebar-header p {
+    font-size: 12px;
+    color: var(--text-dim);
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  .search-box {
+    padding: 12px 20px;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .search-box input {
+    width: 100%;
+    padding: 8px 12px;
+    background: var(--bg-deep);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    color: var(--text-primary);
+    font-size: 13px;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    outline: none;
+    transition: border-color var(--transition);
+  }
+
+  .search-box input:focus { border-color: var(--accent-blue); }
+  .search-box input::placeholder { color: var(--text-dim); }
+
+  .nav-list {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 12px;
+  }
+
+  .nav-list::-webkit-scrollbar { width: 4px; }
+  .nav-list::-webkit-scrollbar-track { background: transparent; }
+  .nav-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .nav-category { margin-bottom: 8px; }
+
+  .nav-category-label {
+    font-size: 10px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 1.2px;
+    color: var(--text-dim);
+    padding: 8px 8px 4px;
+  }
+
+  .nav-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 7px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all var(--transition);
+    font-size: 13px;
+    color: var(--text-secondary);
+    border: 1px solid transparent;
+  }
+
+  .nav-item:hover { background: var(--bg-card); color: var(--text-primary); }
+
+  .nav-item.active {
+    background: var(--bg-card-hover);
+    color: var(--text-primary);
+    border-color: var(--border-accent);
+  }
+
+  .nav-item .icon { font-size: 14px; width: 22px; text-align: center; flex-shrink: 0; }
+  .nav-item .label { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+  .nav-item .badge {
+    font-size: 9px;
+    padding: 2px 6px;
+    border-radius: 10px;
+    font-weight: 600;
+    flex-shrink: 0;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+  }
+
+  /* ===== TAG COLORS ===== */
+  .tag-safety { background: #3f1e1e; color: var(--accent-red); }
+  .tag-tool { background: #1e3f2e; color: var(--accent-green); }
+  .tag-ui { background: #2e1e3f; color: var(--accent-purple); }
+  .tag-command { background: #3f2e1e; color: var(--accent-orange); }
+  .tag-system { background: #1e3f3f; color: var(--accent-cyan); }
+  .tag-git { background: #2e3f1e; color: var(--accent-yellow); }
+  .tag-prompt { background: #3f1e3a; color: var(--accent-pink); }
+  .tag-session { background: #1e2e3f; color: var(--accent-indigo); }
+  .tag-game { background: #3f3a1e; color: var(--accent-yellow); }
+  .tag-provider { background: #3f2e1e; color: var(--accent-orange); }
+  .tag-render { background: #2e1e3f; color: var(--accent-purple); }
+
+  /* ===== MAIN CONTENT ===== */
+  .main {
+    margin-left: var(--sidebar-width);
+    height: 100vh;
+    overflow-y: auto;
+    scroll-behavior: smooth;
+  }
+
+  .main::-webkit-scrollbar { width: 6px; }
+  .main::-webkit-scrollbar-track { background: var(--bg-deep); }
+  .main::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+
+  .slide {
+    min-height: 100vh;
+    padding: 60px 80px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .slide:last-child { border-bottom: none; }
+
+  /* Title slide */
+  .slide-title-page { align-items: center; text-align: center; }
+  .slide-title-page .hero-icon { font-size: 80px; margin-bottom: 24px; }
+  .slide-title-page h2 {
+    font-size: 48px; font-weight: 700;
+    background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple), var(--accent-pink));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;
+    margin-bottom: 16px;
+  }
+  .slide-title-page .subtitle { font-size: 20px; color: var(--text-secondary); max-width: 600px; margin: 0 auto; }
+
+  /* Section headers */
+  .slide h2 { font-size: 32px; font-weight: 700; margin-bottom: 8px; line-height: 1.2; }
+  .slide h2 .ext-name { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; color: var(--accent-blue); }
+
+  .slide .ext-tag {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 4px;
+    font-size: 11px;
+    font-weight: 600;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    margin-left: 8px;
+    vertical-align: middle;
+    position: relative;
+    top: -2px;
+  }
+
+  .slide h3 { font-size: 15px; color: var(--text-dim); font-weight: 400; margin-bottom: 32px; font-style: italic; }
+
+  .slide .description {
+    font-size: 16px; color: var(--text-secondary);
+    max-width: 680px; margin-bottom: 32px; line-height: 1.7;
+  }
+  .slide .description strong { color: var(--text-primary); }
+
+  .slide code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: var(--bg-code);
+    padding: 1px 6px;
+    border-radius: 3px;
+    font-size: 13px;
+    color: var(--accent-green);
+  }
+
+  /* Feature grid */
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 16px;
+    margin-bottom: 32px;
+  }
+
+  .feature-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px;
+    transition: border-color var(--transition);
+  }
+  .feature-card:hover { border-color: var(--accent-blue); }
+  .feature-card .icon { font-size: 24px; margin-bottom: 8px; }
+  .feature-card h4 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-bottom: 4px; }
+  .feature-card p { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+
+  /* Code blocks */
+  .code-block {
+    background: var(--bg-code);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+
+  .code-block-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 8px 16px;
+    background: var(--bg-card);
+    border-bottom: 1px solid var(--border);
+  }
+  .code-block-header .label {
+    font-size: 11px; font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    color: var(--text-dim); font-weight: 600;
+    text-transform: uppercase; letter-spacing: 0.5px;
+  }
+  .code-block-header .lang {
+    font-size: 10px; font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    color: var(--accent-green); background: #1e3f2e;
+    padding: 2px 8px; border-radius: 3px;
+  }
+
+  .code-block pre {
+    padding: 16px; overflow-x: auto;
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    font-size: 13px; line-height: 1.6; color: var(--text-secondary);
+  }
+
+  /* Prompts / Example Usage */
+  .prompts { margin-bottom: 32px; }
+  .prompts h4 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--accent-orange); font-weight: 600; margin-bottom: 12px;
+  }
+  .prompt-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 16px; background: var(--bg-card);
+    border: 1px solid var(--border); border-radius: 6px;
+    margin-bottom: 8px; transition: border-color var(--transition);
+  }
+  .prompt-item:hover { border-color: var(--accent-orange); }
+  .prompt-item .prompt-icon { font-size: 14px; color: var(--accent-orange); flex-shrink: 0; margin-top: 2px; }
+  .prompt-item code { font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 13px; color: var(--accent-green); }
+  .prompt-item .prompt-desc { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+
+  /* Key points */
+  .key-points {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin-bottom: 32px;
+  }
+  .key-point {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 12px; background: var(--bg-surface); border-radius: 6px;
+  }
+  .key-point .point-icon { font-size: 16px; flex-shrink: 0; }
+  .key-point .point-text { font-size: 13px; color: var(--text-secondary); line-height: 1.5; }
+  .key-point .point-text strong { color: var(--text-primary); }
+
+  /* Usage steps */
+  .usage { margin-bottom: 32px; }
+  .usage h4 {
+    font-size: 12px; text-transform: uppercase; letter-spacing: 1px;
+    color: var(--accent-cyan); font-weight: 600; margin-bottom: 12px;
+  }
+  .usage-step {
+    display: flex; align-items: center; gap: 12px;
+    padding: 10px 16px; background: var(--bg-surface); border-radius: 6px;
+    margin-bottom: 8px;
+  }
+  .usage-step .step-num {
+    width: 24px; height: 24px; border-radius: 50%;
+    background: var(--bg-card-hover); display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; color: var(--accent-blue); flex-shrink: 0;
+  }
+  .usage-step .step-content { font-size: 13px; color: var(--text-secondary); }
+  .usage-step code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
+    background: var(--bg-code); padding: 1px 6px; border-radius: 3px;
+    font-size: 12px; color: var(--accent-green);
+  }
+
+  /* Comparison table */
+  .comparison-table { width: 100%; border-collapse: collapse; margin-bottom: 24px; font-size: 13px; }
+  .comparison-table th {
+    text-align: left; padding: 8px 12px; border-bottom: 2px solid var(--border);
+    font-weight: 600; color: var(--text-dim); font-size: 11px;
+    text-transform: uppercase; letter-spacing: 1px;
+  }
+  .comparison-table td {
+    padding: 8px 12px; border-bottom: 1px solid var(--border); color: var(--text-secondary);
+  }
+  .comparison-table tr:hover td { background: var(--bg-card); }
+  .comparison-table code {
+    font-family: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace; font-size: 12px;
+    color: var(--accent-green); background: var(--bg-code);
+    padding: 1px 4px; border-radius: 2px;
+  }
+
+  /* Sources */
+  .sources {
+    margin-bottom: 24px;
+  }
+  .sources h4 {
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--accent-blue);
+    font-weight: 600;
+    margin-bottom: 8px;
+  }
+  .sources ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+  .sources li {
+    padding: 4px 0;
+  }
+  .sources a {
+    color: var(--accent-blue);
+    text-decoration: none;
+    font-size: 13px;
+  }
+  .sources a:hover {
+    text-decoration: underline;
+  }
+
+  /* Responsive */
+  @media (max-width: 1024px) {
+    :root { --sidebar-width: 48px; }
+    .sidebar-header, .nav-category-label, .nav-item .label, .nav-item .badge, .search-box { display: none; }
+    .nav-item { justify-content: center; padding: 10px; }
+    .slide { padding: 40px 32px; }
+    .key-points { grid-template-columns: 1fr; }
+  }
+  @media (max-width: 768px) {
+    .sidebar { transform: translateX(-100%); }
+    .main { margin-left: 0; }
+    .slide { padding: 32px 20px; }
+  }
+
+  @keyframes borderPulse {
+    0%, 100% { border-color: var(--border-accent); }
+    50% { border-color: var(--accent-purple); }
+  }
+  .nav-item.active { animation: borderPulse 3s ease infinite; }
+</style>
+</head>
+<body>
+
+<!-- ===== SIDEBAR ===== -->
+<nav class="sidebar">
+  <div class="sidebar-header">
+    <h1>DECK_TITLE</h1>
+    <p>DECK_SUBTITLE</p>
+  </div>
+  <div class="search-box">
+    <input type="text" placeholder="Filter..." id="searchInput" oninput="filterNav()" />
+  </div>
+  <div class="nav-list" id="navList">
+
+    <!-- CATEGORY TEMPLATE:
+    <div class="nav-category" data-cat="CATEGORY_SLUG">
+      <div class="nav-category-label">Category Name</div>
+      <a class="nav-item" data-slide="SLIDE_ID" onclick="goToSlide('SLIDE_ID')">
+        <span class="icon">ICON</span>
+        <span class="label">Item Name</span>
+        <span class="badge tag-TAG">tag</span>
+      </a>
+    </div>
+    -->
+
+  </div>
+</nav>
+
+<!-- ===== MAIN CONTENT ===== -->
+<div class="main" id="mainContent">
+
+  <!-- SLIDE TEMPLATE:
+  <div class="slide" id="slide-SLUG">
+    <h2>ICON <span class="ext-name">name</span></h2>
+    <h3>One-line subtitle</h3>
+    <span class="ext-tag tag-CATEGORY">category</span>
+
+    <div class="description">
+      Paragraph explaining <strong>what it is</strong> and why it matters.
+    </div>
+
+    <div class="prompts">
+      <h4>Example Usage</h4>
+      <div class="prompt-item">
+        <span class="prompt-icon">🤖</span>
+        <div>
+          <code>command or prompt</code>
+          <div class="prompt-desc">What happens</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="key-points">
+      <div class="key-point">
+        <span class="point-icon">💡</span>
+        <div class="point-text"><strong>Key concept</strong>: explanation</div>
+      </div>
+    </div>
+
+    <div class="code-block">
+      <div class="code-block-header">
+        <span class="label">Title</span>
+        <span class="lang">typescript</span>
+      </div>
+      <pre><code>code here</code></pre>
+    </div>
+
+    <div class="sources">
+      <h4>Sources</h4>
+      <ul>
+        <li><a href="https://example.com/docs">Official Documentation</a></li>
+      </ul>
+    </div>
+  </div>
+  -->
+
+</div>
+
+<script>
+function goToSlide(slideId) {
+  const el = document.getElementById('slide-' + slideId);
+  if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+  const navItem = document.querySelector(`.nav-item[data-slide="${slideId}"]`);
+  if (navItem) navItem.classList.add('active');
+}
+
+function filterNav() {
+  const query = document.getElementById('searchInput').value.toLowerCase();
+  document.querySelectorAll('.nav-item').forEach(item => {
+    const label = item.querySelector('.label')?.textContent?.toLowerCase() || '';
+    item.style.display = label.includes(query) ? '' : 'none';
+  });
+  document.querySelectorAll('.nav-category').forEach(cat => {
+    const hasVisible = Array.from(cat.querySelectorAll('.nav-item')).some(item => item.style.display !== 'none');
+    cat.style.display = hasVisible ? '' : 'none';
+  });
+}
+
+const observer = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const slideId = entry.target.id.replace('slide-', '');
+      document.querySelectorAll('.nav-item').forEach(item => item.classList.remove('active'));
+      const navItem = document.querySelector(`.nav-item[data-slide="${slideId}"]`);
+      if (navItem) navItem.classList.add('active');
+    }
+  });
+}, { threshold: 0.5, rootMargin: '-20% 0px -50% 0px' });
+
+document.querySelectorAll('.slide').forEach(slide => observer.observe(slide));
+</script>
+
+</body>
+</html>
