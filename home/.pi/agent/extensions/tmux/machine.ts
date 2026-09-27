@@ -3,6 +3,15 @@
 // prechecks (single source of truth). No IO here — executors own IO, tools
 // embed probe evidence in events. empty/active discriminate legality for
 // nothing; value = inspector + single mutation path, not state gating.
+//
+// Owner isolation: context.owner = this pi instance's pid ("" = unidentified,
+// isolation off); entries carry the creating pi's pid (null = orphan/untagged).
+// KILL legality (validateKill, shared guard + tool precheck) rejects sessions
+// owned by another live pi — cross-instance kill protection on the shared
+// pi.sock. Dead is sticky to stale events: PROMPT_SEEN/PROMPT_TIMEOUT are
+// legal only from waiting_prompt — dead/failed entries are never resurrected
+// by late tool results. RECONCILE alone may correct dead→ready, on fresh
+// probe evidence (ground truth beats a misjudged prompt-wait).
 
 import { setup, assign } from "xstate";
 
@@ -16,6 +25,7 @@ export interface SessionEntry {
   status: SessionStatus;
   waitAttempts: number; // tmux_wait timeouts; reset by WAIT_MATCHED
   monitor: boolean; // keep alive across pi quit (/tmux monitor <id>)
+  owner: string | null; // creating pi's pid (PI_OWNER session env); null = orphan/untagged
 }
 
 export interface RegistryLimits {
@@ -27,10 +37,12 @@ export interface RegistryLimits {
 export interface RegistryContext {
   sessions: SessionEntry[];
   limits: RegistryLimits;
+  owner: string; // this pi instance's pid ("" = unidentified, isolation off)
 }
 
 export interface MachineInput {
   limits?: RegistryLimits;
+  owner?: string;
 }
 
 function num(env: string, fallback: number): number {
@@ -56,9 +68,9 @@ export type TmuxEvent =
   | { type: "SEND"; id: string; text: string; live: boolean }
   | { type: "WAIT_MATCHED"; id: string; regex: string }
   | { type: "WAIT_TIMEOUT"; id: string; regex: string }
-  | { type: "KILL"; id: string }
+  | { type: "KILL"; id: string; foreignLive?: boolean }
   | { type: "MONITOR_TOGGLE"; id: string }
-  | { type: "RECONCILE"; live: { name: string }[] };
+  | { type: "RECONCILE"; live: { name: string; owner?: string; ownerAlive?: boolean }[] };
 
 // normalize restored entries defensively — snapshots are our own details shape,
 // but older snapshots may lack newer fields
@@ -71,6 +83,7 @@ function normalizeEntry(e: Partial<SessionEntry> & { id: string }): SessionEntry
     status: e.status ?? "ready",
     waitAttempts: typeof e.waitAttempts === "number" ? e.waitAttempts : 0,
     monitor: e.monitor === true,
+    owner: typeof e.owner === "string" && e.owner !== "" ? e.owner : null,
   };
 }
 
@@ -142,6 +155,36 @@ export function validateKnown(ctx: RegistryContext, id: string): Validation<Sess
   return { ok: true, value: entry };
 }
 
+/** Kill legality: own + orphaned sessions only. foreignLive = probe evidence
+ *  that the entry is owned by another *running* pi (owner pid alive). Dead
+ *  entries are always killable (registry hygiene). ctx.owner "" = unidentified
+ *  actor (tests/legacy) — isolation off. */
+export function validateKill(
+  ctx: RegistryContext,
+  id: string,
+  foreignLive: boolean,
+): Validation<SessionEntry> {
+  const entry = findSession(ctx, id);
+  if (!entry) {
+    return { ok: false, reason: unknownReason(ctx, id) };
+  }
+  if (
+    foreignLive &&
+    ctx.owner !== "" &&
+    entry.owner !== null &&
+    entry.owner !== ctx.owner &&
+    entry.status !== "dead"
+  ) {
+    return {
+      ok: false,
+      reason:
+        `session "${id}" is owned by another live pi (owner pid ${entry.owner}) — not this session's to kill. ` +
+        `Kill it from its owning session, or manually: tmux kill-session -t =${id} (socket path in tmux_status monitor lines)`,
+    };
+  }
+  return { ok: true, value: entry };
+}
+
 function unknownReason(ctx: RegistryContext, id: string): string {
   const live = liveNames(ctx);
   const peers = live.length > 0 ? live.join(", ") : "none";
@@ -149,7 +192,11 @@ function unknownReason(ctx: RegistryContext, id: string): string {
 }
 
 // readable drift between registry snapshots (reconcile reporting)
-export function driftReport(before: SessionEntry[], after: SessionEntry[]): string[] {
+export function driftReport(
+  before: SessionEntry[],
+  after: SessionEntry[],
+  selfOwner?: string,
+): string[] {
   const report: string[] = [];
   for (const b of before) {
     const a = after.find((s) => s.id === b.id);
@@ -157,11 +204,17 @@ export function driftReport(before: SessionEntry[], after: SessionEntry[]): stri
       report.push(`"${b.id}" unregistered`);
     } else if (a.status === "dead" && b.status !== "dead") {
       report.push(`"${b.id}" found dead (was ${b.status})`);
+    } else if (b.status === "dead" && a.status !== "dead") {
+      report.push(`"${b.id}" recovered (probe live, was dead)`);
     }
   }
   for (const a of after) {
     if (a.tool === "?" && !before.find((s) => s.id === a.id)) {
-      report.push(`"${a.id}" adopted (live pi-* stray)`);
+      const foreign =
+        selfOwner !== undefined && selfOwner !== "" && a.owner !== null && a.owner !== selfOwner;
+      report.push(
+        `"${a.id}" adopted (live pi-* stray${foreign ? `, foreign owner pid ${a.owner}` : ""})`,
+      );
     }
   }
   return report;
@@ -193,6 +246,14 @@ export const tmuxMachine = setup({
     idUnique: ({ context, event }) =>
       event.type === "SESSION_STARTED" && validateRegister(context, event.id).ok,
     known: ({ context, event }) => "id" in event && !!findSession(context, event.id),
+    killLegal: ({ context, event }) =>
+      event.type === "KILL" && validateKill(context, event.id, event.foreignLive === true).ok,
+    // sticky dead/failed: prompt transitions only from waiting_prompt
+    waiting: ({ context, event }) => {
+      if (!("id" in event)) return false;
+      const entry = findSession(context, event.id);
+      return !!entry && entry.status === "waiting_prompt";
+    },
     sendLegal: ({ context, event }) =>
       event.type === "SEND" && validateSend(context, event.id, event.live).ok,
     noSessions: ({ context }) => context.sessions.length === 0,
@@ -231,6 +292,7 @@ export const tmuxMachine = setup({
             status: event.promptRegex ? "waiting_prompt" : "ready",
             waitAttempts: 0,
             monitor: false,
+            owner: context.owner || null,
           },
         ];
       },
@@ -264,9 +326,18 @@ export const tmuxMachine = setup({
       sessions: ({ context, event }) => {
         if (event.type !== "RECONCILE") return context.sessions;
         const live = new Set(event.live.map((l) => l.name));
-        const marked = context.sessions.map((s) =>
-          s.status !== "dead" && !live.has(s.id) ? { ...s, status: "dead" as SessionStatus } : s,
-        );
+        // probe is ground truth both ways: not-live → dead, and dead-but-live
+        // → ready (recovery from a misjudged prompt-wait — stale tool events
+        // cannot flip statuses; only fresh probe evidence can)
+        const marked = context.sessions.map((s) => {
+          if (s.status !== "dead" && !live.has(s.id)) {
+            return { ...s, status: "dead" as SessionStatus };
+          }
+          if (s.status === "dead" && live.has(s.id)) {
+            return { ...s, status: "ready" as SessionStatus };
+          }
+          return s;
+        });
         const adopted: SessionEntry[] = event.live
           .filter((l) => !marked.find((s) => s.id === l.name))
           .map((l) => ({
@@ -277,6 +348,7 @@ export const tmuxMachine = setup({
             status: "ready",
             waitAttempts: 0,
             monitor: false,
+            owner: l.owner || null,
           }));
         return [...marked, ...adopted];
       },
@@ -287,6 +359,7 @@ export const tmuxMachine = setup({
   context: ({ input }) => ({
     sessions: [],
     limits: input?.limits ?? DEFAULT_LIMITS,
+    owner: input?.owner ?? "",
   }),
   initial: "empty",
   states: {
@@ -306,13 +379,13 @@ export const tmuxMachine = setup({
       on: {
         SESSION_START: { guard: "startUnderCap" },
         SESSION_STARTED: { guard: "idUnique", actions: "registerSession" },
-        PROMPT_SEEN: { guard: "known", actions: "markReady" },
-        PROMPT_TIMEOUT: { guard: "known", actions: "markFailed" },
+        PROMPT_SEEN: { guard: "waiting", actions: "markReady" },
+        PROMPT_TIMEOUT: { guard: "waiting", actions: "markFailed" },
         SESSION_DEAD: { guard: "known", actions: "markDead" },
         SEND: { guard: "sendLegal" },
         WAIT_MATCHED: { guard: "known", actions: "resetWaits" },
         WAIT_TIMEOUT: { guard: "known", actions: "bumpWaits" },
-        KILL: { guard: "known", actions: "unregister" },
+        KILL: { guard: "killLegal", actions: "unregister" },
         MONITOR_TOGGLE: { guard: "known", actions: "toggleMonitor" },
         RECONCILE: { actions: "reconcile" },
       },

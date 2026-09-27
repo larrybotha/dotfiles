@@ -4,8 +4,12 @@
  * Machine owns legality (registry, caps, dead-marking); model owns judgment
  * (what to send, which regex, when output looks done). Executors own IO:
  * JSON out, exit 0, failure-as-data. Probe evidence rides events; guards
- * backstop. Extension owns one socket (pi.sock) + pi- prefix; foreign
- * sessions never touched.
+ * backstop. Extension owns one socket (pi.sock) + pi- prefix; user sessions
+ * on it are never touched. Cross-instance isolation: each session carries
+ * PI_OWNER (creating pi's pid); tmux_kill, /tmux kill --all and quit-kill
+ * touch only own + orphaned sessions — sessions owned by another live pi
+ * are rejected/skipped. Executors anchor exact tmux targets (=name — no
+ * prefix matching, no wrong-session kills).
  *
  * Tools: tmux_start, tmux_send, tmux_wait, tmux_capture, tmux_kill, tmux_status
  * Command: /tmux status | kill --all | footer | viz [off]
@@ -35,6 +39,7 @@ import {
 	findSession,
 	liveNames,
 	validateKnown,
+	validateKill,
 	validateRegister,
 	validateSend,
 	validateStart,
@@ -71,7 +76,7 @@ function restoreFromBranch(ctx: ExtensionContext): void {
 	const reg = lastRegistryFromBranch(ctx);
 	const old = actor;
 	const options = {
-		input: { limits: reg ? reg.limits : DEFAULT_LIMITS },
+		input: { limits: reg ? reg.limits : DEFAULT_LIMITS, owner: OWNER },
 		...viz.option(),
 	};
 	actor = createActor(tmuxMachine, options);
@@ -80,17 +85,18 @@ function restoreFromBranch(ctx: ExtensionContext): void {
 	old?.stop();
 }
 
-/** Probe pi.sock + RECONCILE: mark registered-but-dead (readable drift,
- *  never resurrected), adopt live pi-* strays (crash recovery). */
+/** Probe pi.sock + RECONCILE: mark registered-but-dead, recover
+ *  dead-marked-but-live (probe is ground truth both ways), adopt live pi-*
+ *  strays (crash recovery). */
 async function reconcileFromProbe(ctx: ExtensionContext): Promise<void> {
-	const { names, error } = await probeLive();
+	const { peers, error } = await probeLive();
 	if (error) {
 		if (ctx.hasUI) ctx.ui.notify(`tmux probe failed: ${error}`, "warning");
 		return;
 	}
 	const before = registry().sessions;
-	send({ type: "RECONCILE", live: ownSessions(names).map((name) => ({ name })) });
-	const drift = driftReport(before, registry().sessions);
+	send({ type: "RECONCILE", live: ownSessions(peers) });
+	const drift = driftReport(before, registry().sessions, registry().owner);
 	if (drift.length > 0 && ctx.hasUI) {
 		ctx.ui.notify(`tmux reconcile: ${drift.join("; ")}`, "info");
 	}
@@ -109,6 +115,10 @@ const SOCKET_DIR =
 const SOCKET_PATH = path.join(SOCKET_DIR, "pi.sock");
 const PREFIX = "pi-";
 
+/** This pi instance's identity for session ownership (PI_OWNER session env).
+ *  Cross-instance kill isolation on the shared pi.sock. */
+const OWNER = String(process.pid);
+
 function envNum(name: string, fallback: number): number {
 	const v = process.env[name];
 	if (v === undefined || v === "") return fallback;
@@ -126,8 +136,16 @@ const FOOTER_INTERVAL_MS = 5000;
 // executors
 // ---------------------------------------------------------------------------
 
+/** Probe evidence per live session: owner = creating pi's pid ("" = untagged,
+ *  legacy/pre-owner sessions); ownerAlive = that pid is running. */
+interface ProbeSession {
+	name: string;
+	owner: string;
+	ownerAlive: boolean;
+}
+
 type ExecResult =
-	| { sessions: string[] }
+	| { sessions: ProbeSession[] }
 	| { socket: string; name: string }
 	| { matched: boolean; lastPane: string }
 	| { text: string }
@@ -144,6 +162,7 @@ async function runExecutor(
 		const { stdout } = await execFileP(path.join(EXECUTORS_DIR, script), args, {
 			timeout: timeoutMs,
 			maxBuffer: 4 * 1024 * 1024,
+			env: { ...process.env, PI_OWNER: OWNER },
 		});
 		const parsed = JSON.parse(stdout.trim());
 		if (parsed && typeof parsed === "object") return parsed as ExecResult;
@@ -156,16 +175,32 @@ async function runExecutor(
 	}
 }
 
-/** Probe live sessions on pi.sock. Names include everything on the socket —
- *  callers filter to the pi- prefix (own prefix, own socket only). */
-async function probeLive(): Promise<{ names: string[]; error?: string }> {
-	const r = await runExecutor("sessions.sh", [], 5000);
-	if ("sessions" in r) return { names: r.sessions };
-	return { names: [], error: r.error };
+/** Readable error from an executor result — non-error variants mean unexpected output. */
+function execError(r: ExecResult): string {
+	return "error" in r && r.error ? r.error : "unexpected executor output";
 }
 
-function ownSessions(names: string[]): string[] {
-	return names.filter((n) => n.startsWith(PREFIX));
+/** Probe live sessions on pi.sock with owner evidence (probe.sh — sessions.sh
+ *  stays the legacy string contract for in-memory older instances). Names
+ *  include everything on the socket — callers filter to the pi- prefix. */
+async function probeLive(): Promise<{ peers: ProbeSession[]; error?: string }> {
+	const r = await runExecutor("probe.sh", [], 5000);
+	if ("sessions" in r) return { peers: r.sessions };
+	return { peers: [], error: execError(r) };
+}
+
+function ownSessions(peers: ProbeSession[]): ProbeSession[] {
+	return peers.filter((p) => p.name.startsWith(PREFIX));
+}
+
+/** pi-* peer names (probe evidence -> plain names). */
+function peerNames(peers: ProbeSession[]): string[] {
+	return ownSessions(peers).map((p) => p.name);
+}
+
+/** Foreign-live: owned by another running pi — not this session's to kill. */
+function isForeignLive(p: ProbeSession): boolean {
+	return p.owner !== "" && p.owner !== OWNER && p.ownerAlive;
 }
 
 // ---------------------------------------------------------------------------
@@ -176,14 +211,16 @@ let actor: Actor<typeof tmuxMachine> | null = null;
 
 function getActor(): Actor<typeof tmuxMachine> {
 	if (!actor) {
-		actor = createActor(tmuxMachine, { input: { limits: DEFAULT_LIMITS } });
+		actor = createActor(tmuxMachine, { input: { limits: DEFAULT_LIMITS, owner: OWNER } });
 		actor.start();
 	}
 	return actor;
 }
 
 function registry(): RegistryContext {
-	return actor ? actor.getSnapshot().context : { sessions: [], limits: DEFAULT_LIMITS };
+	return actor
+		? actor.getSnapshot().context
+		: { sessions: [], limits: DEFAULT_LIMITS, owner: OWNER };
 }
 
 function send(event: TmuxEvent): void {
@@ -217,7 +254,7 @@ function rej(action: string, reason: string): ToolResult {
 }
 
 function monitorCmd(id: string): string {
-	return `tmux -S ${SOCKET_PATH} attach -t ${id}`;
+	return `tmux -S ${SOCKET_PATH} attach -t =${id}`;
 }
 
 function lastLines(s: string, n = 15): string {
@@ -256,7 +293,7 @@ function rewireActor(): void {
 	const snapshot = actor ? actor.getPersistedSnapshot() : undefined;
 	const old = actor;
 	actor = createActor(tmuxMachine, {
-		...(snapshot ? { snapshot } : { input: { limits: DEFAULT_LIMITS } }),
+		...(snapshot ? { snapshot } : { input: { limits: DEFAULT_LIMITS, owner: OWNER } }),
 		...viz.option(),
 	} as never);
 	actor.start();
@@ -286,8 +323,8 @@ let footerTimer: ReturnType<typeof setInterval> | null = null;
 
 async function updateFooter(ctx: ExtensionContext): Promise<void> {
 	if (!ctx.hasUI) return;
-	const { names } = await probeLive();
-	const live = ownSessions(names);
+	const { peers } = await probeLive();
+	const live = peerNames(peers);
 	const reg = registry().sessions;
 	if (live.length === 0) {
 		ctx.ui.setStatus("tmux", undefined);
@@ -331,14 +368,14 @@ function formatEntry(s: SessionEntry): string {
 
 async function buildStatus(): Promise<{ text: string; error?: string }> {
 	const a = getActor();
-	const { names, error: probeError } = await probeLive();
+	const { peers, error: probeError } = await probeLive();
 	if (probeError) {
 		return { text: `probe failed: ${probeError}`, error: probeError };
 	}
 	const before = registry().sessions;
-	send({ type: "RECONCILE", live: ownSessions(names).map((name) => ({ name })) });
+	send({ type: "RECONCILE", live: ownSessions(peers) });
 	const after = registry().sessions;
-	const drift = driftReport(before, after);
+	const drift = driftReport(before, after, registry().owner);
 
 	const lines: string[] = [];
 	lines.push(`registry (${after.length} registered, live cap ${registry().limits.maxSessions}):`);
@@ -350,7 +387,14 @@ async function buildStatus(): Promise<{ text: string; error?: string }> {
 		lines.push("drift:");
 		for (const d of drift) lines.push(`  ${d}`);
 	}
-	lines.push(`live on pi.sock: ${ownSessions(names).join(", ") || "none"}`);
+	const piPeers = ownSessions(peers);
+	lines.push(`live on pi.sock: ${piPeers.map((p) => p.name).join(", ") || "none"}`);
+	const foreign = piPeers.filter(isForeignLive);
+	if (foreign.length > 0) {
+		lines.push(
+			`foreign (owned by other live pi): ${foreign.map((p) => `${p.name} (pid ${p.owner})`).join(", ")} — protected from kill`,
+		);
+	}
 	lines.push("monitor:");
 	for (const s of after.filter((e) => e.status !== "dead")) {
 		lines.push(`  ${s.id}: ${monitorCmd(s.id)}`);
@@ -375,7 +419,8 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 			"Use tmux_send / tmux_wait / tmux_capture to drive it.",
 		parameters: Type.Object({
 			tool: Type.String({
-				description: "tool name for the session id, e.g. python, gdb (session: pi-<tool>-<n>)",
+				description:
+					"tool name for the session id, e.g. python, gdb (session id: pi-<tool>, then pi-<tool>-2, -3, ...)", 
 			}),
 			cmd: Type.String({ description: "command line to run, e.g. python3 or gdb ./a.out" }),
 			prompt_regex: Type.Optional(
@@ -389,9 +434,9 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 
 		async execute(_toolCallId, params, signal, onUpdate): Promise<ToolResult> {
 			const a = getActor();
-			const { names, error: probeError } = await probeLive();
+			const { peers, error: probeError } = await probeLive();
 			if (probeError) return rej("tmux_start", `probe failed: ${probeError}`);
-			const live = ownSessions(names);
+			const live = peerNames(peers);
 
 			const start = validateStart(registry(), live.length);
 			if (!start.ok) {
@@ -454,7 +499,7 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 					send({ type: "SESSION_DEAD", id });
 					return rej(
 						"tmux_start",
-						`session ${id} died while waiting for prompt: ${w.error}\nlast pane:\n${lastLines(lastPane) || "(empty)"}`,
+						`session ${id} died while waiting for prompt: ${execError(w)}\nlast pane:\n${lastLines(lastPane) || "(empty)"}`,
 					);
 				}
 			}
@@ -486,15 +531,17 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 			"(note the \\n\\n): without it the block stays open and the next send lands inside it as a SyntaxError. " +
 			"After sending, tmux_wait for the prompt (^>>> ) before the next send.",
 		parameters: Type.Object({
-			target: Type.String({ description: "session id, e.g. pi-python-1 (see tmux_status)" }),
+			target: Type.String({
+				description: "exact session id from tmux_status (first session is pi-<tool>, later ones pi-<tool>-n)",
+			}),
 			text: Type.String({ description: "text to send" }),
 		}),
 		executionMode: "sequential",
 
 		async execute(_toolCallId, params): Promise<ToolResult> {
-			const { names, error: probeError } = await probeLive();
+			const { peers, error: probeError } = await probeLive();
 			if (probeError) return rej("tmux_send", `probe failed: ${probeError}`);
-			const isLive = ownSessions(names).includes(params.target);
+			const isLive = peerNames(peers).includes(params.target);
 
 			const v = validateSend(registry(), params.target, isLive);
 			if (!v.ok) {
@@ -566,7 +613,7 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 				);
 			}
 			send({ type: "SESSION_DEAD", id: params.target });
-			return rej("tmux_wait", `wait on ${params.target} failed: ${r.error}`);
+			return rej("tmux_wait", `wait on ${params.target} failed: ${execError(r)}`);
 		},
 
 		renderCall(args, theme) {
@@ -607,7 +654,7 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 			);
 			if ("text" in r) return ok("tmux_capture", r.text);
 			send({ type: "SESSION_DEAD", id: params.target });
-			return rej("tmux_capture", `capture of ${params.target} failed: ${r.error}`);
+			return rej("tmux_capture", `capture of ${params.target} failed: ${execError(r)}`);
 		},
 
 		renderCall(args, theme) {
@@ -626,20 +673,28 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 		name: "tmux_kill",
 		label: "tmux kill",
 		description:
-			"Kill a session and unregister it. Killing an already-dead entry just unregisters. Explicit kill overrides monitor.",
+			"Kill a session and unregister it. Killing an already-dead entry just unregisters. Explicit kill overrides monitor. " +
+			"Sessions owned by another live pi instance are rejected (see tmux_status).", 
 		parameters: Type.Object({
 			target: Type.String({ description: "session id" }),
 		}),
 		executionMode: "sequential",
 
 		async execute(_toolCallId, params): Promise<ToolResult> {
-			const v = validateKnown(registry(), params.target);
+			const { peers, error: probeError } = await probeLive();
+			if (probeError) return rej("tmux_kill", `probe failed: ${probeError}`);
+			const peer = ownSessions(peers).find((p) => p.name === params.target);
+			const foreignLive = !!peer && isForeignLive(peer);
+
+			// owner isolation: precheck (same validator as the machine guard) —
+			// foreign-live sessions are rejected before any executor runs
+			const v = validateKill(registry(), params.target, foreignLive);
 			if (!v.ok) return rej("tmux_kill", v.reason);
 
 			const r = await runExecutor("kill.sh", [params.target], 10000);
 			// unregister regardless — registry is always suspect; kill of a dead
 			// session is registry hygiene, not an error
-			send({ type: "KILL", id: params.target });
+			send({ type: "KILL", id: params.target, foreignLive });
 			if ("error" in r) {
 				return ok(
 					"tmux_kill",
@@ -666,7 +721,7 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 		name: "tmux_status",
 		label: "tmux status",
 		description:
-			"Probe pi.sock, reconcile the registry (mark dead, adopt stray pi-* sessions), and report session states + monitor commands.",
+			"Probe pi.sock, reconcile the registry (mark dead, adopt stray pi-* sessions, flag foreign-owned), and report session states + monitor commands.", 
 		parameters: Type.Object({}),
 		executionMode: "sequential",
 
@@ -707,34 +762,51 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 					ctx.ui.notify("usage: /tmux kill --all (own pi-* sessions only)", "warning");
 					return;
 				}
-				const { names, error: probeError } = await probeLive();
+				const { peers, error: probeError } = await probeLive();
 				if (probeError) {
 					ctx.ui.notify(`probe failed: ${probeError}`, "error");
 					return;
 				}
+				const piPeers = ownSessions(peers);
 				const monitored = registry().sessions.filter((s) => s.monitor).map((s) => s.id);
-				const targets = ownSessions(names).filter((id) => !monitored.includes(id));
+				// own + orphaned only: foreign-live sessions (owned by another
+				// running pi) are skipped — kill them from their own session
+				const killable = piPeers.filter(
+					(p) => !monitored.includes(p.name) && !isForeignLive(p),
+				);
+				const skipped = piPeers.filter(
+					(p) => !monitored.includes(p.name) && isForeignLive(p),
+				);
 				const report: string[] = [];
-				for (const id of targets) {
-					const r = await runExecutor("kill.sh", [id], 10000);
-					send({ type: "KILL", id });
+				for (const p of killable) {
+					const r = await runExecutor("kill.sh", [p.name], 10000);
+					send({ type: "KILL", id: p.name, foreignLive: false });
 					report.push(
-						"error" in r ? `${id}: unregistered (${r.error})` : `${id}: killed`,
+						"error" in r ? `${p.name}: unregistered (${r.error})` : `${p.name}: killed`,
 					);
 				}
 				// monitored: unregister from this registry, keep tmux session alive
 				for (const id of monitored) {
 					send({ type: "KILL", id });
 				}
-				// unregister registered-but-gone entries too
+				// unregister registered-but-gone entries (hygiene); foreign-live
+				// entries stay registered — visible in tmux_status, owned elsewhere
 				for (const s of registry().sessions) {
+					if (piPeers.some((p) => p.name === s.id && isForeignLive(p))) continue;
 					send({ type: "KILL", id: s.id });
 				}
 				if (monitored.length > 0) {
 					report.push(`kept (monitor): ${monitored.join(", ")}`);
 				}
+				if (skipped.length > 0) {
+					report.push(
+						`skipped (foreign, other live pi): ${skipped.map((p) => `${p.name} (pid ${p.owner})`).join(", ")}`,
+					);
+				}
 				report.push(
-					targets.length === 0 ? "no live pi-* sessions on pi.sock" : `killed ${targets.length}`,
+					killable.length === 0
+						? "no own/orphaned pi-* sessions on pi.sock"
+						: `killed ${killable.length}`,
 				);
 				if (ctx.hasUI) await ctx.ui.select("tmux kill --all", report);
 				return;
@@ -803,19 +875,25 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 	// reconcile handles them on return. Foreign sockets never scanned.
 	pi.on("session_shutdown", async (event) => {
 		if (event.reason === "quit") {
-			const { names } = await probeLive();
-			const live = ownSessions(names);
+			const { peers } = await probeLive();
+			const piPeers = ownSessions(peers);
 			const entries = registry().sessions;
 			for (const s of entries) {
 				if (s.monitor) continue;
+				// foreign-live (owned by another running pi): leave it — its
+				// owning session manages it; keep the registry entry visible
+				const peer = piPeers.find((p) => p.name === s.id);
+				if (peer && isForeignLive(peer)) continue;
 				await runExecutor("kill.sh", [s.id], 10000);
-				send({ type: "KILL", id: s.id });
+				send({ type: "KILL", id: s.id, foreignLive: false });
 			}
-			// strays: live pi-* not registered (crash leftovers) — never foreign
+			// strays: live pi-* not registered (crash leftovers, unowned or
+			// owner dead) — never another live instance's sessions
 			const registered = new Set(entries.map((s) => s.id));
-			for (const id of live) {
-				if (registered.has(id)) continue;
-				await runExecutor("kill.sh", [id], 10000);
+			for (const p of piPeers) {
+				if (registered.has(p.name)) continue;
+				if (isForeignLive(p)) continue;
+				await runExecutor("kill.sh", [p.name], 10000);
 			}
 		}
 		// idempotent teardown: footer timer, viz transport (WS client + relay)

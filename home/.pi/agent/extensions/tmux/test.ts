@@ -4,12 +4,14 @@
 import { createActor, type Actor } from "xstate";
 import {
   tmuxMachine,
+  DEFAULT_LIMITS,
   findSession,
   liveNames,
   validateStart,
   validateSend,
   validateWait,
   validateRegister,
+  validateKill,
   driftReport,
   type RegistryContext,
   type RegistryLimits,
@@ -181,6 +183,15 @@ function status(a: A, id: string): string | undefined {
   ok(!report.some((l) => l.includes('"pi-a"')), "drift report: clean session not mentioned");
   a.send({ type: "RECONCILE", live: [{ name: "pi-a" }] });
   ok(status(a, "pi-stray-1") === "dead", "reconcile marks adopted stray dead when it disappears");
+  // probe is ground truth both ways: dead-marked-but-live recovers to ready
+  const before2 = ctx(a).sessions;
+  a.send({ type: "RECONCILE", live: [{ name: "pi-stray-1" }] });
+  ok(status(a, "pi-stray-1") === "ready", "reconcile recovers dead-marked-but-live to ready");
+  const report2 = driftReport(before2, ctx(a).sessions);
+  ok(
+    report2.some((l) => l.includes('"pi-stray-1" recovered (probe live, was dead)')),
+    "drift report: recovered entry noted",
+  );
 }
 
 // 10. reconcile in empty adopts stray -> active
@@ -214,7 +225,10 @@ function status(a: A, id: string): string | undefined {
   register(a1, "pi-gdb-1", "gdb", "^\\(gdb\\) ");
   a1.send({ type: "WAIT_TIMEOUT", id: "pi-gdb-1", regex: "x" });
   const snapshot = a1.getPersistedSnapshot();
-  const a2 = createActor(tmuxMachine, { snapshot });
+  const a2 = createActor(tmuxMachine, {
+    input: { limits: DEFAULT_LIMITS },
+    snapshot: snapshot as never,
+  });
   a2.start();
   ok(
     JSON.stringify(ctx(a2)) === JSON.stringify(ctx(a1)),
@@ -265,25 +279,29 @@ function status(a: A, id: string): string | undefined {
   // registry now: pi-python-1 ready(+monitor via RESTORE), pi-python-2-like ready
   const snap: RegistryContext = {
     sessions: [
-      { id: "pi-python-1", socket: "pi.sock", tool: "python", promptRegex: "^>>> ", status: "ready", waitAttempts: 2, monitor: true },
-      { id: "pi-failed-1", socket: "pi.sock", tool: "x", promptRegex: null, status: "failed", waitAttempts: 3, monitor: false },
-      { id: "pi-dead-1", socket: "pi.sock", tool: "x", promptRegex: null, status: "dead", waitAttempts: 0, monitor: false },
+      { id: "pi-python-1", socket: "pi.sock", tool: "python", promptRegex: "^>>> ", status: "ready", waitAttempts: 2, monitor: true, owner: null },
+      { id: "pi-failed-1", socket: "pi.sock", tool: "x", promptRegex: null, status: "failed", waitAttempts: 3, monitor: false, owner: null },
+      { id: "pi-dead-1", socket: "pi.sock", tool: "x", promptRegex: null, status: "dead", waitAttempts: 0, monitor: false, owner: null },
+      { id: "pi-wait-1", socket: "pi.sock", tool: "x", promptRegex: "^> ", status: "waiting_prompt", waitAttempts: 0, monitor: false, owner: null },
     ],
     limits,
+    owner: "",
   };
   const b = freshActor();
   b.send({ type: "RESTORE", registry: snap });
   ok(b.getSnapshot().value === "active", "RESTORE -> active");
   const restored = ctx(b).sessions;
-  ok(restored.length === 3, "RESTORE restores all sessions");
+  ok(restored.length === 4, "RESTORE restores all sessions");
   ok(restored.every((s, i) => JSON.stringify(s) === JSON.stringify(snap.sessions[i])), "RESTORE carries sessions over exactly (status/waitAttempts/monitor)");
   ok(JSON.stringify(ctx(b).limits) === JSON.stringify(limits), "RESTORE restores limits");
   // blocked when non-empty
   b.send({ type: "RESTORE", registry: { sessions: [], limits } });
-  ok(ctx(b).sessions.length === 3, "RESTORE on non-empty registry rejected");
-  // post-restore events work (viz survives restore)
+  ok(ctx(b).sessions.length === 4, "RESTORE on non-empty registry rejected");
+  // post-restore events work (viz survives restore); sticky statuses hold
   b.send({ type: "PROMPT_SEEN", id: "pi-failed-1" });
-  ok(status(b, "pi-failed-1") === "ready", "restored actor accepts further events");
+  ok(status(b, "pi-failed-1") === "failed", "PROMPT_SEEN on restored failed entry: stays failed");
+  b.send({ type: "PROMPT_SEEN", id: "pi-wait-1" });
+  ok(status(b, "pi-wait-1") === "ready", "restored waiting_prompt entry accepts PROMPT_SEEN");
   // malformed entries filtered
   const c = freshActor();
   c.send({
@@ -291,7 +309,10 @@ function status(a: A, id: string): string | undefined {
     registry: { sessions: [{ id: "ok-1", status: "ready" }, { broken: true }, null], limits },
   } as never);
   const cs = ctx(c).sessions;
-  ok(cs.length === 1 && cs[0].id === "ok-1" && cs[0].monitor === false, "RESTORE filters malformed entries, fills defaults");
+  ok(
+    cs.length === 1 && cs[0].id === "ok-1" && cs[0].monitor === false && cs[0].owner === null,
+    "RESTORE filters malformed entries, fills defaults (incl. owner)",
+  );
   // empty restore pops back to empty state (active.always)
   const d = freshActor();
   d.send({ type: "RESTORE", registry: { sessions: [], limits } });
@@ -308,6 +329,71 @@ function status(a: A, id: string): string | undefined {
   ok(findSession(ctx(a), "pi-python-1")?.monitor === false, "MONITOR_TOGGLE again -> false");
   a.send({ type: "MONITOR_TOGGLE", id: "pi-nope" });
   ok(true, "MONITOR_TOGGLE unknown consumed without crash");
+}
+
+// 17. sticky dead/failed: PROMPT_SEEN/PROMPT_TIMEOUT only from waiting_prompt
+{
+  const a = freshActor();
+  register(a, "pi-dead-1", "x", "^> ");
+  a.send({ type: "SESSION_DEAD", id: "pi-dead-1" });
+  a.send({ type: "PROMPT_SEEN", id: "pi-dead-1" });
+  ok(status(a, "pi-dead-1") === "dead", "PROMPT_SEEN cannot resurrect dead");
+  a.send({ type: "PROMPT_TIMEOUT", id: "pi-dead-1" });
+  ok(status(a, "pi-dead-1") === "dead", "PROMPT_TIMEOUT cannot resurrect dead");
+  register(a, "pi-failed-1", "x", "^> ");
+  a.send({ type: "PROMPT_TIMEOUT", id: "pi-failed-1" });
+  a.send({ type: "PROMPT_SEEN", id: "pi-failed-1" });
+  ok(status(a, "pi-failed-1") === "failed", "PROMPT_SEEN cannot resurrect failed");
+  register(a, "pi-ready-1", "x", null);
+  a.send({ type: "PROMPT_SEEN", id: "pi-ready-1" });
+  ok(status(a, "pi-ready-1") === "ready", "PROMPT_SEEN on ready: no-op, stays ready");
+  register(a, "pi-live-1", "x", "^> ");
+  a.send({ type: "PROMPT_SEEN", id: "pi-live-1" });
+  ok(status(a, "pi-live-1") === "ready", "PROMPT_SEEN from waiting_prompt -> ready (the one legal path)");
+}
+
+// 18. owner isolation: register/adoption stamping, validateKill, KILL guard
+{
+  const a = createActor(tmuxMachine, { input: { limits, owner: "111" } });
+  a.start();
+  register(a, "pi-own-1", "x", null);
+  ok(findSession(ctx(a), "pi-own-1")?.owner === "111", "registerSession stamps owner from context");
+  a.send({
+    type: "RECONCILE",
+    live: [
+      { name: "pi-own-1" },
+      { name: "pi-orph-1", owner: "" },
+      { name: "pi-foreign-1", owner: "222", ownerAlive: true },
+    ],
+  });
+  ok(findSession(ctx(a), "pi-orph-1")?.owner === null, "untagged stray adopted as orphan (owner null)");
+  ok(findSession(ctx(a), "pi-foreign-1")?.owner === "222", "stray adoption carries foreign owner");
+  ok(validateKill(ctx(a), "pi-own-1", false).ok, "validateKill own session: killable");
+  ok(validateKill(ctx(a), "pi-orph-1", true).ok, "validateKill orphan: killable even with foreignLive=true");
+  const vf = validateKill(ctx(a), "pi-foreign-1", true);
+  ok(
+    !vf.ok && vf.reason.includes("owner pid 222") && vf.reason.includes("not this session's to kill"),
+    "validateKill foreign-live: readable rejection naming the owner",
+  );
+  ok(validateKill(ctx(a), "pi-foreign-1", false).ok, "validateKill foreign: killable once owner dead");
+  ok(!validateKill(ctx(a), "pi-nope", false).ok, "validateKill unknown: readable rejection");
+  // machine KILL guard backstop: foreign-live KILL rejected, entry kept
+  a.send({ type: "KILL", id: "pi-foreign-1", foreignLive: true });
+  ok(!!findSession(ctx(a), "pi-foreign-1"), "machine KILL foreign-live backstopped, entry kept");
+  a.send({ type: "KILL", id: "pi-foreign-1", foreignLive: false });
+  ok(!findSession(ctx(a), "pi-foreign-1"), "KILL with owner-dead evidence unregisters");
+  // dead foreign entry: registry hygiene — always killable
+  const b = createActor(tmuxMachine, { input: { limits, owner: "111" } });
+  b.start();
+  b.send({ type: "RECONCILE", live: [{ name: "pi-f-1", owner: "222", ownerAlive: true }] });
+  b.send({ type: "SESSION_DEAD", id: "pi-f-1" });
+  ok(validateKill(ctx(b), "pi-f-1", true).ok, "dead foreign entry killable (registry hygiene)");
+  b.send({ type: "KILL", id: "pi-f-1", foreignLive: true });
+  ok(!findSession(ctx(b), "pi-f-1"), "KILL dead foreign entry unregisters (hygiene)");
+  // unidentified context (owner ""): isolation off — legacy behavior
+  const c = freshActor();
+  c.send({ type: "RECONCILE", live: [{ name: "pi-x-1", owner: "999", ownerAlive: true }] });
+  ok(validateKill(ctx(c), "pi-x-1", true).ok, "unidentified context (owner '') skips isolation");
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

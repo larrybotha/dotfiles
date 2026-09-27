@@ -16,11 +16,17 @@ DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 name=$1
 text=$2
 
-out=$(tmux -S "$SOCKET" send-keys -t "$name" -l "$text" 2>&1) || json_fail "$out"
+# resolve the session's active pane by id first: tmux rejects a bare =name
+# as a pane target, and a bare name would prefix-match another session.
+# %N pane ids are server-unique — no ambiguity, no prefix risk
+pane_id=$(tmux -S "$SOCKET" list-panes -t "=$name" -F '#{pane_id}' 2>/dev/null | head -n 1)
+[ -n "$pane_id" ] || json_fail "can't find pane: $name"
+
+out=$(tmux -S "$SOCKET" send-keys -t "$pane_id" -l "$text" 2>&1) || json_fail "$out"
 
 if [ -z "$text" ] || [ "${text%$'\n'}" != "$text" ]; then
   json_out '{}'
 fi
 
-out=$(tmux -S "$SOCKET" send-keys -t "$name" Enter 2>&1) || json_fail "$out"
+out=$(tmux -S "$SOCKET" send-keys -t "$pane_id" Enter 2>&1) || json_fail "$out"
 json_out '{}'

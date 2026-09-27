@@ -12,5 +12,7 @@ DIR=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 [ $# -ge 1 ] || json_fail "usage: kill.sh <name>"
 name=$1
 
-out=$(tmux -S "$SOCKET" kill-session -t "$name" 2>&1) || json_fail "$out"
+# exact target (=name): tmux accepts a unique prefix — unanchored kills hit
+# the wrong session when a dead short id prefix-matches a live suffixed one
+out=$(tmux -S "$SOCKET" kill-session -t "=$name" 2>&1) || json_fail "$out"
 json_out '{}'

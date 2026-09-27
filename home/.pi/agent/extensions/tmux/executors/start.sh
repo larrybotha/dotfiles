@@ -19,5 +19,7 @@ esac
 
 ensure_socket_dir
 
-out=$(tmux -S "$SOCKET" -f /dev/null new-session -d -s "$name" "$@" 2>&1) || json_fail "$out"
+# PI_OWNER comes from the extension's env (creating pi's pid): tags the
+# session for cross-instance kill isolation (probe.sh reads it back)
+out=$(tmux -S "$SOCKET" -f /dev/null new-session -d -s "$name" -e "PI_OWNER=${PI_OWNER:-}" "$@" 2>&1) || json_fail "$out"
 json_out "{\"socket\":\"$(json_esc "$SOCKET")\",\"name\":\"$(json_esc "$name")\"}"
