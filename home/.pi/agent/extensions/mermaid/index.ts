@@ -34,7 +34,8 @@ import {
 } from "node:fs";
 import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, isAbsolute, join, resolve } from "node:path";
+import { pathToFileURL } from "node:url";
 import type {
   AgentToolUpdateCallback,
   ExtensionAPI,
@@ -161,8 +162,8 @@ type OutputMode = "ascii" | "png-tui" | "svg" | "png" | "none";
 const OUTPUT_MODES: ReadonlyMap<OutputMode, string> = new Map([
   ["ascii", "ASCII preview in TUI (no render)"],
   ["png-tui", "render PNG, show inline in TUI (kitty/iTerm2 images)"],
-  ["svg", "render SVG, reveal in Finder/file manager"],
-  ["png", "render PNG, reveal in Finder/file manager"],
+  ["svg", "render SVG, open it in the browser"],
+  ["png", "render PNG, open it in the browser"],
   ["none", "no auto-output"],
 ]);
 const OUTPUT_MODE_FILE = join(LOG_DIR, "output-mode");
@@ -540,24 +541,23 @@ function showImagePreview(execCtx: unknown, title: string, pngPath: string) {
 }
 
 /**
- * Best-effort "open externally" (executor): system viewer for the file, or a
- * Finder/file-manager reveal (open -R / xdg-open on the parent dir). Never throws.
+ * Best-effort "open in browser" (executor): the rendered file displayed in
+ * the default web browser. `open <file>` would follow the file-type handler
+ * (Preview/editor for SVG/PNG), so macOS uses AppleScript `open location`,
+ * which always targets the default browser. Never throws.
  */
-function openExternally(
+function openInBrowser(
   outPath: string,
-  reveal = false,
 ): Promise<{ ok: boolean; error: string | null }> {
+  const url = pathToFileURL(outPath).href; // percent-encoded, safe to embed
   return new Promise((resolve_) => {
     const darwin = process.platform === "darwin";
-    const opener = darwin ? "open" : "xdg-open";
-    const args = darwin
-      ? reveal
-        ? ["-R", outPath]
-        : [outPath]
-      : [reveal ? dirname(outPath) : outPath];
-    execFile(opener, args, (err) => {
+    // -e splits words; pass the whole AppleScript line as ONE argv element.
+    const cmd = darwin ? "osascript" : "xdg-open";
+    const args = darwin ? ["-e", `open location "${url}"`] : [url];
+    execFile(cmd, args, (err) => {
       if (err) {
-        log("WARN", `open failed: ${err.message}`);
+        log("WARN", `open in browser failed: ${err.message}`);
         resolve_({ ok: false, error: err.message });
       } else {
         resolve_({ ok: true, error: null });
@@ -620,11 +620,9 @@ async function deliverOutput(
   if (mode === "png-tui") {
     showImagePreview(execCtx, basename(outPath), outPath);
   } else {
-    // svg / png: reveal the rendered file where it was written
-    const revealed = await openExternally(outPath, true);
-    shown = revealed.ok
-      ? "revealed in Finder/file manager"
-      : `reveal failed (${revealed.error})`;
+    // svg / png: display the rendered file in the browser
+    const opened = await openInBrowser(outPath);
+    shown = opened.ok ? "opened in browser" : `open failed (${opened.error})`;
   }
   log("INFO", `auto-output ${mode}: ${outPath}`);
   return `\nOutput (${mode}): ${outPath} — ${shown}`;
@@ -988,6 +986,7 @@ export default function (pi: ExtensionAPI) {
     description:
       "Render the validated diagram to SVG or PNG (Docker; format follows the outPath extension). Only legal for the source " +
       "that last passed mermaid_validate, with unchanged content — an edit invalidates the pass (re-validate). " +
+      "The rendered file is opened in the default browser (interactive sessions only). " +
       "Optional theme: default|dark|forest|neutral.",
     parameters: Type.Object({
       path: Type.String({
@@ -1057,17 +1056,17 @@ export default function (pi: ExtensionAPI) {
         const r = await runRender(path, hash, outPath, theme, onUpdate);
         if (r.ok) {
           // Output comes from the extension: open the rendered file in the
-          // system viewer (browser/Preview/…) right away — no need to ask.
-          // Interactive only: print/JSON/RPC sessions are background —
-          // launching a viewer from them would be a surprise.
+          // browser right away — no need to ask. Interactive only:
+          // print/JSON/RPC sessions are background — launching a browser
+          // from them would be a surprise.
           let openedNote = "";
           if (
             outputMode !== "none" &&
             (execCtx as { mode?: string } | undefined)?.mode === "tui"
           ) {
-            const opened = await openExternally(outPath);
+            const opened = await openInBrowser(outPath);
             openedNote = opened.ok
-              ? `\nOpened in system viewer: ${outPath}`
+              ? `\nOpened in browser: ${outPath}`
               : `\nOpen failed (${opened.error}) — open it manually: ${outPath}`;
             log(
               opened.ok ? "INFO" : "WARN",

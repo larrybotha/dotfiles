@@ -45,7 +45,7 @@ IO). The distinction is enforced end to end:
 | Tool               | Effect                                                                                                                            |
 | ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
 | `mermaid_validate` | Validate diagram (Docker `ascii.sh`), returns ASCII preview (optional theme); moves to `validated`                                |
-| `mermaid_render`   | Render validated source to SVG/PNG (Docker `svg.sh`; format follows outPath); optional theme; opens the file in the system viewer |
+| `mermaid_render`   | Render validated source to SVG/PNG (Docker `svg.sh`; format follows outPath); optional theme; opens the file in the default browser |
 | `mermaid_embed`    | Insert fenced mermaid block into Markdown (validated source only); idempotent; optional `after` anchor                            |
 | `mermaid_reset`    | Clear state, start over                                                                                                           |
 
@@ -72,18 +72,20 @@ validate there is nothing to demo). The last selection persists in
 | ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `ascii` (default) | ASCII preview overlay in the TUI — fire-and-forget (j/k/arrows/PgUp/PgDn/g/G scroll; Esc/q/Enter closes), never blocks the tool result or the agent turn         |
 | `png-tui`         | render PNG to the preview cache (`~/.cache/mermaid/previews/`, content-hashed), show it inline in the TUI (kitty/iTerm2 images; dim filename fallback otherwise) |
-| `svg`             | render SVG next to the diagram, reveal it in Finder/file manager                                                                                                 |
-| `png`             | render PNG to the preview cache, reveal it in Finder/file manager (`open -R`)                                                                                    |
+| `svg`             | render SVG next to the diagram, open it in the default browser                                                                                                   |
+| `png`             | render PNG to the preview cache, open it in the default browser                                                                                                  |
 | `none`            | no auto-output                                                                                                                                                   |
 
 Auto-renders go through the same machine-gated path as `mermaid_render`
 (fresh pass required); the result text records what the user got, so the
 model stays in sync. Interactive modes only — print/JSON/RPC sessions skip
-auto-output (background; a viewer launch would be a surprise).
+auto-output (background; a browser launch would be a surprise).
 
 **`mermaid_render`** itself renders `.svg` or `.png` (format follows the
 outPath extension) and — unless the mode is `none` — opens the file in the
-system viewer immediately; the result names what was opened.
+default browser immediately (AppleScript `open location` on macOS —
+`open <file>` would follow the file-type handler, i.e. Preview/editor);
+the result names what was opened.
 
 ## Layout
 
