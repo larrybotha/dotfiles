@@ -25,7 +25,6 @@ end
 
 local function extendFormatters(conform)
 	local formatters = conform.formatters
-	local util = require("conform.util")
 
 	formatters.custom_golines = function()
 		return {
