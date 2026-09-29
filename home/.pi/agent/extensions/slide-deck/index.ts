@@ -7,17 +7,20 @@
  * html5lib validation) — no per-step model round-trips. The model may only
  * act via legal events, selected through tools:
  *
- *   slide_deck_start    — idle|done -> researching (records topic)
- *   slide_deck_research — researching -> planning (records sources)
- *   slide_deck_plan    — planning -> writing (records planned slide ids)
+ *   slide_deck_start    — records the topic; phase researching (fresh
+ *                        authoring, or done — done starts a NEW deck)
+ *   slide_deck_research — records sources; phase planning
+ *   slide_deck_plan    — records planned slide ids; phase writing
+ *                        (replan legal mid-writing and mid-fix)
  *   slide_deck_build   — one event, full content; machine drives
  *                        build -> validate -> done (opens the deck)
  *   slide_deck_status  — snapshot + allowed next steps
  *   slide_deck_reset   — clear state, start over
  *
- * The authoring phases are optional announcements (the fast path — one
- * BEGIN_BUILD from idle — is legal): what the machine enforces is the
- * pipeline, not the ceremony. Editorial content rules live in the
+ * The authoring ceremony (start -> research -> plan -> writing) is ONE
+ * machine state with the phase tracked in context — optional
+ * announcements (the fast path, one BEGIN_BUILD from fresh authoring, is
+ * legal): what the machine enforces is the pipeline, not the ceremony. Editorial content rules live in the
  * slide_deck_build tool description (prompt-side); structural validation
  * (nav↔slide 1:1, slides inside main, no external deps) is machine-side via
  * the validate service. Same split as the skill had — now enforced.
@@ -181,7 +184,7 @@ let statusEnabled = process.env.SLIDE_DECK_FOOTER === "1";
 /** Compact live status for the TUI footer. */
 function statusText(c: SlideDeckContext): string {
 	const deck = c.deck ? c.deck.title : "no deck";
-	return `slide-deck ${stateValue()} · ${deck} · failed validations ${c.validateAttempts}/${c.limits.maxValidateAttempts} · builds ${c.builds.length}`;
+	return `slide-deck ${stateLabel(c)} · ${deck} · failed validations ${c.validateAttempts}/${c.limits.maxValidateAttempts} · builds ${c.builds.length}`;
 }
 
 function refreshStatus() {
@@ -235,6 +238,16 @@ function getActor(): Actor<typeof wiredMachine> {
 function stateValue(): string {
 	const snap = getActor().getSnapshot() as unknown as PersistedSnapshot;
 	return String(snap.value ?? snap.status);
+}
+
+/**
+ * State label for model/user-facing text: the collapsed authoring state
+ * names its ceremony phase — `authoring (researching)` ≡ the old
+ * researching state; bare `authoring` ≡ the old idle (fresh).
+ */
+function stateLabel(c: SlideDeckContext): string {
+	const v = stateValue();
+	return v === "authoring" && c.phase ? `authoring (${c.phase})` : v;
 }
 
 /**
@@ -476,7 +489,7 @@ function defaultOutPath(title: string): string {
 
 function statusLine(ctx: SlideDeckContext): string {
 	const parts = [
-		`Machine state: ${stateValue()}.`,
+		`Machine state: ${stateLabel(ctx)}.`,
 	];
 	if (ctx.topic) parts.push(`Topic: ${ctx.topic}.`);
 	if (ctx.sources.length > 0) parts.push(`Sources: ${ctx.sources.length}.`);
@@ -492,17 +505,27 @@ function statusLine(ctx: SlideDeckContext): string {
 	return parts.join(" ");
 }
 
-/** Allowed next steps, derived from the CURRENT machine state — never a hardcoded template. */
+/**
+ * Allowed next steps, derived from the CURRENT machine state + ceremony
+ * phase — never a hardcoded template.
+ */
 function allowedNext(): string {
-	switch (stateValue()) {
-		case "idle":
-			return "Allowed next: slide_deck_start (topic), or slide_deck_build directly (one event carries the full content).";
-		case "researching":
-			return "Allowed next: slide_deck_research (sources), slide_deck_build (content), or slide_deck_reset.";
-		case "planning":
-			return "Allowed next: slide_deck_plan (slide ids), slide_deck_build (content), or slide_deck_reset.";
-		case "writing":
-			return "Allowed next: slide_deck_build (content), or slide_deck_reset.";
+	const v = stateValue();
+	// The collapsed authoring state: enumerate per phase (≡ the old
+	// idle/researching/planning/writing cases)
+	if (v === "authoring") {
+		switch (getActor().getSnapshot().context.phase) {
+			case null:
+				return "Allowed next: slide_deck_start (topic), or slide_deck_build directly (one event carries the full content).";
+			case "researching":
+				return "Allowed next: slide_deck_research (sources), slide_deck_build (content), or slide_deck_reset.";
+			case "planning":
+				return "Allowed next: slide_deck_plan (slide ids), slide_deck_build (content), or slide_deck_reset.";
+			case "writing":
+				return "Allowed next: slide_deck_build (content), or slide_deck_reset.";
+		}
+	}
+	switch (v) {
 		case "building":
 			return "Allowed next: none — the build service is in flight; wait for the tool result.";
 		case "validating":
@@ -512,7 +535,7 @@ function allowedNext(): string {
 		case "done":
 			return "Allowed next: slide_deck_build (tweaked content — rebuild), slide_deck_start (new deck topic), or slide_deck_reset.";
 		default:
-			return `Allowed next (state ${stateValue()}): see /slidedeck status.`;
+			return `Allowed next (state ${v}): see /slidedeck status.`;
 	}
 }
 
@@ -665,7 +688,7 @@ export default function (pi: ExtensionAPI) {
 				if (violation || !canStart) {
 					const reason =
 						violation ??
-						`not legal from state \`${stateValue()}\` (START starts a NEW deck from idle|done)`;
+						`not legal from state \`${stateLabel(snap.context)}\` (START starts a NEW deck — fresh authoring (phase null) or done)`;
 					return {
 						content: text(
 							`Start rejected: ${reason}\n${statusLine(snap.context)}\n${allowedNext()}`,
@@ -713,7 +736,7 @@ export default function (pi: ExtensionAPI) {
 				if (violation || !can) {
 					const reason =
 						violation ??
-						`not legal from state \`${stateValue()}\` (RESEARCH_DONE moves researching -> planning)`;
+						`not legal from state \`${stateLabel(snap.context)}\` (RESEARCH_DONE is legal in the research phase — after slide_deck_start)`;
 					return {
 						content: text(
 							`Research rejected: ${reason}\n${statusLine(snap.context)}\n${allowedNext()}`,
@@ -765,7 +788,7 @@ export default function (pi: ExtensionAPI) {
 				if (violation || !can) {
 					const reason =
 						violation ??
-						`not legal from state \`${stateValue()}\` (PLAN_DONE moves planning -> writing)`;
+						`not legal from state \`${stateLabel(snap.context)}\` (slide_deck_plan is legal after slide_deck_research — replans mid-writing and mid-fix included)`;
 					return {
 						content: text(
 							`Plan rejected: ${reason}\n${statusLine(snap.context)}\n${allowedNext()}`,
@@ -861,7 +884,7 @@ export default function (pi: ExtensionAPI) {
 				if (violation || !canBuild) {
 					const reason =
 						violation ??
-						`not legal from state \`${stateValue()}\` — a build or validation is in flight`;
+						`not legal from state \`${stateLabel(snap.context)}\` — a build or validation is in flight`;
 					log("WARN", `build rejected: ${reason}`);
 					return {
 						content: text(
@@ -975,7 +998,11 @@ export default function (pi: ExtensionAPI) {
 			return new Text("slide_deck_status", 0, 0);
 		},
 		renderResult() {
-			return new Text(`✓ ${stateValue()}`, 0, 0);
+			return new Text(
+				`✓ ${stateLabel(getActor().getSnapshot().context)}`,
+				0,
+				0,
+			);
 		},
 	});
 
@@ -988,7 +1015,7 @@ export default function (pi: ExtensionAPI) {
 		async execute() {
 			return withToolLock(async () => {
 				const ctx = getActor().getSnapshot().context;
-				const prior = `topic ${ctx.topic ?? "none"}, deck ${ctx.deck ? `"${ctx.deck.title}"` : "none"}, failed validations ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}, builds ${ctx.builds.length}, machine state ${stateValue()}`;
+				const prior = `topic ${ctx.topic ?? "none"}, deck ${ctx.deck ? `"${ctx.deck.title}"` : "none"}, failed validations ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}, builds ${ctx.builds.length}, machine state ${stateLabel(ctx)}`;
 				getActor().send({ type: "RESET" });
 				log("INFO", `reset (was: ${prior})`);
 				return {

@@ -124,35 +124,45 @@ async function ok(name: string, fn: () => Promise<void> | void) {
 
 // --- initial state -----------------------------------------------------------
 
-await ok("idle initial; phases and fast-path build are legal events", () => {
+await ok("authoring initial (phase null); phases and fast-path build are legal events", () => {
 	const a = makeActor(makeStubs());
-	assert.equal(a.getSnapshot().value, "idle");
+	assert.equal(a.getSnapshot().value, "authoring");
+	assert.equal(a.getSnapshot().context.phase, null);
 	assert.equal(a.getSnapshot().can({ type: "START", topic: "x" }), true);
+	// fresh (phase null ≡ old idle): ceremony events beyond START not yet legal
+	assert.equal(a.getSnapshot().can({ type: "RESEARCH_DONE", sources: ["s"] }), false);
+	assert.equal(a.getSnapshot().can({ type: "PLAN_DONE", slides: ["a"] }), false);
 	assert.equal(a.getSnapshot().can(beginBuild()), true);
 });
 
 // --- authoring phases --------------------------------------------------------
 
-await ok("START -> researching (topic recorded); empty topic rejected", () => {
+await ok("START -> authoring/phase researching (topic recorded); empty topic rejected", () => {
 	const a = makeActor(makeStubs());
 	assert.notEqual(startViolation(""), null);
 	a.send({ type: "START", topic: "Telescopes" });
-	assert.equal(a.getSnapshot().value, "researching");
+	assert.equal(a.getSnapshot().value, "authoring");
+	assert.equal(a.getSnapshot().context.phase, "researching");
 	assert.equal(a.getSnapshot().context.topic, "Telescopes");
 	assert.equal(a.getSnapshot().can({ type: "START", topic: "again" }), false);
+	// phase researching ≡ old researching state: PLAN_DONE not yet legal
+	assert.equal(a.getSnapshot().can({ type: "PLAN_DONE", slides: ["a"] }), false);
 });
 
-await ok("RESEARCH_DONE -> planning; empty sources rejected", () => {
+await ok("RESEARCH_DONE -> authoring/phase planning; empty sources rejected", () => {
 	const a = makeActor(makeStubs());
 	a.send({ type: "START", topic: "t" });
 	assert.notEqual(researchViolation([]), null);
 	assert.equal(a.getSnapshot().can({ type: "RESEARCH_DONE", sources: [] }), false);
 	a.send({ type: "RESEARCH_DONE", sources: ["https://a", "file.md"] });
-	assert.equal(a.getSnapshot().value, "planning");
+	assert.equal(a.getSnapshot().value, "authoring");
+	assert.equal(a.getSnapshot().context.phase, "planning");
 	assert.deepEqual(a.getSnapshot().context.sources, ["https://a", "file.md"]);
+	// phase planning ≡ old planning state: re-announcing research done is illegal
+	assert.equal(a.getSnapshot().can({ type: "RESEARCH_DONE", sources: ["x"] }), false);
 });
 
-await ok("PLAN_DONE -> writing; empty/duplicate slides rejected", () => {
+await ok("PLAN_DONE -> authoring/phase writing; empty/duplicate slides rejected", () => {
 	const a = makeActor(makeStubs());
 	a.send({ type: "START", topic: "t" });
 	a.send({ type: "RESEARCH_DONE", sources: ["s"] });
@@ -160,7 +170,8 @@ await ok("PLAN_DONE -> writing; empty/duplicate slides rejected", () => {
 	assert.notEqual(planViolation(["a", "a"]), null);
 	assert.equal(a.getSnapshot().can({ type: "PLAN_DONE", slides: [] }), false);
 	a.send({ type: "PLAN_DONE", slides: ["intro", "history"] });
-	assert.equal(a.getSnapshot().value, "writing");
+	assert.equal(a.getSnapshot().value, "authoring");
+	assert.equal(a.getSnapshot().context.phase, "writing");
 	assert.deepEqual(a.getSnapshot().context.plannedSlides, ["intro", "history"]);
 });
 
@@ -185,12 +196,14 @@ await ok("happy path: BEGIN_BUILD -> building -> validating -> done; services re
 	assert.equal(countSlides(CONTENT.slidesHtml), 1);
 });
 
-await ok("fast path: BEGIN_BUILD legal from idle (no phase ceremony needed)", async () => {
+await ok("fast path: BEGIN_BUILD legal from fresh authoring (no ceremony needed)", async () => {
 	const stubs = makeStubs();
 	const a = makeActor(stubs);
 	a.send(beginBuild());
 	await waitFor(a, (s) => s.matches("done") || s.matches("fixing"));
 	assert.equal(a.getSnapshot().value, "done");
+	// the pipeline never touches the ceremony phase
+	assert.equal(a.getSnapshot().context.phase, null);
 });
 
 await ok("build output carries the outPath evidence (different from submitted)", async () => {
@@ -220,6 +233,9 @@ await ok("validation failure (deck) -> fixing: errors recorded, attempt bumped, 
 	const ctx = a.getSnapshot().context;
 	assert.deepEqual(ctx.errors, ["✗ Nav data-slide with no matching slide id: ['x']"]);
 	assert.equal(ctx.validateAttempts, 1);
+	// fast-path fixing (phase null): replan stays legal — phase-agnostic (≡ old fixing)
+	assert.equal(ctx.phase, null);
+	assert.equal(a.getSnapshot().can({ type: "PLAN_DONE", slides: ["a"] }), true);
 	// retry with fixed content: builds history records both, attempts kept
 	a.send(beginBuild());
 	await waitFor(a, (s) => s.matches("done") || s.matches("fixing"));
@@ -288,7 +304,7 @@ await ok("attempt cap: exhausted deck validations block BEGIN_BUILD until RESET"
 	assert.match(String(reason), /validation attempts exhausted/);
 	assert.equal(a.getSnapshot().can(beginBuild()), false);
 	a.send({ type: "RESET" });
-	assert.equal(a.getSnapshot().value, "idle");
+	assert.equal(a.getSnapshot().value, "authoring");
 	assert.deepEqual(a.getSnapshot().context, initialContext(LIMITS));
 	assert.equal(a.getSnapshot().can(beginBuild()), true);
 	assert.equal(calls, LIMITS.maxValidateAttempts);
@@ -328,12 +344,12 @@ await ok("RESET during validating wins; late validate result is dropped, done no
 	a.send(beginBuild());
 	await waitFor(a, (s) => s.matches("building"));
 	a.send({ type: "RESET" });
-	assert.equal(a.getSnapshot().value, "idle");
+	assert.equal(a.getSnapshot().value, "authoring");
 	assert.deepEqual(a.getSnapshot().context, initialContext(LIMITS));
-	// the in-flight service resolves late — idle has no handler, dropped
+	// the in-flight service resolves late — authoring has no handler, dropped
 	release();
 	await new Promise((r) => setTimeout(r, 20));
-	assert.equal(a.getSnapshot().value, "idle");
+	assert.equal(a.getSnapshot().value, "authoring");
 	assert.equal(a.getSnapshot().context.deck, null);
 	assert.equal(stubs.validateInputs.length, 0); // exited before validating
 });
@@ -354,7 +370,8 @@ await ok("done: START begins a new deck — authoring cleared, history kept", as
 	const stubs = makeStubs();
 	const a = await buildOnce(stubs);
 	a.send({ type: "START", topic: "New Topic" });
-	assert.equal(a.getSnapshot().value, "researching");
+	assert.equal(a.getSnapshot().value, "authoring");
+	assert.equal(a.getSnapshot().context.phase, "researching");
 	const ctx = a.getSnapshot().context;
 	assert.equal(ctx.topic, "New Topic");
 	assert.deepEqual(ctx.sources, []);
@@ -367,7 +384,7 @@ await ok("RESET from done clears everything (builds history included)", async ()
 	const stubs = makeStubs();
 	const a = await buildOnce(stubs);
 	a.send({ type: "RESET" });
-	assert.equal(a.getSnapshot().value, "idle");
+	assert.equal(a.getSnapshot().value, "authoring");
 	assert.deepEqual(a.getSnapshot().context, initialContext(LIMITS));
 });
 
@@ -455,10 +472,12 @@ await ok("PLAN_DONE replans from writing and fixing (plan is load-bearing)", asy
 	a.send({ type: "START", topic: "t" });
 	a.send({ type: "RESEARCH_DONE", sources: ["s"] });
 	a.send({ type: "PLAN_DONE", slides: ["a"] });
-	assert.equal(a.getSnapshot().value, "writing");
+	assert.equal(a.getSnapshot().value, "authoring");
+	assert.equal(a.getSnapshot().context.phase, "writing");
 	// replan mid-authoring: adds "b"
 	a.send({ type: "PLAN_DONE", slides: ["a", "b"] });
-	assert.equal(a.getSnapshot().value, "writing");
+	assert.equal(a.getSnapshot().value, "authoring");
+	assert.equal(a.getSnapshot().context.phase, "writing");
 	assert.deepEqual(a.getSnapshot().context.plannedSlides, ["a", "b"]);
 	a.send(beginBuild({
 		slidesHtml:

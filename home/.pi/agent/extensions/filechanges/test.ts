@@ -71,7 +71,7 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
 // 1. initial state
 {
   const a = freshActor();
-  ok(a.getSnapshot().value === "empty", "initial state is empty");
+  ok(a.getSnapshot().value === "registry", "initial state is registry");
   ok(ctx(a).pending.size === 0 && ctx(a).baselines.size === 0 && ctx(a).tracked.size === 0, "initial registry empty");
 }
 
@@ -79,7 +79,7 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
 {
   const a = freshActor();
   start(a, "tc1", "a.ts");
-  ok(a.getSnapshot().value === "active", "started -> active");
+  ok(a.getSnapshot().value === "registry", "started -> registry state");
   ok(ctx(a).pending.size === 1, "pending recorded");
   ok(ctx(a).pending.get("tc1")?.before === "original", "pending holds before snapshot");
 }
@@ -138,14 +138,14 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
   start(a, "tc1", "a.ts");
   a.send({ type: "TOOL_CALL_FAILED", toolCallId: "tc1" });
   ok(ctx(a).pending.size === 0, "failed drops pending");
-  ok(a.getSnapshot().value === "empty", "failed returns to empty when nothing else tracked");
+  ok(ctx(a).baselines.size === 0 && ctx(a).tracked.size === 0, "failed with nothing else tracked leaves registry empty");
 }
 
 // 9. orphan FAILED rejected (no crash, no change)
 {
   const a = freshActor();
   a.send({ type: "TOOL_CALL_FAILED", toolCallId: "ghost" });
-  ok(a.getSnapshot().value === "empty", "orphan failed rejected, state unchanged");
+  ok(a.getSnapshot().value === "registry", "orphan failed rejected, state unchanged");
 }
 
 // 10. CLEAR mid-flight: pending dropped; late SUCCEEDED rejected
@@ -191,14 +191,14 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
   a.send({ type: "RECOMPUTE_DONE", path: "a.ts", entry: trackedEntry("a.ts") });
   a.send({ type: "UNTRACK", path: "a.ts" });
   ok(!ctx(a).baselines.has("a.ts") && !ctx(a).tracked.has("a.ts"), "untrack removes baseline + tracked");
-  ok(a.getSnapshot().value === "empty", "untrack of last data -> empty");
+  ok(ctx(a).baselines.size === 0 && ctx(a).tracked.size === 0, "untrack of last data empties registry");
 }
 
 // 15. UNTRACK unknown path is a legal no-op
 {
   const a = freshActor();
   a.send({ type: "UNTRACK", path: "ghost.ts" });
-  ok(a.getSnapshot().value === "empty", "unknown untrack is no-op");
+  ok(a.getSnapshot().value === "registry" && ctx(a).baselines.size === 0, "unknown untrack is no-op");
 }
 
 // 16. backToOriginal full flow: edit -> revert -> untracked -> empty
@@ -210,7 +210,7 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
   ok(!ctx(a).tracked.has("a.ts"), "revert leaves nothing tracked");
   a.send({ type: "UNTRACK", path: "a.ts" });
   ok(ctx(a).baselines.size === 0, "untrack clears baseline after revert");
-  ok(a.getSnapshot().value === "empty", "back-to-original flow ends empty");
+  ok(ctx(a).baselines.size === 0 && ctx(a).tracked.size === 0, "back-to-original flow leaves registry empty");
 }
 
 // 17. pending survives tracked-empty (still active)
@@ -219,7 +219,7 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
   baseline(a, "a.ts", "original");
   a.send({ type: "UNTRACK", path: "a.ts" });
   start(a, "tc1", "b.ts");
-  ok(a.getSnapshot().value === "active", "pending keeps machine active");
+  ok(ctx(a).pending.size === 1, "pending survives tracked-empty (registry state)");
 }
 
 // 18. CLEAR clears all three maps -> empty
@@ -230,14 +230,14 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
   a.send({ type: "RECOMPUTE_DONE", path: "b.ts", entry: trackedEntry("b.ts") });
   a.send({ type: "CLEAR", reason: "accept", timestamp: 1 });
   ok(ctx(a).pending.size === 0 && ctx(a).baselines.size === 0 && ctx(a).tracked.size === 0, "clear empties registry");
-  ok(a.getSnapshot().value === "empty", "clear -> empty");
+  ok(a.getSnapshot().value === "registry", "clear -> registry state (maps empty above)");
 }
 
 // 19. CLEAR on empty machine is a legal no-op
 {
   const a = freshActor();
   a.send({ type: "CLEAR", reason: "replay", timestamp: 1 });
-  ok(a.getSnapshot().value === "empty", "clear on empty is no-op");
+  ok(a.getSnapshot().value === "registry", "clear on empty registry is no-op");
 }
 
 // 20. replay sequence: BASELINE a, BASELINE b, UNTRACK a, CLEAR, BASELINE c
@@ -251,7 +251,7 @@ function baseline(a: A, path: string, originalContent: string | null, createdAt 
   a.send({ type: "RECOMPUTE_DONE", path: "c.ts", entry: trackedEntry("c.ts", "new") });
   ok(ctx(a).baselines.size === 1 && ctx(a).baselines.has("c.ts"), "replay: only post-clear baseline remains");
   ok(ctx(a).tracked.get("c.ts")?.kind === "new", "replay: recomputed tracked entry recorded");
-  ok(a.getSnapshot().value === "active", "replay ends active");
+  ok(a.getSnapshot().value === "registry", "replay ends in registry state");
 }
 
 // 21. later RECOMPUTE_DONE replaces earlier entry (recompute refresh)

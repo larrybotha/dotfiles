@@ -56,7 +56,7 @@ function status(a: A, id: string): string | undefined {
 // 1. initial state + defaults
 {
   const a = freshActor();
-  ok(a.getSnapshot().value === "empty", "initial state is empty");
+  ok(a.getSnapshot().value === "registry", "initial state is registry");
   ok(ctx(a).sessions.length === 0, "initial registry empty");
   ok(ctx(a).limits.maxSessions === 3, "explicit limits respected");
 }
@@ -65,7 +65,7 @@ function status(a: A, id: string): string | undefined {
 {
   const a = freshActor();
   register(a, "pi-python-1", "python", "^>>> ");
-  ok(a.getSnapshot().value === "active", "register transitions empty -> active");
+  ok(a.getSnapshot().value === "registry", "register records session (registry state)");
   ok(status(a, "pi-python-1") === "waiting_prompt", "with promptRegex -> waiting_prompt");
   register(a, "pi-server-1", "server", null);
   ok(status(a, "pi-server-1") === "ready", "without promptRegex -> ready immediately");
@@ -158,7 +158,7 @@ function status(a: A, id: string): string | undefined {
   a.send({ type: "KILL", id: "pi-a" });
   ok(!findSession(ctx(a), "pi-a"), "KILL dead entry unregisters silently");
   a.send({ type: "KILL", id: "pi-b" });
-  ok(!findSession(ctx(a), "pi-b") && a.getSnapshot().value === "empty", "last KILL -> registry empty, state empty");
+  ok(!findSession(ctx(a), "pi-b") && ctx(a).sessions.length === 0, "last KILL -> registry empty");
   a.send({ type: "KILL", id: "pi-b" });
   ok(true, "KILL unknown consumed without crash");
 }
@@ -198,11 +198,11 @@ function status(a: A, id: string): string | undefined {
 {
   const a = freshActor();
   a.send({ type: "RECONCILE", live: [{ name: "pi-orphan-1" }] });
-  ok(a.getSnapshot().value === "active", "reconcile adopting in empty -> active");
-  ok(status(a, "pi-orphan-1") === "ready", "orphan adopted ready");
-  const empty = freshActor();
-  empty.send({ type: "RECONCILE", live: [] });
-  ok(empty.getSnapshot().value === "empty", "reconcile with nothing stays empty");
+  ok(status(a, "pi-orphan-1") === "ready" && ctx(a).sessions.length === 1, "reconcile adopts strays from empty registry (recorded)");
+  ok(a.getSnapshot().value === "registry", "reconcile adopting -> registry state");
+  const none = freshActor();
+  none.send({ type: "RECONCILE", live: [] });
+  ok(none.getSnapshot().value === "registry" && ctx(none).sessions.length === 0, "reconcile with nothing records nothing");
 }
 
 // 11. id uniqueness: suffix collision rejected
@@ -234,7 +234,7 @@ function status(a: A, id: string): string | undefined {
     JSON.stringify(ctx(a2)) === JSON.stringify(ctx(a1)),
     "persisted snapshot restores registry exactly",
   );
-  ok(a2.getSnapshot().value === "active", "restored actor in active state");
+  ok(a2.getSnapshot().value === "registry", "restored actor in registry state");
   a2.send({ type: "PROMPT_SEEN", id: "pi-gdb-1" });
   ok(status(a2, "pi-gdb-1") === "ready", "restored actor accepts further events");
 }
@@ -289,7 +289,7 @@ function status(a: A, id: string): string | undefined {
   };
   const b = freshActor();
   b.send({ type: "RESTORE", registry: snap });
-  ok(b.getSnapshot().value === "active", "RESTORE -> active");
+  ok(b.getSnapshot().value === "registry", "RESTORE applied (registry state)");
   const restored = ctx(b).sessions;
   ok(restored.length === 4, "RESTORE restores all sessions");
   ok(restored.every((s, i) => JSON.stringify(s) === JSON.stringify(snap.sessions[i])), "RESTORE carries sessions over exactly (status/waitAttempts/monitor)");
@@ -313,10 +313,10 @@ function status(a: A, id: string): string | undefined {
     cs.length === 1 && cs[0].id === "ok-1" && cs[0].monitor === false && cs[0].owner === null,
     "RESTORE filters malformed entries, fills defaults (incl. owner)",
   );
-  // empty restore pops back to empty state (active.always)
+  // empty restore: no sessions recorded (former always-flip removed)
   const d = freshActor();
   d.send({ type: "RESTORE", registry: { sessions: [], limits } });
-  ok(d.getSnapshot().value === "empty", "RESTORE with no sessions ends in empty state");
+  ok(ctx(d).sessions.length === 0, "RESTORE with no sessions records none");
 }
 
 // 16. MONITOR_TOGGLE

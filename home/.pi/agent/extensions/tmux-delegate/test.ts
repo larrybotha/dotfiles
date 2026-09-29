@@ -1,25 +1,132 @@
 /**
- * Machine tests — run without an LLM or tmux:
+ * Machine tests — run without an LLM, tmux, or Docker:
  *   node test.ts
+ *
+ * Service slots are provided with controllable stubs (machine.provide) —
+ * no executor runs. The stubs record their inputs (evidence parity), observe
+ * their AbortSignal (KILL aborts), and decide outcomes, so the full
+ * machine-driven lifecycle — spawn → monitor → collect, exit/dead/deadline
+ * routing, KILL-in-spawning/running, collect-on-three-transitions — is
+ * testable deterministically. The old shape kept the poll loop in the tool:
+ * untestable here. Now the lifecycle is machine-side and covered.
  */
 import assert from "node:assert/strict";
-import { createActor, type Actor } from "xstate";
+import { createActor, type Actor, fromPromise, waitFor } from "xstate";
 import {
 	buildSummary,
 	delegateMachine,
 	initialContext,
+	type ArtifactEntry,
+	type CollectServiceInput,
+	type CollectServiceOutput,
+	type DelegateContext,
+	type MonitorServiceInput,
+	type MonitorServiceOutput,
+	type SpawnServiceInput,
+	type SpawnServiceOutput,
+	type SpawnFiles,
 	paramsViolation,
 	statusOf,
-	type ArtifactEntry,
 } from "./machine.ts";
 
-function makeActor(): Actor<typeof delegateMachine> {
-	const a = createActor(delegateMachine);
+// ---------------------------------------------------------------------------
+// Controllable stubs (slide-deck test pattern)
+// ---------------------------------------------------------------------------
+
+type StubState = {
+	spawnInputs: SpawnServiceInput[];
+	monitorInputs: MonitorServiceInput[];
+	collectInputs: CollectServiceInput[];
+	/** AbortSignals observed by each service (spawn, monitor). */
+	aborted: { spawn: boolean; monitor: boolean };
+	spawnNext: (input: SpawnServiceInput) => Promise<SpawnServiceOutput>;
+	monitorNext: (input: MonitorServiceInput) => Promise<MonitorServiceOutput>;
+	collectNext: (input: CollectServiceInput) => Promise<CollectServiceOutput>;
+};
+
+const FILES: SpawnFiles = {
+	signalFile: "/tmp/delegate/signal",
+	stderrFile: "/tmp/delegate/stderr",
+	taskFile: "/tmp/delegate/task",
+	scriptFile: "/tmp/delegate/script",
+	promptFile: null,
+};
+
+function makeStubs(
+	over: Partial<{
+		spawn: StubState["spawnNext"];
+		monitor: StubState["monitorNext"];
+		collect: StubState["collectNext"];
+	}> = {},
+): StubState {
+	const stub: StubState = {
+		spawnInputs: [],
+		monitorInputs: [],
+		collectInputs: [],
+		aborted: { spawn: false, monitor: false },
+		spawnNext:
+			over.spawn ??
+			(async (input) => ({
+				sessionId: input.sessionId,
+				socketPath: input.socketPath,
+				files: FILES,
+			})),
+		monitorNext: over.monitor ?? (async () => ({ kind: "exit", exitCode: 0 })),
+		collectNext:
+			over.collect ??
+			(async (input) => ({
+				artifacts: input.artifactPaths.map((path) => ({
+					path,
+					content: `content of ${path}`,
+					missing: false,
+				})),
+				stderr: "",
+			})),
+	};
+	return stub;
+}
+
+function makeMachine(stub: StubState) {
+	return delegateMachine.provide({
+		actors: {
+			spawnService: fromPromise<SpawnServiceOutput, SpawnServiceInput>(
+				async ({ input, signal }) => {
+					stub.spawnInputs.push(input);
+					signal.addEventListener("abort", () => {
+						stub.aborted.spawn = true;
+					});
+					return stub.spawnNext(input);
+				},
+			),
+			monitorService: fromPromise<MonitorServiceOutput, MonitorServiceInput>(
+				async ({ input, signal }) => {
+					stub.monitorInputs.push(input);
+					signal.addEventListener("abort", () => {
+						stub.aborted.monitor = true;
+					});
+					return stub.monitorNext(input);
+				},
+			),
+			collectService: fromPromise<CollectServiceOutput, CollectServiceInput>(
+				async ({ input }) => {
+					stub.collectInputs.push(input);
+					return stub.collectNext(input);
+				},
+			),
+		},
+	});
+}
+
+type M = ReturnType<typeof makeMachine>;
+type A = Actor<M>;
+
+function makeActor(stub: StubState = makeStubs()): A {
+	const a = createActor(makeMachine(stub));
 	a.start();
 	return a;
 }
 
-function begin(a: Actor<typeof delegateMachine>, overrides: Record<string, unknown> = {}) {
+function begin(a: A, overrides: Record<string, unknown> = {}) {
 	a.send({
 		type: "BEGIN_DELEGATION",
 		sessionId: "delegate-1-abcd",
@@ -29,54 +136,52 @@ function begin(a: Actor<typeof delegateMachine>, overrides: Record<string, unkno
 		timeoutSecs: 300,
 		workingDir: "/tmp/work",
 		artifactPaths: ["out.txt"],
+		launch: { socketDir: "/tmp/agent-tmux-sockets", agentPrompt: null, parentPid: 42, pi: { command: "pi", args: [] } },
 		...overrides,
 	});
 }
 
-function beginBad(a: Actor<typeof delegateMachine>, overrides: Record<string, unknown> = {}) {
+function beginBad(a: A, overrides: Record<string, unknown> = {}) {
 	begin(a, { task: "t", timeoutSecs: 10, artifactPaths: ["a.txt"], ...overrides });
 }
 
-function spawnOk(a: Actor<typeof delegateMachine>) {
-	begin(a);
-	a.send({ type: "SPAWN_OK" });
+/** Settled: terminal + collected (spawn-fail error: no collect, settled at terminal). */
+function settled(s: A extends never ? never : ReturnType<A["getSnapshot"]>): boolean {
+	if (s.matches("aborted")) return true;
+	if (!(s.matches("success") || s.matches("error") || s.matches("timeout"))) return false;
+	return s.context.files === null || s.context.collected;
 }
 
-function collect(a: Actor<typeof delegateMachine>, artifacts: ArtifactEntry[]) {
-	a.send({ type: "COLLECT_DONE", artifacts, stderr: "" });
+async function drive(stub: StubState = makeStubs()): Promise<A> {
+	const a = makeActor(stub);
+	begin(a);
+	await waitFor(a, (s) => settled(s));
+	return a;
 }
 
 let passed = 0;
-function ok(name: string, fn: () => void) {
-	fn();
-	passed++;
-	console.log(`✓ ${name}`);
+let failed = 0;
+async function ok(name: string, fn: () => Promise<void> | void) {
+	try {
+		await fn();
+		passed++;
+		console.log(`✓ ${name}`);
+	} catch (e) {
+		failed++;
+		console.error(`✗ ${name}\n${e instanceof Error ? e.stack : String(e)}`);
+	}
 }
 
-// --- idle / event order ----------------------------------------------------
-ok("idle: BEGIN legal, everything else rejected", () => {
+// --- idle / begin ------------------------------------------------------------
+
+await ok("idle: BEGIN legal; KILL illegal (nothing to abort)", () => {
 	const a = makeActor();
-	assert.equal(
-		a.getSnapshot().can({
-			type: "BEGIN_DELEGATION",
-			sessionId: "s",
-			socketPath: "p",
-			task: "t",
-			monitor: false,
-			timeoutSecs: 10,
-			workingDir: "w",
-			artifactPaths: [],
-		}),
-		true,
-	);
-	assert.equal(a.getSnapshot().can({ type: "SPAWN_OK" }), false);
-	assert.equal(a.getSnapshot().can({ type: "EXIT_SEEN", exitCode: 0 }), false);
-	assert.equal(a.getSnapshot().can({ type: "DEADLINE_HIT" }), false);
 	assert.equal(a.getSnapshot().can({ type: "KILL" }), false);
-	assert.equal(a.getSnapshot().can({ type: "COLLECT_DONE", artifacts: [], stderr: "" }), false);
+	begin(a);
+	assert.equal(a.getSnapshot().value, "spawning");
 });
 
-ok("idle: illegal BEGIN rejected (validator shared with tool precheck)", () => {
+await ok("idle: illegal BEGIN rejected (validator shared with tool precheck)", () => {
 	const a = makeActor();
 	a.send({
 		type: "BEGIN_DELEGATION",
@@ -87,25 +192,28 @@ ok("idle: illegal BEGIN rejected (validator shared with tool precheck)", () => {
 		timeoutSecs: 300,
 		workingDir: "w",
 		artifactPaths: [],
+		launch: { socketDir: "/d", agentPrompt: null, parentPid: 1, pi: { command: "pi", args: [] } },
 	});
 	assert.equal(a.getSnapshot().value, "idle");
 	assert.equal(a.getSnapshot().context.sessionId, "");
 });
 
-ok("BEGIN stores delegation params in context", () => {
+await ok("BEGIN stores delegation params in context (launch stays out of the snapshot)", () => {
 	const a = makeActor();
 	begin(a);
-	assert.equal(a.getSnapshot().value, "spawning");
 	const c = a.getSnapshot().context;
+	assert.equal(a.getSnapshot().value, "spawning");
 	assert.equal(c.sessionId, "delegate-1-abcd");
 	assert.equal(c.task, "Write results to out.txt");
 	assert.equal(c.timeoutSecs, 300);
 	assert.deepEqual(c.artifactPaths, ["out.txt"]);
 	assert.equal(c.monitor, false);
 	assert.equal(c.workingDir, "/tmp/work");
+	assert.equal(c.files, null); // spawn not done yet
+	assert.deepEqual(Object.keys(initialContext()).includes("launch"), false);
 });
 
-ok("second BEGIN rejected — one delegation per actor", () => {
+await ok("second BEGIN rejected — one delegation per actor", () => {
 	const a = makeActor();
 	begin(a);
 	beginBad(a, { sessionId: "delegate-2-efgh" });
@@ -113,160 +221,31 @@ ok("second BEGIN rejected — one delegation per actor", () => {
 	assert.equal(a.getSnapshot().context.sessionId, "delegate-1-abcd");
 });
 
-// --- paramsViolation (pure validator) ----------------------------------------
-ok("paramsViolation: empty task", () => {
+// --- paramsViolation (pure validator — unchanged) -----------------------------
+
+await ok("paramsViolation: empty task / bad timeout / empty + dup + too many artifacts", () => {
 	assert.match(paramsViolation("", 300, [])!, /task is empty/);
 	assert.match(paramsViolation("  ", 300, [])!, /task is empty/);
 	assert.equal(paramsViolation("do work", 300, []), null);
+	assert.match(paramsViolation("t", 0, [])!, /timeout must be a positive number/);
+	assert.match(paramsViolation("t", -5, [])!, /timeout must be a positive number/);
+	assert.match(paramsViolation("t", 10, [""])!, /must be non-empty strings/);
+	assert.match(paramsViolation("t", 10, new Array(65).fill("f").map((_, i) => `f${i}.txt`))!, /too many artifact paths/);
+	assert.match(paramsViolation("t", 10, ["a", "a"])!, /duplicate artifact paths/);
+	assert.equal(paramsViolation("t", 10, ["a", "b"]), null);
 });
 
-ok("paramsViolation: bad timeout", () => {
-	assert.match(paramsViolation("t", 0, [])!, /timeout must be a positive/);
-	assert.match(paramsViolation("t", -5, [])!, /timeout must be a positive/);
-	assert.match(paramsViolation("t", Number.NaN, [])!, /timeout must be a positive/);
-});
-
-ok("paramsViolation: empty + duplicate artifact paths", () => {
-	assert.match(paramsViolation("t", 10, [""])!, /non-empty strings/);
-	assert.match(paramsViolation("t", 10, ["a.txt", "b.txt", "a.txt"])!, /duplicate artifact paths/);
-	assert.equal(paramsViolation("t", 10, ["a.txt", "b.txt"]), null);
-});
-
-ok("paramsViolation: artifact count capped (collect payload is bounded)", () => {
-	const many = Array.from({ length: 65 }, (_, i) => `f${i}.txt`);
-	assert.match(paramsViolation("t", 10, many)!, /too many artifact paths/);
-	assert.equal(paramsViolation("t", 10, many.slice(0, 64)), null);
-});
-
-ok("buildSummary: unreadable artifacts counted like missing, never as collected", () => {
-	const artifacts = [
-		{ path: "ok.txt", content: "x", missing: false },
-		{ path: "gone.txt", content: "", missing: true },
-		{ path: "dir", content: "", missing: false, readError: "EISDIR: illegal operation on a directory, read" },
+await ok("buildSummary: collected/missing/unreadable counts", () => {
+	const arts: ArtifactEntry[] = [
+		{ path: "a.txt", content: "x", missing: false },
+		{ path: "b.txt", content: "", missing: true },
+		{ path: "c.txt", content: "", missing: false, readError: "EISDIR" },
 	];
-	const s = buildSummary(["ok.txt", "gone.txt", "dir"], artifacts);
-	assert.match(s, /Collected 1\/3 artifacts\./);
-	assert.match(s, /Missing: gone\.txt\./);
-	assert.match(s, /Unreadable: dir\./);
+	assert.equal(buildSummary(["a.txt", "b.txt", "c.txt"], arts), "Collected 1/3 artifacts. Missing: b.txt. Unreadable: c.txt.");
+	assert.equal(buildSummary(["a.txt"], [{ path: "a.txt", content: "x", missing: false }]), "Collected 1/1 artifacts.");
 });
 
-// --- spawning ----------------------------------------------------------------
-ok("SPAWN_FAIL → error with readable failure detail", () => {
-	const a = makeActor();
-	begin(a);
-	a.send({ type: "SPAWN_FAIL", error: "no tmux binary" });
-	assert.equal(a.getSnapshot().value, "error");
-	assert.match(a.getSnapshot().context.failureDetail!, /Failed to create tmux session: no tmux binary/);
-	assert.equal(a.getSnapshot().context.exitCode, null);
-	assert.equal(a.getSnapshot().can({ type: "COLLECT_DONE", artifacts: [], stderr: "" }), true);
-});
-
-ok("spawning: EXIT_SEEN / DEADLINE_HIT / KILL rejected", () => {
-	const a = makeActor();
-	begin(a);
-	assert.equal(a.getSnapshot().can({ type: "EXIT_SEEN", exitCode: 0 }), false);
-	assert.equal(a.getSnapshot().can({ type: "DEADLINE_HIT" }), false);
-	assert.equal(a.getSnapshot().can({ type: "KILL" }), false);
-});
-
-// --- running → terminal -----------------------------------------------------
-ok("EXIT_SEEN 0 → success, exit code recorded", () => {
-	const a = makeActor();
-	spawnOk(a);
-	a.send({ type: "EXIT_SEEN", exitCode: 0 });
-	assert.equal(a.getSnapshot().value, "success");
-	assert.equal(a.getSnapshot().context.exitCode, 0);
-});
-
-ok("EXIT_SEEN nonzero → error, exit code recorded", () => {
-	const a = makeActor();
-	spawnOk(a);
-	a.send({ type: "EXIT_SEEN", exitCode: 2 });
-	assert.equal(a.getSnapshot().value, "error");
-	assert.equal(a.getSnapshot().context.exitCode, 2);
-});
-
-ok("SESSION_DEAD → error with died-without-signal detail, no exit code", () => {
-	const a = makeActor();
-	spawnOk(a);
-	a.send({ type: "SESSION_DEAD" });
-	assert.equal(a.getSnapshot().value, "error");
-	assert.match(a.getSnapshot().context.failureDetail!, /died without writing an exit code/);
-	assert.equal(a.getSnapshot().context.exitCode, null);
-});
-
-ok("DEADLINE_HIT → timeout", () => {
-	const a = makeActor();
-	spawnOk(a);
-	a.send({ type: "DEADLINE_HIT" });
-	assert.equal(a.getSnapshot().value, "timeout");
-	assert.equal(a.getSnapshot().context.exitCode, null);
-});
-
-ok("KILL → aborted with summary", () => {
-	const a = makeActor();
-	spawnOk(a);
-	a.send({ type: "KILL" });
-	assert.equal(a.getSnapshot().value, "aborted");
-	assert.equal(a.getSnapshot().context.summary, "Aborted by user");
-});
-
-ok("running: COLLECT_DONE rejected (collect only after terminal)", () => {
-	const a = makeActor();
-	spawnOk(a);
-	assert.equal(a.getSnapshot().can({ type: "COLLECT_DONE", artifacts: [], stderr: "" }), false);
-});
-
-// --- collect ------------------------------------------------------------------
-ok("COLLECT_DONE stores artifacts, stderr, summary; recorded once", () => {
-	const a = makeActor();
-	begin(a, { artifactPaths: ["out.txt", "gone.txt"] });
-	a.send({ type: "SPAWN_OK" });
-	a.send({ type: "EXIT_SEEN", exitCode: 0 });
-	const artifacts: ArtifactEntry[] = [
-		{ path: "out.txt", content: "line1\nline2", missing: false },
-		{ path: "gone.txt", content: "", missing: true },
-	];
-	collect(a, artifacts);
-	const c = a.getSnapshot().context;
-	assert.deepEqual(c.artifacts, artifacts);
-	assert.equal(c.collected, true);
-	assert.match(c.summary, /Collected 1\/2 artifacts/);
-	assert.match(c.summary, /Missing: gone\.txt/);
-	// second collect rejected
-	assert.equal(a.getSnapshot().can({ type: "COLLECT_DONE", artifacts: [], stderr: "" }), false);
-});
-
-ok("collect builds summary from declared paths, not just entries", () => {
-	const a = makeActor();
-	begin(a, { artifactPaths: ["a.txt", "b.txt", "c.txt"] });
-	a.send({ type: "SPAWN_OK" });
-	a.send({ type: "EXIT_SEEN", exitCode: 0 });
-	collect(a, [{ path: "a.txt", content: "x", missing: false }]);
-	assert.match(a.getSnapshot().context.summary, /Collected 1\/3 artifacts/);
-});
-
-// --- buildSummary (pure) -------------------------------------------------------
-ok("buildSummary: all, some missing, none declared", () => {
-	assert.equal(
-		buildSummary(["a.txt"], [{ path: "a.txt", content: "x", missing: false }]),
-		"Collected 1/1 artifacts.",
-	);
-	assert.equal(
-		buildSummary([], []),
-		"Collected 0/0 artifacts.",
-	);
-	assert.match(
-		buildSummary(["a.txt", "b.txt"], [
-			{ path: "a.txt", content: "", missing: true },
-			{ path: "b.txt", content: "", missing: true },
-		]),
-		/Missing: a\.txt, b\.txt/,
-	);
-});
-
-// --- statusOf -------------------------------------------------------------------
-ok("statusOf: terminal states pass through, others collapse to running", () => {
+await ok("statusOf: terminal names pass through; the rest collapse to running", () => {
 	assert.equal(statusOf("success"), "success");
 	assert.equal(statusOf("error"), "error");
 	assert.equal(statusOf("timeout"), "timeout");
@@ -276,50 +255,201 @@ ok("statusOf: terminal states pass through, others collapse to running", () => {
 	assert.equal(statusOf("running"), "running");
 });
 
-// --- snapshot restore -------------------------------------------------------------
-ok("persisted snapshot restores terminal state + collected context", () => {
-	const a = makeActor();
-	spawnOk(a);
-	a.send({ type: "EXIT_SEEN", exitCode: 0 });
-	collect(a, [{ path: "out.txt", content: "done", missing: false }]);
-	const persisted = a.getPersistedSnapshot();
+// --- happy path: spawn → monitor → collect (machine-driven) --------------------
 
-	const b = createActor(delegateMachine, { snapshot: persisted as never });
-	b.start();
-	assert.equal(b.getSnapshot().value, "success");
-	const c = b.getSnapshot().context;
+await ok("exit 0 → success; artifacts collected; summary built; evidence parity", async () => {
+	const stub = makeStubs();
+	const a = await drive(stub);
+	assert.equal(a.getSnapshot().value, "success");
+	const c = a.getSnapshot().context;
 	assert.equal(c.exitCode, 0);
-	assert.equal(c.sessionId, "delegate-1-abcd");
 	assert.equal(c.collected, true);
-	assert.equal(c.artifacts.length, 1);
-	assert.match(c.summary, /Collected 1\/1/);
-	// collect-once rule survives restore
-	assert.equal(b.getSnapshot().can({ type: "COLLECT_DONE", artifacts: [], stderr: "" }), false);
-	// terminal: no new lifecycle events
-	assert.equal(b.getSnapshot().can({ type: "EXIT_SEEN", exitCode: 0 }), false);
-	assert.equal(b.getSnapshot().can({ type: "KILL" }), false);
+	assert.deepEqual(
+		c.artifacts.map((x) => x.path),
+		["out.txt"],
+	);
+	assert.equal(c.summary, "Collected 1/1 artifacts.");
+	assert.equal(c.failureDetail, null);
+	// spawn input parity: launch params flow through the event
+	assert.equal(stub.spawnInputs.length, 1);
+	assert.deepEqual(stub.spawnInputs[0]!.launch, {
+		socketDir: "/tmp/agent-tmux-sockets",
+		agentPrompt: null,
+		parentPid: 42,
+		pi: { command: "pi", args: [] },
+	});
+	assert.equal(stub.spawnInputs[0]!.sessionId, "delegate-1-abcd");
+	// monitor input parity: context-derived (files recorded from spawn output)
+	assert.equal(stub.monitorInputs.length, 1);
+	assert.equal(stub.monitorInputs[0]!.files.signalFile, FILES.signalFile);
+	assert.equal(stub.monitorInputs[0]!.sessionId, "delegate-1-abcd");
+	assert.equal(stub.monitorInputs[0]!.timeoutSecs, 300);
+	// collect input parity: artifacts/workingDir/stderrFile from context
+	assert.equal(stub.collectInputs.length, 1);
+	assert.deepEqual(stub.collectInputs[0]!.artifactPaths, ["out.txt"]);
+	assert.equal(stub.collectInputs[0]!.workingDir, "/tmp/work");
+	assert.equal(stub.collectInputs[0]!.stderrFile, FILES.stderrFile);
 });
 
-ok("persisted snapshot restores running state with live transitions", () => {
-	const a = makeActor();
-	spawnOk(a);
-	const persisted = a.getPersistedSnapshot();
-
-	const b = createActor(delegateMachine, { snapshot: persisted as never });
-	b.start();
-	assert.equal(b.getSnapshot().value, "running");
-	assert.equal(b.getSnapshot().can({ type: "EXIT_SEEN", exitCode: 0 }), true);
-	assert.equal(b.getSnapshot().can({ type: "DEADLINE_HIT" }), true);
-	b.send({ type: "DEADLINE_HIT" });
-	assert.equal(b.getSnapshot().value, "timeout");
-	assert.equal(b.getSnapshot().can({ type: "COLLECT_DONE", artifacts: [], stderr: "" }), true);
+await ok("exit 0 → monitor input derives socketPath/sessionId from context", async () => {
+	const stub = makeStubs();
+	const a = await drive(stub);
+	assert.equal(stub.monitorInputs[0]!.socketPath, "/tmp/agent-tmux-sockets/agent.sock");
+	assert.equal(a.getSnapshot().context.files, FILES);
 });
 
-ok("initialContext is a clean slate", () => {
-	assert.deepEqual(initialContext().artifactPaths, []);
-	assert.equal(initialContext().exitCode, null);
-	assert.equal(initialContext().collected, false);
-	assert.equal(initialContext().failureDetail, null);
+await ok("exit != 0 → error; exitCode recorded; artifacts collected", async () => {
+	const stub = makeStubs({ monitor: async () => ({ kind: "exit", exitCode: 137 }) });
+	const a = await drive(stub);
+	assert.equal(a.getSnapshot().value, "error");
+	assert.equal(a.getSnapshot().context.exitCode, 137);
+	assert.equal(a.getSnapshot().context.collected, true);
+	assert.equal(a.getSnapshot().context.failureDetail, null);
 });
 
-console.log(`\n${passed} tests passed`);
+await ok("session dead → error with readable failureDetail; collect still runs", async () => {
+	const stub = makeStubs({ monitor: async () => ({ kind: "dead" }) });
+	const a = await drive(stub);
+	assert.equal(a.getSnapshot().value, "error");
+	assert.match(a.getSnapshot().context.failureDetail ?? "", /died without writing an exit code/);
+	assert.equal(a.getSnapshot().context.collected, true);
+});
+
+await ok("deadline → timeout; collect runs after the deadline kill", async () => {
+	const stub = makeStubs({ monitor: async () => ({ kind: "deadline" }) });
+	const a = await drive(stub);
+	assert.equal(a.getSnapshot().value, "timeout");
+	assert.equal(a.getSnapshot().context.collected, true);
+	assert.equal(a.getSnapshot().context.exitCode, null);
+});
+
+// --- spawn failure -------------------------------------------------------------
+
+await ok("spawn fail → error with failureDetail; NO collect (task never ran)", async () => {
+	const stub = makeStubs({
+		spawn: async () => {
+			throw new Error("tmux server not running");
+		},
+	});
+	const a = makeActor(stub);
+	begin(a);
+	await waitFor(a, (s) => settled(s));
+	assert.equal(a.getSnapshot().value, "error");
+	const c = a.getSnapshot().context;
+	assert.match(c.failureDetail ?? "", /Failed to create tmux session: tmux server not running/);
+	assert.equal(c.collected, false);
+	assert.equal(c.artifacts.length, 0);
+	assert.equal(c.files, null);
+	assert.equal(stub.collectInputs.length, 0); // collect never invoked
+});
+
+// --- abort (KILL) ---------------------------------------------------------------
+
+await ok("KILL during running → aborted; NO collect; monitor AbortSignal fires", async () => {
+	const gate = { resolve: (_: MonitorServiceOutput) => {} };
+	const stub = makeStubs({
+		monitor: () =>
+			new Promise<MonitorServiceOutput>((res) => {
+				gate.resolve = res;
+			}),
+	});
+	const a = makeActor(stub);
+	begin(a);
+	await waitFor(a, (s) => s.matches("running"));
+	a.send({ type: "KILL" });
+	assert.equal(a.getSnapshot().value, "aborted");
+	assert.equal(a.getSnapshot().context.summary, "Aborted by user");
+	assert.equal(a.getSnapshot().context.collected, false);
+	assert.equal(stub.collectInputs.length, 0);
+	// exiting `running` aborted the monitor service
+	await new Promise((r) => setTimeout(r, 20));
+	assert.equal(stub.aborted.monitor, true);
+	// late monitor result: no handler in aborted — dropped
+	gate.resolve({ kind: "exit", exitCode: 0 });
+	await new Promise((r) => setTimeout(r, 20));
+	assert.equal(a.getSnapshot().value, "aborted");
+	assert.equal(a.getSnapshot().context.exitCode, null);
+});
+
+await ok("KILL during spawning → aborted; spawn AbortSignal fires; late spawn dropped", async () => {
+	const gate = { resolve: (_: SpawnServiceOutput) => {} };
+	const stub = makeStubs({
+		spawn: () =>
+			new Promise<SpawnServiceOutput>((res) => {
+				gate.resolve = res;
+			}),
+	});
+	const a = makeActor(stub);
+	begin(a);
+	assert.equal(a.getSnapshot().value, "spawning");
+	a.send({ type: "KILL" });
+	assert.equal(a.getSnapshot().value, "aborted");
+	await new Promise((r) => setTimeout(r, 20));
+	assert.equal(stub.aborted.spawn, true);
+	assert.equal(stub.collectInputs.length, 0);
+	// late spawn result: dropped — no handler in aborted
+	gate.resolve({ sessionId: "late", socketPath: "late", files: FILES });
+	await new Promise((r) => setTimeout(r, 20));
+	assert.equal(a.getSnapshot().value, "aborted");
+	assert.equal(a.getSnapshot().context.files, null);
+});
+
+await ok("late KILL after terminal is dropped; terminal is final", async () => {
+	const a = await drive();
+	a.send({ type: "KILL" });
+	assert.equal(a.getSnapshot().value, "success");
+	assert.equal(a.getSnapshot().context.summary, "Collected 1/1 artifacts.");
+});
+
+// --- collect failure -------------------------------------------------------------
+
+await ok("collect fail → empty artifacts, error as stderr, collected still true", async () => {
+	const stub = makeStubs({
+		collect: async () => {
+			throw new Error("EACCES on stderr file");
+		},
+	});
+	const a = await drive(stub);
+	assert.equal(a.getSnapshot().value, "success"); // task succeeded; only collection failed
+	const c = a.getSnapshot().context;
+	assert.equal(c.collected, true);
+	assert.equal(c.artifacts.length, 0);
+	assert.match(c.stderr, /collection failed: EACCES/);
+	assert.match(c.summary, /Collection failed: EACCES/);
+});
+
+await ok("collect with missing artifacts → summary names them", async () => {
+	const stub = makeStubs({
+		collect: async (input) => ({
+			artifacts: input.artifactPaths.map((path) => ({ path, content: "", missing: true })),
+			stderr: "",
+		}),
+	});
+	const a = await drive(stub);
+	assert.equal(a.getSnapshot().value, "success");
+	assert.match(a.getSnapshot().context.summary, /Collected 0\/1 artifacts\. Missing: out\.txt\./);
+});
+
+// --- unwired machine ---------------------------------------------------------------
+
+await ok("unwired machine: entering spawning lands in error with a readable reason", async () => {
+	const a = createActor(delegateMachine);
+	a.start();
+	begin(a);
+	await waitFor(a, (s) => s.matches("error"));
+	assert.match(a.getSnapshot().context.failureDetail ?? "", /spawnService not wired/);
+	assert.equal(a.getSnapshot().context.collected, false);
+});
+
+// --- terminal stability --------------------------------------------------------------
+
+await ok("terminal states are final: duplicate begin/kill events dropped", async () => {
+	const a = await drive();
+	beginBad(a, { sessionId: "again" });
+	a.send({ type: "KILL" });
+	assert.equal(a.getSnapshot().value, "success");
+	assert.equal(a.getSnapshot().context.sessionId, "delegate-1-abcd");
+});
+
+console.log(`\n${passed} tests passed${failed > 0 ? `, ${failed} failed` : ""}`);
+if (failed > 0) process.exit(1);

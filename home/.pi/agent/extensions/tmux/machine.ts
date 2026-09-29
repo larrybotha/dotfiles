@@ -1,8 +1,19 @@
 // Registry machine for the tmux extension.
-// Flat machine: registry context + guards + pure validators shared with tool
-// prechecks (single source of truth). No IO here — executors own IO, tools
-// embed probe evidence in events. empty/active discriminate legality for
-// nothing; value = inspector + single mutation path, not state gating.
+// Flat machine: one `registry` state over registry context + guards + pure
+// validators shared with tool prechecks (single source of truth). No IO
+// here — executors own IO, tools embed probe evidence in events.
+// Design note: the former empty/active state pair discriminated legality
+// for nothing — every legality rule is context-derived (guards call
+// findSession/validators directly; an empty-context event misses the lookup
+// and is rejected) — and cost a duplicated transition table plus an
+// `always: noSessions -> empty` self-normalization, so it collapsed into the
+// single `registry` state. Outcome-equivalent by construction: RECONCILE was
+// a dual branch in empty (target active when non-empty, otherwise stay) with
+// the same reconcile action — unconditional here, stray adoption from an
+// empty context included; SESSION_START stays a guard-only precheck event;
+// RESTORE still requires an empty registry (restoreValid checks
+// sessions.length === 0 itself). value = inspector + single mutation
+// path, not state gating.
 //
 // Owner isolation: context.owner = this pi instance's pid ("" = unidentified,
 // isolation off); entries carry the creating pi's pid (null = orphan/untagged).
@@ -14,6 +25,8 @@
 // probe evidence (ground truth beats a misjudged prompt-wait).
 
 import { setup, assign } from "xstate";
+
+import { envLimit } from "../_kit/machine-kit.ts";
 
 export type SessionStatus = "starting" | "waiting_prompt" | "ready" | "failed" | "dead";
 
@@ -45,17 +58,10 @@ export interface MachineInput {
   owner?: string;
 }
 
-function num(env: string, fallback: number): number {
-  const v = process.env[env];
-  if (v === undefined || v === "") return fallback;
-  const n = Number(v);
-  return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
-}
-
 export const DEFAULT_LIMITS: RegistryLimits = {
-  maxSessions: num("TMUX_MAX_SESSIONS", 3),
-  maxPromptWaits: num("TMUX_MAX_PROMPT_WAITS", 2),
-  maxWaitAttempts: num("TMUX_MAX_WAIT_ATTEMPTS", 3),
+  maxSessions: envLimit("TMUX_MAX_SESSIONS", 3),
+  maxPromptWaits: envLimit("TMUX_MAX_PROMPT_WAITS", 2),
+  maxWaitAttempts: envLimit("TMUX_MAX_WAIT_ATTEMPTS", 3),
 };
 
 export type TmuxEvent =
@@ -256,9 +262,6 @@ export const tmuxMachine = setup({
     },
     sendLegal: ({ context, event }) =>
       event.type === "SEND" && validateSend(context, event.id, event.live).ok,
-    noSessions: ({ context }) => context.sessions.length === 0,
-    reconcileNonEmpty: ({ context, event }) =>
-      event.type === "RECONCILE" && (context.sessions.length > 0 || event.live.length > 0),
     restoreValid: ({ context, event }) =>
       event.type === "RESTORE" &&
       context.sessions.length === 0 &&
@@ -361,22 +364,11 @@ export const tmuxMachine = setup({
     limits: input?.limits ?? DEFAULT_LIMITS,
     owner: input?.owner ?? "",
   }),
-  initial: "empty",
+  initial: "registry",
   states: {
-    empty: {
+    registry: {
       on: {
-        RESTORE: { guard: "restoreValid", target: "active", actions: "restoreRegistry" },
-        SESSION_START: { guard: "startUnderCap" },
-        SESSION_STARTED: { guard: "idUnique", target: "active", actions: "registerSession" },
-        RECONCILE: [
-          { guard: "reconcileNonEmpty", target: "active", actions: "reconcile" },
-          { actions: "reconcile" },
-        ],
-      },
-    },
-    active: {
-      always: [{ guard: "noSessions", target: "empty" }],
-      on: {
+        RESTORE: { guard: "restoreValid", actions: "restoreRegistry" },
         SESSION_START: { guard: "startUnderCap" },
         SESSION_STARTED: { guard: "idUnique", actions: "registerSession" },
         PROMPT_SEEN: { guard: "waiting", actions: "markReady" },
@@ -387,6 +379,9 @@ export const tmuxMachine = setup({
         WAIT_TIMEOUT: { guard: "known", actions: "bumpWaits" },
         KILL: { guard: "killLegal", actions: "unregister" },
         MONITOR_TOGGLE: { guard: "known", actions: "toggleMonitor" },
+        // unconditional (the former empty-state dual branch collapsed):
+        // adopts live pi-* strays even from an empty registry — probe is
+        // ground truth, target choice was the only difference
         RECONCILE: { actions: "reconcile" },
       },
     },

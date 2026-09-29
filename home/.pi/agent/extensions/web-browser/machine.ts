@@ -5,7 +5,21 @@
  * emulate) are only legal in `running`; launch only from `stopped`.
  * Context carries last-known caches (browser info, active tab, emulation
  * preference) + known device presets. Executors (skill scripts + extension
- * probes) own IO and embed evidence in events.
+ * probes) own IO and embed evidence in events — launch is an invoked
+ * service (XState v5 fromPromise): BEGIN_LAUNCH enters `starting` and
+ * invokes launchService (start.js spawn + endpoint probe; wired in
+ * index.ts via machine.provide(), machine.ts ships a typed stub only);
+ * onDone → running with the probe-confirmed browser evidence, onError →
+ * stopped + error ring. The old BEGIN/LAUNCH_DONE plumbing is gone — a
+ * throw between spawn and probe can no longer wedge `starting`.
+ *
+ * Exiting `starting` (STOP, or PROBE adopting a live browser) ABORTS the
+ * launch service: the wired executor observes its AbortSignal and
+ * best-effort kills the spawned browser pid (stop.mjs — owned instances
+ * only; attach/foreign are never killed). Late service results have no
+ * handler outside `starting` and are dropped. PROBE !up in `starting`
+ * proves nothing (the endpoint is not up YET — the launch is still in
+ * flight): the machine stays in `starting` and records no drift.
  *
  * Ground truth for "is the browser up" is the probe executor — never a stale
  * context field. PROBE reconciles both directions: adopts a live browser
@@ -20,123 +34,174 @@
  * launches, and drift cannot grow context without bound. Slim snapshots
  * persist only the tail (slimContext in index.ts).
  */
-import { assign, setup } from "xstate";
+import { assign, fromPromise, setup } from "xstate";
 
 export type LaunchMode = "fresh" | "profile" | "reset-profile" | "attach";
 /** Probed-live browser with no skill state file — connect-only, never killed. */
 export type BrowserMode = LaunchMode | "foreign";
 
 export interface BrowserInfo {
-	mode: BrowserMode;
-	port: number;
-	/** Null for attach/foreign, or if the pid is unknown. */
-	pid: number | null;
-	userDataDir: string | null;
-	/** Product string from /json/version, e.g. "Chrome/126.0.6478.57". */
-	browser: string | null;
-	startedAt: string | null;
+  mode: BrowserMode;
+  port: number;
+  /** Null for attach/foreign, or if the pid is unknown. */
+  pid: number | null;
+  userDataDir: string | null;
+  /** Product string from /json/version, e.g. "Chrome/126.0.6478.57". */
+  browser: string | null;
+  startedAt: string | null;
 }
 
 export interface ActiveTab {
-	targetId: string | null;
-	url: string;
-	at: string;
+  targetId: string | null;
+  url: string;
+  at: string;
 }
 
 export interface EmulationPref {
-	device: string;
-	landscape: boolean;
-	at: string;
+  device: string;
+  landscape: boolean;
+  at: string;
 }
 
 export interface BrowserContext {
-	browser: BrowserInfo | null;
-	activeTab: ActiveTab | null;
-	emulation: EmulationPref | null;
-	errors: string[];
-	/** Known device preset ids. Ground truth: skill devices.js; loaded at
-	 *  session_start, refreshed via DEVICES. Default mirrors it. */
-	devices: string[];
+  browser: BrowserInfo | null;
+  activeTab: ActiveTab | null;
+  emulation: EmulationPref | null;
+  errors: string[];
+  /** Known device preset ids. Ground truth: skill devices.js; loaded at
+   *  session_start, refreshed via DEVICES. Default mirrors it. */
+  devices: string[];
 }
 
 export type BrowserEvent =
-	| { type: "BEGIN_LAUNCH"; mode: LaunchMode }
-	| {
-			type: "LAUNCH_DONE";
-			mode: LaunchMode;
-			port: number;
-			pid: number | null;
-			userDataDir: string | null;
-			browser: string | null;
-			error: string | null;
-	  }
-	| {
-			type: "PROBE";
-			up: boolean;
-			port: number;
-			browser: string | null;
-			pid: number | null;
-			mode: BrowserMode;
-			userDataDir: string | null;
-			startedAt: string | null;
-	  }
-	| { type: "NAV"; url: string; newTab: boolean }
-	| { type: "TAB_SWITCH"; targetId: string | null; url: string }
-	| { type: "EMULATE_SET"; device: string; landscape: boolean }
-	| { type: "EMULATE_RESET" }
-	| { type: "STOP"; reason: string }
-	| {
-			type: "RESTORE";
-			activeTab: ActiveTab | null;
-			emulation: EmulationPref | null;
-			devices: string[] | null;
-	  }
-	| { type: "DEVICES"; ids: string[] };
+  | {
+      type: "BEGIN_LAUNCH";
+      mode: LaunchMode;
+      extraEnv?: Record<string, string>;
+    }
+  | {
+      type: "PROBE";
+      up: boolean;
+      port: number;
+      browser: string | null;
+      pid: number | null;
+      mode: BrowserMode;
+      userDataDir: string | null;
+      startedAt: string | null;
+    }
+  | { type: "NAV"; url: string; newTab: boolean }
+  | { type: "TAB_SWITCH"; targetId: string | null; url: string }
+  | { type: "EMULATE_SET"; device: string; landscape: boolean }
+  | { type: "EMULATE_RESET" }
+  | { type: "STOP"; reason: string }
+  | {
+      type: "RESTORE";
+      activeTab: ActiveTab | null;
+      emulation: EmulationPref | null;
+      devices: string[] | null;
+    }
+  | { type: "DEVICES"; ids: string[] };
+
+// ---- launch service (invoked from `starting`) ----
+
+/** Launch service input: the resolved mode + executor env (BROWSER_BIN /
+ *  BROWSER_DEBUG_PORT from auto-detect or the bin param — auto UX stays
+ *  tool-side, BEFORE BEGIN_LAUNCH; the machine sees only the resolved
+ *  mode, as with explicit modes). */
+export interface LaunchInput {
+  mode: LaunchMode;
+  extraEnv?: Record<string, string>;
+}
+
+/** Launch service output: probe-confirmed browser evidence (the service ran
+ *  start.js + a follow-up probe — ground truth, never launcher claims) +
+ *  start.js stdout for the browser_start result text. */
+export interface LaunchOutput {
+  browser: BrowserInfo;
+  text: string;
+}
 
 /** Mirrors skill devices.js preset ids — replaced at session_start by a live read. */
-export const DEFAULT_DEVICES = ["iphone-se", "iphone-14", "pixel-7", "galaxy-s20"];
+export const DEFAULT_DEVICES = [
+  "iphone-se",
+  "iphone-14",
+  "pixel-7",
+  "galaxy-s20",
+];
 
-export function initialContext(devices: string[] = DEFAULT_DEVICES): BrowserContext {
-	return {
-		browser: null,
-		activeTab: null,
-		emulation: null,
-		errors: [],
-		devices: devices.length > 0 ? [...devices] : [...DEFAULT_DEVICES],
-	};
+export function initialContext(
+  devices: string[] = DEFAULT_DEVICES,
+): BrowserContext {
+  return {
+    browser: null,
+    activeTab: null,
+    emulation: null,
+    errors: [],
+    devices: devices.length > 0 ? [...devices] : [...DEFAULT_DEVICES],
+  };
 }
 
 /** Error ring bound: keep the last MAX_ERRORS entries. */
 export const MAX_ERRORS = 50;
 
 function appendError(errors: string[], entry: string): string[] {
-	const next = [...errors, entry];
-	return next.length > MAX_ERRORS ? next.slice(next.length - MAX_ERRORS) : next;
+  const next = [...errors, entry];
+  return next.length > MAX_ERRORS ? next.slice(next.length - MAX_ERRORS) : next;
+}
+
+/** Launch service failure shape — the wired executor throws it (mode from
+ *  its input); onError records it in the ring. Stubs / unexpected throws
+ *  normalize to a null mode (the ring entry reads `launch: <message>`). */
+export interface LaunchFailure {
+  mode: LaunchMode | null;
+  message: string;
+}
+
+/** Normalize an unknown launch-service error into readable ring data. */
+export function launchFailureOf(error: unknown): LaunchFailure {
+  const modes: LaunchMode[] = ["fresh", "profile", "reset-profile", "attach"];
+  if (typeof error === "object" && error !== null) {
+    const { mode, message } = error as { mode?: unknown; message?: unknown };
+    if (
+      typeof message === "string" &&
+      (mode === null || modes.includes(mode as LaunchMode))
+    ) {
+      return { mode: mode === null ? null : (mode as LaunchMode), message };
+    }
+  }
+  return {
+    mode: null,
+    message:
+      error instanceof Error ? error.message : String(error ?? "launch failed"),
+  };
 }
 
 // ---- pure validators: shared by guards and tool prechecks ----
 
 export function launchViolation(ctx: BrowserContext): string | null {
-	if (ctx.browser) {
-		return `browser already running (${ctx.browser.mode} on :${ctx.browser.port}) — browser_stop first, or browser_start mode "attach" to reuse it`;
-	}
-	return null;
+  if (ctx.browser) {
+    return `browser already running (${ctx.browser.mode} on :${ctx.browser.port}) — browser_stop first, or browser_start mode "attach" to reuse it`;
+  }
+  return null;
 }
 
-export function emulateViolation(ctx: BrowserContext, device: string): string | null {
-	if (!device) return "no device preset provided";
-	if (!ctx.devices.includes(device)) {
-		return `unknown device preset "${device}" — known: ${ctx.devices.join(", ")}`;
-	}
-	return null;
+export function emulateViolation(
+  ctx: BrowserContext,
+  device: string,
+): string | null {
+  if (!device) return "no device preset provided";
+  if (!ctx.devices.includes(device)) {
+    return `unknown device preset "${device}" — known: ${ctx.devices.join(", ")}`;
+  }
+  return null;
 }
 
 /** Readable reason for page-op prechecks (state-value level, not context). */
 export function notRunningReason(value: string): string {
-	if (value === "starting") {
-		return "browser still starting — wait for the browser_start result before page ops";
-	}
-	return "browser not running — browser_start first (auto | fresh | profile | reset_profile | attach), or browser_status to probe";
+  if (value === "starting") {
+    return "browser still starting — wait for the browser_start result before page ops";
+  }
+  return "browser not running — browser_start first (auto | fresh | profile | reset_profile | attach), or browser_status to probe";
 }
 
 // ---- smart start (mode "auto"): pure resolution over detect buckets ----
@@ -155,278 +220,369 @@ export function notRunningReason(value: string): string {
 // Arc's lock is global — a running Arc without CDP blocks any Arc launch.
 
 export interface AttachableEntry {
-	name: string;
-	port: number;
-	browser: string | null;
-	pid: number | null;
+  name: string;
+  port: number;
+  browser: string | null;
+  pid: number | null;
 }
 
 export interface RunningNoCdpEntry {
-	name: string;
-	pid: number;
+  name: string;
+  pid: number;
 }
 
 export interface InstalledEntry {
-	name: string;
-	bin: string;
-	globalSingleton: boolean;
+  name: string;
+  bin: string;
+  globalSingleton: boolean;
 }
 
 export interface DefaultEntry extends InstalledEntry {}
 
 export interface DetectBuckets {
-	attachable: AttachableEntry[];
-	runningNoCdp: RunningNoCdpEntry[];
-	installed: InstalledEntry[];
-	default: DefaultEntry | null;
+  attachable: AttachableEntry[];
+  runningNoCdp: RunningNoCdpEntry[];
+  installed: InstalledEntry[];
+  default: DefaultEntry | null;
 }
 
 export type AutoAction =
-	| { kind: "attach"; port: number }
-	| { kind: "prompt-attach" }
-	| { kind: "launch"; bin: string }
-	| { kind: "prompt-launch" }
-	| { kind: "error" };
+  | { kind: "attach"; port: number }
+  | { kind: "prompt-attach" }
+  | { kind: "launch"; bin: string }
+  | { kind: "prompt-launch" }
+  | { kind: "error" };
 
 export interface AutoResolution {
-	action: AutoAction;
-	note: string;
-	warnings: string[];
+  action: AutoAction;
+  note: string;
+  warnings: string[];
 }
 
 export function resolveAuto(b: DetectBuckets): AutoResolution {
-	const warnings: string[] = [];
-	const running = new Set(b.runningNoCdp.map((r) => r.name));
-	// informational: user's Chromium-class instance running — isolated launch
-	// is a separate instance, not their session
-	for (const i of b.installed) {
-		if (running.has(i.name) && !i.globalSingleton) {
-			warnings.push(
-				`your ${i.name} is running without a debug port — launch uses an isolated profile (separate instance, not your session)`,
-			);
-		}
-	}
-	// hard blocker: global singleton (Arc) running without CDP — neither
-	// attach (no port) nor launch (lock) is possible for it. One warning per
-	// blocked browser name (default + installed would otherwise duplicate)
-	const blockedNames = new Set<string>();
-	for (const e of [b.default, ...b.installed]) {
-		if (e && running.has(e.name) && e.globalSingleton && !blockedNames.has(e.name)) {
-			blockedNames.add(e.name);
-			warnings.push(
-				`${e.name} is running without a debug port — global singleton lock: quit it first (then auto can launch it), or relaunch it with --remote-debugging-port to attach`,
-			);
-		}
-	}
-	const blocked = (e: InstalledEntry) => blockedNames.has(e.name);
+  const warnings: string[] = [];
+  const running = new Set(b.runningNoCdp.map((r) => r.name));
+  // informational: user's Chromium-class instance running — isolated launch
+  // is a separate instance, not their session
+  for (const i of b.installed) {
+    if (running.has(i.name) && !i.globalSingleton) {
+      warnings.push(
+        `your ${i.name} is running without a debug port — launch uses an isolated profile (separate instance, not your session)`,
+      );
+    }
+  }
+  // hard blocker: global singleton (Arc) running without CDP — neither
+  // attach (no port) nor launch (lock) is possible for it. One warning per
+  // blocked browser name (default + installed would otherwise duplicate)
+  const blockedNames = new Set<string>();
+  for (const e of [b.default, ...b.installed]) {
+    if (
+      e &&
+      running.has(e.name) &&
+      e.globalSingleton &&
+      !blockedNames.has(e.name)
+    ) {
+      blockedNames.add(e.name);
+      warnings.push(
+        `${e.name} is running without a debug port — global singleton lock: quit it first (then auto can launch it), or relaunch it with --remote-debugging-port to attach`,
+      );
+    }
+  }
+  const blocked = (e: InstalledEntry) => blockedNames.has(e.name);
 
-	if (b.attachable.length === 1) {
-		const a = b.attachable[0]!;
-		return {
-			action: { kind: "attach", port: a.port },
-			note: `one browser with CDP running (${a.name} on :${a.port}) — attaching, no ask`,
-			warnings,
-		};
-	}
-	if (b.attachable.length > 1) {
-		return {
-			action: { kind: "prompt-attach" },
-			note: `${b.attachable.length} browsers with CDP running`,
-			warnings,
-		};
-	}
+  if (b.attachable.length === 1) {
+    const a = b.attachable[0]!;
+    return {
+      action: { kind: "attach", port: a.port },
+      note: `one browser with CDP running (${a.name} on :${a.port}) — attaching, no ask`,
+      warnings,
+    };
+  }
+  if (b.attachable.length > 1) {
+    return {
+      action: { kind: "prompt-attach" },
+      note: `${b.attachable.length} browsers with CDP running`,
+      warnings,
+    };
+  }
 
-	// no attachable browser — launch path
-	if (b.default && !blocked(b.default)) {
-		return {
-			action: { kind: "launch", bin: b.default.bin },
-			note: `no browser with CDP — launching your default browser (${b.default.name}), no ask`,
-			warnings,
-		};
-	}
-	const candidates = b.installed.filter((i) => !blocked(i));
-	if (b.installed.length === 0) {
-		return {
-			action: { kind: "error" },
-			note: "no CDP-capable browser installed (Chrome/Chromium/Arc/Brave/Edge) — set BROWSER_BIN=/path/to/browser and retry",
-			warnings,
-		};
-	}
-	if (candidates.length === 0) {
-		const names = b.installed.map((i) => i.name).join(", ");
-		return {
-			action: { kind: "error" },
-			note: `every installed browser is blocked by a running singleton without CDP (${names}) — quit it or relaunch it with --remote-debugging-port, then browser_start auto again`,
-			warnings,
-		};
-	}
-	if (candidates.length === 1) {
-		return {
-			action: { kind: "launch", bin: candidates[0]!.bin },
-			note: `no browser with CDP${b.default && blocked(b.default) ? ` — default (${b.default.name}) blocked, demoted` : ""} — launching the only usable browser (${candidates[0]!.name}), no ask`,
-			warnings,
-		};
-	}
-	return {
-		action: { kind: "prompt-launch" },
-		note: `no browser with CDP${b.default && blocked(b.default) ? ` — default (${b.default.name}) blocked, demoted` : ""} — ${candidates.length} usable browsers`,
-		warnings,
-	};
+  // no attachable browser — launch path
+  if (b.default && !blocked(b.default)) {
+    return {
+      action: { kind: "launch", bin: b.default.bin },
+      note: `no browser with CDP — launching your default browser (${b.default.name}), no ask`,
+      warnings,
+    };
+  }
+  const candidates = b.installed.filter((i) => !blocked(i));
+  if (b.installed.length === 0) {
+    return {
+      action: { kind: "error" },
+      note: "no CDP-capable browser installed (Chrome/Chromium/Arc/Brave/Edge) — set BROWSER_BIN=/path/to/browser and retry",
+      warnings,
+    };
+  }
+  if (candidates.length === 0) {
+    const names = b.installed.map((i) => i.name).join(", ");
+    return {
+      action: { kind: "error" },
+      note: `every installed browser is blocked by a running singleton without CDP (${names}) — quit it or relaunch it with --remote-debugging-port, then browser_start auto again`,
+      warnings,
+    };
+  }
+  if (candidates.length === 1) {
+    return {
+      action: { kind: "launch", bin: candidates[0]!.bin },
+      note: `no browser with CDP${b.default && blocked(b.default) ? ` — default (${b.default.name}) blocked, demoted` : ""} — launching the only usable browser (${candidates[0]!.name}), no ask`,
+      warnings,
+    };
+  }
+  return {
+    action: { kind: "prompt-launch" },
+    note: `no browser with CDP${b.default && blocked(b.default) ? ` — default (${b.default.name}) blocked, demoted` : ""} — ${candidates.length} usable browsers`,
+    warnings,
+  };
 }
 
 // ---- machine ----
 
-function browserFromEvent(e: Extract<BrowserEvent, { type: "LAUNCH_DONE" | "PROBE" }>): BrowserInfo {
-	return {
-		mode: e.mode,
-		port: e.port,
-		pid: e.pid,
-		userDataDir: e.userDataDir,
-		browser: e.browser,
-		startedAt: "startedAt" in e ? e.startedAt : null,
-	};
+function browserFromEvent(
+  e: Extract<BrowserEvent, { type: "PROBE" }>,
+): BrowserInfo {
+  return {
+    mode: e.mode,
+    port: e.port,
+    pid: e.pid,
+    userDataDir: e.userDataDir,
+    browser: e.browser,
+    startedAt: e.startedAt,
+  };
 }
 
 export const browserMachine = setup({
-	types: {
-		context: {} as BrowserContext,
-		events: {} as BrowserEvent,
-		input: {} as { devices?: string[] } | undefined,
-	},
-	guards: {
-		deviceKnown: ({ context, event }) =>
-			event.type === "EMULATE_SET" && emulateViolation(context, event.device) === null,
-		restoreShape: ({ event }) =>
-			event.type === "RESTORE" &&
-			(event.activeTab === null ||
-				(typeof event.activeTab.url === "string" &&
-					typeof event.activeTab.at === "string" &&
-					(event.activeTab.targetId === null || typeof event.activeTab.targetId === "string"))) &&
-			(event.emulation === null ||
-				(typeof event.emulation.device === "string" && typeof event.emulation.landscape === "boolean")) &&
-			(event.devices === null ||
-				(Array.isArray(event.devices) && event.devices.every((d) => typeof d === "string"))),
-	},
-	actions: {
-		setBrowser: assign(({ event }) => {
-			if (event.type !== "LAUNCH_DONE" && event.type !== "PROBE") return {};
-			return { browser: browserFromEvent(event) };
-		}),
-		recordLaunchError: assign(({ context, event }) => {
-			if (event.type !== "LAUNCH_DONE" || !event.error) return {};
-			return { errors: appendError(context.errors, `launch ${event.mode}: ${event.error}`) };
-		}),
-		recordDrift: assign(({ context, event }) => {
-			if (event.type !== "PROBE" || event.up) return {};
-			const had = context.browser
-				? `browser gone (was ${context.browser.mode} on :${context.browser.port})`
-				: "browser gone";
-			return { errors: appendError(context.errors, had), browser: null, activeTab: null };
-		}),
-		setActiveTab: assign(({ event }) => {
-			if (event.type === "NAV") {
-				return {
-					activeTab: { targetId: null, url: event.url, at: new Date().toISOString() },
-				};
-			}
-			if (event.type === "TAB_SWITCH") {
-				return {
-					activeTab: { targetId: event.targetId, url: event.url, at: new Date().toISOString() },
-				};
-			}
-			return {};
-		}),
-		setEmulation: assign(({ event }) => {
-			if (event.type !== "EMULATE_SET") return {};
-			return {
-				emulation: {
-					device: event.device,
-					landscape: event.landscape,
-					at: new Date().toISOString(),
-				},
-			};
-		}),
-		clearEmulation: assign(() => ({ emulation: null })),
-		stopBrowser: assign(({ context, event }) => {
-			if (event.type !== "STOP") return {};
-			// browser + active tab die with the session; emulation pref survives
-			return {
-				browser: null,
-				activeTab: null,
-				errors: appendError(context.errors, `stopped: ${event.reason}`),
-			};
-		}),
-		restoreCaches: assign(({ context, event }) => {
-			if (event.type !== "RESTORE") return {};
-			return {
-				activeTab: event.activeTab ?? context.activeTab,
-				emulation: event.emulation ?? context.emulation,
-				devices: event.devices && event.devices.length > 0 ? [...event.devices] : context.devices,
-			};
-		}),
-		setDevices: assign(({ context, event }) => {
-			if (event.type !== "DEVICES" || event.ids.length === 0) return {};
-			return { devices: [...event.ids] };
-		}),
-	},
+  types: {
+    context: {} as BrowserContext,
+    events: {} as BrowserEvent,
+    input: {} as { devices?: string[] } | undefined,
+  },
+  guards: {
+    deviceKnown: ({ context, event }) =>
+      event.type === "EMULATE_SET" &&
+      emulateViolation(context, event.device) === null,
+    restoreShape: ({ event }) =>
+      event.type === "RESTORE" &&
+      (event.activeTab === null ||
+        (typeof event.activeTab.url === "string" &&
+          typeof event.activeTab.at === "string" &&
+          (event.activeTab.targetId === null ||
+            typeof event.activeTab.targetId === "string"))) &&
+      (event.emulation === null ||
+        (typeof event.emulation.device === "string" &&
+          typeof event.emulation.landscape === "boolean")) &&
+      (event.devices === null ||
+        (Array.isArray(event.devices) &&
+          event.devices.every((d) => typeof d === "string"))),
+  },
+  actors: {
+    /** Typed stub only — the real launch executor (start.js + probe +
+     *  abort cleanup) is injected via `browserMachine.provide({ actors })`
+     *  (index.ts wires it; tests provide controlled stubs). machine.ts
+     *  stays IO-free; an unwired machine that enters `starting` lands in
+     *  `stopped` with this readable error — never wedged.
+     */
+    launchService: fromPromise<LaunchOutput, LaunchInput>(async () => {
+      throw new Error(
+        "launchService not wired — machine.provide() must inject the launch executor",
+      );
+    }),
+  },
+  actions: {
+    setBrowser: assign(({ event }) => {
+      if (event.type !== "PROBE") return {};
+      return { browser: browserFromEvent(event) };
+    }),
+    launchDone: assign(({ event }) => {
+      // onDone of launchService — DoneActorEvent carries `output`
+      // (probe-confirmed evidence; copy — the executor may reuse it)
+      if (!("output" in event)) return {};
+      return {
+        browser: { ...(event as { output: LaunchOutput }).output.browser },
+      };
+    }),
+    recordLaunchError: assign(({ context, event }) => {
+      // onError of launchService — ErrorActorEvent carries `error`
+      if (!("error" in event)) return {};
+      const f = launchFailureOf((event as { error: unknown }).error);
+      return {
+        errors: appendError(
+          context.errors,
+          `launch${f.mode ? ` ${f.mode}` : ""}: ${f.message}`,
+        ),
+      };
+    }),
+    stopDuringLaunch: assign(({ context, event }) => {
+      if (event.type !== "STOP") return {};
+      // exiting `starting` aborts the launch service (the wired executor
+      // best-effort kills the spawned pid); caches die with the session,
+      // emulation pref survives
+      return {
+        browser: null,
+        activeTab: null,
+        errors: appendError(
+          context.errors,
+          `stopped during launch: ${event.reason}`,
+        ),
+      };
+    }),
+    recordDrift: assign(({ context, event }) => {
+      if (event.type !== "PROBE" || event.up) return {};
+      const had = context.browser
+        ? `browser gone (was ${context.browser.mode} on :${context.browser.port})`
+        : "browser gone";
+      return {
+        errors: appendError(context.errors, had),
+        browser: null,
+        activeTab: null,
+      };
+    }),
+    setActiveTab: assign(({ event }) => {
+      if (event.type === "NAV") {
+        return {
+          activeTab: {
+            targetId: null,
+            url: event.url,
+            at: new Date().toISOString(),
+          },
+        };
+      }
+      if (event.type === "TAB_SWITCH") {
+        return {
+          activeTab: {
+            targetId: event.targetId,
+            url: event.url,
+            at: new Date().toISOString(),
+          },
+        };
+      }
+      return {};
+    }),
+    setEmulation: assign(({ event }) => {
+      if (event.type !== "EMULATE_SET") return {};
+      return {
+        emulation: {
+          device: event.device,
+          landscape: event.landscape,
+          at: new Date().toISOString(),
+        },
+      };
+    }),
+    clearEmulation: assign(() => ({ emulation: null })),
+    stopBrowser: assign(({ context, event }) => {
+      if (event.type !== "STOP") return {};
+      // browser + active tab die with the session; emulation pref survives
+      return {
+        browser: null,
+        activeTab: null,
+        errors: appendError(context.errors, `stopped: ${event.reason}`),
+      };
+    }),
+    restoreCaches: assign(({ context, event }) => {
+      if (event.type !== "RESTORE") return {};
+      return {
+        activeTab: event.activeTab ?? context.activeTab,
+        emulation: event.emulation ?? context.emulation,
+        devices:
+          event.devices && event.devices.length > 0
+            ? [...event.devices]
+            : context.devices,
+      };
+    }),
+    setDevices: assign(({ context, event }) => {
+      if (event.type !== "DEVICES" || event.ids.length === 0) return {};
+      return { devices: [...event.ids] };
+    }),
+  },
 }).createMachine({
-	id: "browser",
-	context: ({ input }) => initialContext(input?.devices),
-	initial: "stopped",
-	states: {
-		stopped: {
-			on: {
-				BEGIN_LAUNCH: { target: "starting" },
-				// adopt: user kept the browser open across a pi restart
-				PROBE: [
-					{
-						guard: ({ event }) => event.type === "PROBE" && event.up,
-						target: "running",
-						actions: "setBrowser",
-					},
-					{
-						guard: ({ context, event }) =>
-							event.type === "PROBE" && !event.up && !!context.browser,
-						actions: "recordDrift",
-					},
-					{},
-				],
-				RESTORE: { guard: "restoreShape", actions: "restoreCaches" },
-				DEVICES: { actions: "setDevices" },
-				STOP: { actions: "stopBrowser" },
-			},
-		},
-		starting: {
-			on: {
-				LAUNCH_DONE: [
-					{
-						guard: ({ event }) => event.type === "LAUNCH_DONE" && event.error === null,
-						target: "running",
-						actions: "setBrowser",
-					},
-					{ target: "stopped", actions: "recordLaunchError" },
-				],
-				DEVICES: { actions: "setDevices" },
-			},
-		},
-		running: {
-			on: {
-				// fresh evidence overwrites the cache; drift marks the browser gone
-				PROBE: [
-					{
-						guard: ({ event }) => event.type === "PROBE" && event.up,
-						actions: "setBrowser",
-					},
-					{ target: "stopped", actions: "recordDrift" },
-				],
-				NAV: { actions: "setActiveTab" },
-				TAB_SWITCH: { actions: "setActiveTab" },
-				EMULATE_SET: { guard: "deviceKnown", actions: "setEmulation" },
-				EMULATE_RESET: { actions: "clearEmulation" },
-				STOP: { target: "stopped", actions: "stopBrowser" },
-				RESTORE: { guard: "restoreShape", actions: "restoreCaches" },
-				DEVICES: { actions: "setDevices" },
-			},
-		},
-	},
+  id: "browser",
+  context: ({ input }) => initialContext(input?.devices),
+  initial: "stopped",
+  states: {
+    stopped: {
+      on: {
+        BEGIN_LAUNCH: { target: "starting" },
+        // adopt: user kept the browser open across a pi restart
+        PROBE: [
+          {
+            guard: ({ event }) => event.type === "PROBE" && event.up,
+            target: "running",
+            actions: "setBrowser",
+          },
+          {
+            guard: ({ context, event }) =>
+              event.type === "PROBE" && !event.up && !!context.browser,
+            actions: "recordDrift",
+          },
+          {},
+        ],
+        RESTORE: { guard: "restoreShape", actions: "restoreCaches" },
+        DEVICES: { actions: "setDevices" },
+        STOP: { actions: "stopBrowser" },
+      },
+    },
+    starting: {
+      // BEGIN_LAUNCH invoked the launch service (stub in machine.ts,
+      // real executor via machine.provide() in index.ts). A throw between
+      // spawn and probe routes to onError → stopped — never a wedge.
+      invoke: {
+        src: "launchService",
+        input: ({ event }) => {
+          if (event.type !== "BEGIN_LAUNCH") {
+            // snapshot restore mid-launch replays the persisted input;
+            // any other event is a machine bug — fail loudly
+            throw new Error(`starting entered by ${event.type}`);
+          }
+          return { mode: event.mode, extraEnv: event.extraEnv };
+        },
+        onDone: { target: "running", actions: "launchDone" },
+        onError: { target: "stopped", actions: "recordLaunchError" },
+      },
+      on: {
+        // exiting aborts the service; the wired executor observes its
+        // AbortSignal and best-effort kills the spawned pid (owned only)
+        STOP: { target: "stopped", actions: "stopDuringLaunch" },
+        PROBE: [
+          {
+            // fresh probe evidence wins: adopt and drop the in-flight
+            // launch's late result (no handler in `running`)
+            guard: ({ event }) => event.type === "PROBE" && event.up,
+            target: "running",
+            actions: "setBrowser",
+          },
+          // !up proves nothing — the endpoint is not up YET; stay in
+          // `starting`, never record drift while a launch is in flight
+          {},
+        ],
+        DEVICES: { actions: "setDevices" },
+      },
+    },
+    running: {
+      on: {
+        // fresh evidence overwrites the cache; drift marks the browser gone
+        PROBE: [
+          {
+            guard: ({ event }) => event.type === "PROBE" && event.up,
+            actions: "setBrowser",
+          },
+          { target: "stopped", actions: "recordDrift" },
+        ],
+        NAV: { actions: "setActiveTab" },
+        TAB_SWITCH: { actions: "setActiveTab" },
+        EMULATE_SET: { guard: "deviceKnown", actions: "setEmulation" },
+        EMULATE_RESET: { actions: "clearEmulation" },
+        STOP: { target: "stopped", actions: "stopBrowser" },
+        RESTORE: { guard: "restoreShape", actions: "restoreCaches" },
+        DEVICES: { actions: "setDevices" },
+      },
+    },
+  },
 });

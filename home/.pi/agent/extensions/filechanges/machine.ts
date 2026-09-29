@@ -2,6 +2,14 @@
 // Machine owns registry legality (pending/baselines/tracked maps + event
 // order); executors (index.ts) own IO (file reads/writes, session entries).
 //
+// Flat machine: one `registry` state (the former empty/active pair
+// collapsed — it discriminated legality for nothing: commitLegal needs a
+// pending, recomputeLegal needs a baseline, and neither can exist on an
+// empty registry, so the empty state's trimmed event table and the
+// `always: noData -> empty` self-normalization were pure ceremony costing a
+// duplicated transition table). All events live in one table; legality is
+// unchanged (empty-context commit/recompute fall to the same guards).
+//
 // The session custom entries ARE the persisted event log — BASELINE / CLEAR /
 // UNTRACK replay 1:1 — so branch restore is event replay, not snapshot
 // restore. RECOMPUTE_DONE carries executor-computed diff entries (diffs need
@@ -22,6 +30,8 @@
 import { relative, resolve } from "node:path";
 import { assign, setup } from "xstate";
 import { createTwoFilesPatch } from "diff";
+
+import { envLimit } from "../_kit/machine-kit.ts";
 
 export type Baseline = {
 	path: string; // relPath key
@@ -80,15 +90,8 @@ export interface FileChangesLimits {
 	maxTracked: number;
 }
 
-function envNum(name: string, fallback: number): number {
-	const v = process.env[name];
-	if (v === undefined || v === "") return fallback;
-	const n = Number(v);
-	return Number.isFinite(n) && n > 0 ? Math.floor(n) : fallback;
-}
-
 export const DEFAULT_LIMITS: FileChangesLimits = {
-	maxTracked: envNum("FILECHANGES_MAX_TRACKED", 256),
+	maxTracked: envLimit("FILECHANGES_MAX_TRACKED", 256),
 };
 
 export type FileChangesRegistry = {
@@ -228,8 +231,6 @@ export const fileChangesMachine = setup({
 			commitViolation(context, event.toolCallId) === null,
 		recomputeLegal: ({ context, event }) =>
 			event.type === "RECOMPUTE_DONE" && recomputeViolation(context, event.path) === null,
-		noData: ({ context }) =>
-			context.pending.size === 0 && context.baselines.size === 0 && context.tracked.size === 0,
 	},
 	actions: {
 		recordPending: assign(({ context, event }) => {
@@ -301,19 +302,9 @@ export const fileChangesMachine = setup({
 }).createMachine({
 	id: "fileChanges",
 	context: ({ input }) => emptyRegistry(input?.limits),
-	initial: "empty",
+	initial: "registry",
 	states: {
-		empty: {
-			on: {
-				TOOL_CALL_STARTED: { guard: "startLegal", target: "active", actions: "recordPending" },
-				BASELINE: { target: "active", actions: "applyBaseline" },
-				RECOMPUTE_DONE: { guard: "recomputeLegal", target: "active", actions: "applyRecompute" },
-				UNTRACK: { actions: "removeTrackedPath" },
-				CLEAR: { actions: "clearAll" },
-			},
-		},
-		active: {
-			always: [{ guard: "noData", target: "empty" }],
+		registry: {
 			on: {
 				TOOL_CALL_STARTED: { guard: "startLegal", actions: "recordPending" },
 				TOOL_CALL_SUCCEEDED: { guard: "commitLegal", actions: "commitPending" },

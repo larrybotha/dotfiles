@@ -1,22 +1,31 @@
 // machine tests — no LLM, no browser, no CDP. Synthetic probe evidence only.
 // run: node test.ts
+//
+// The launch service slot is provided with a controllable stub
+// (machine.provide) — no start.js runs. The stub records its input (mode +
+// extraEnv parity), observes its AbortSignal (STOP-during-launch abort), and
+// resolves/rejects on demand, so launch routing, wedged-start recovery, and
+// STOP/PROBE-during-starting are testable deterministically.
 
-import { createActor, type Actor } from "xstate";
+import { createActor, type Actor, fromPromise, waitFor } from "xstate";
 import {
   browserMachine,
   DEFAULT_DEVICES,
   emulateViolation,
+  type BrowserInfo,
+  type BrowserContext,
+  type LaunchInput,
+  type LaunchMode,
+  type LaunchOutput,
+  type BrowserMode,
+  type ActiveTab,
+  type EmulationPref,
   launchViolation,
   MAX_ERRORS,
   notRunningReason,
   resolveAuto,
   type DetectBuckets,
   type InstalledEntry,
-  type ActiveTab,
-  type BrowserContext,
-  type BrowserMode,
-  type EmulationPref,
-  type LaunchMode,
 } from "./machine.ts";
 
 let passed = 0;
@@ -32,10 +41,64 @@ function ok(cond: boolean, name: string, detail?: unknown): void {
   }
 }
 
-type A = Actor<typeof browserMachine>;
+const settle = (a: A) => waitFor(a, (s) => s.matches("running") || s.matches("stopped"));
+const tick = (ms = 10) => new Promise((r) => setTimeout(r, ms));
 
-function freshActor(devices?: string[]): A {
-  const a = createActor(browserMachine, { input: devices ? { devices } : undefined });
+// ---- controllable launch-service stubs (slide-deck test pattern) ----
+
+type StubState = {
+  inputs: LaunchInput[];
+  /** Set when the service's AbortSignal fired (STOP during launch). */
+  aborted: boolean;
+  next: (input: LaunchInput) => Promise<LaunchOutput>;
+};
+
+function browserInfo(over: Partial<BrowserInfo> = {}): BrowserInfo {
+  return {
+    mode: "fresh",
+    port: 9222,
+    pid: 4242,
+    userDataDir: "/x",
+    browser: "Chrome/126",
+    startedAt: "t",
+    ...over,
+  };
+}
+
+function makeStubs(
+  over: Partial<{ next: StubState["next"] }> = {},
+): StubState {
+  const stub: StubState = {
+    inputs: [],
+    aborted: false,
+    next:
+      over.next ??
+      (async () => ({ browser: browserInfo(), text: "started" })),
+  };
+  return stub;
+}
+
+function makeMachine(stub: StubState) {
+  return browserMachine.provide({
+    actors: {
+      launchService: fromPromise<LaunchOutput, LaunchInput>(
+        async ({ input, signal }) => {
+          stub.inputs.push(input);
+          signal.addEventListener("abort", () => {
+            stub.aborted = true;
+          });
+          return stub.next(input);
+        },
+      ),
+    },
+  });
+}
+
+type M = ReturnType<typeof makeMachine>;
+type A = Actor<M>;
+
+function freshActor(stub: StubState = makeStubs()): A {
+  const a = createActor(makeMachine(stub), { input: undefined });
   a.start();
   return a;
 }
@@ -48,9 +111,15 @@ function ctx(a: A): BrowserContext {
   return a.getSnapshot().context;
 }
 
-function launchOk(a: A, mode: LaunchMode = "fresh", pid = 4242): void {
-  a.send({ type: "BEGIN_LAUNCH", mode });
-  a.send({ type: "LAUNCH_DONE", mode, port: 9222, pid, userDataDir: "/x", browser: "Chrome/126", error: null });
+/** Drive one happy launch to `running` (default stub); returns the actor. */
+async function launchOk(
+  stub: StubState = makeStubs(),
+  over: Partial<LaunchInput> = {},
+): Promise<A> {
+  const a = freshActor(stub);
+  a.send({ type: "BEGIN_LAUNCH", mode: over.mode ?? "fresh", extraEnv: over.extraEnv });
+  await settle(a);
+  return a;
 }
 
 function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
@@ -66,51 +135,51 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
   ok(JSON.stringify(ctx(a).devices) === JSON.stringify(DEFAULT_DEVICES), "default devices match skill presets");
 }
 
-// 2. launch lifecycle: stopped -> starting -> running
+// 2. launch lifecycle: stopped -> starting (invoke) -> running
 {
-  const a = freshActor();
-  a.send({ type: "BEGIN_LAUNCH", mode: "profile" });
+  const stub = makeStubs({ next: async (input) => ({ browser: browserInfo({ mode: input.mode, pid: 99, userDataDir: "/profile-copy" }), text: "started" }) });
+  const a = freshActor(stub);
+  a.send({ type: "BEGIN_LAUNCH", mode: "profile", extraEnv: { BROWSER_BIN: "/x/Chrome" } });
   ok(value(a) === "starting", "BEGIN_LAUNCH moves to starting");
-  a.send({
-    type: "LAUNCH_DONE",
-    mode: "profile",
-    port: 9222,
-    pid: 99,
-    userDataDir: "/profile-copy",
-    browser: "Chrome/126",
-    error: null,
-  });
-  ok(value(a) === "running", "LAUNCH_DONE (no error) moves to running");
+  await settle(a);
+  ok(value(a) === "running", "launchService resolve moves to running");
   ok(ctx(a).browser?.mode === "profile", "browser mode recorded");
   ok(ctx(a).browser?.pid === 99, "browser pid recorded");
   ok(ctx(a).browser?.userDataDir === "/profile-copy", "userDataDir recorded");
+  // input parity: mode + extraEnv flow into the service
+  ok(stub.inputs.length === 1, "service invoked once");
+  ok(stub.inputs[0]?.mode === "profile", "service input carries mode");
+  ok(stub.inputs[0]?.extraEnv?.BROWSER_BIN === "/x/Chrome", "service input carries extraEnv");
 }
 
-// 3. launch failure: starting -> stopped, error recorded
+// 3. launch failure: starting -> stopped, error recorded (never wedged)
 {
-  const a = freshActor();
+  const stub = makeStubs({ next: async () => { throw new Error("port in use"); } });
+  const a = freshActor(stub);
   a.send({ type: "BEGIN_LAUNCH", mode: "fresh" });
-  a.send({ type: "LAUNCH_DONE", mode: "fresh", port: 9222, pid: null, userDataDir: null, browser: null, error: "port in use" });
-  ok(value(a) === "stopped", "LAUNCH_DONE error returns to stopped");
+  await settle(a);
+  ok(value(a) === "stopped", "launchService reject returns to stopped");
   ok(ctx(a).browser === null, "no browser after failed launch");
   ok(ctx(a).errors.some((e) => e.includes("port in use")), "launch error recorded");
+  ok(a.getSnapshot().can({ type: "BEGIN_LAUNCH", mode: "fresh" }), "retry legal after failed launch");
 }
 
 // 4. BEGIN_LAUNCH while running is rejected (structure backstop)
 {
-  const a = freshActor();
-  launchOk(a);
+  const a = await launchOk();
   a.send({ type: "BEGIN_LAUNCH", mode: "fresh" });
   ok(value(a) === "running", "BEGIN_LAUNCH in running is ignored");
   ok(ctx(a).browser?.pid === 4242, "browser untouched by illegal launch");
 }
 
-// 5. LAUNCH_DONE in running (illegal) is ignored
+// 5. BEGIN_LAUNCH while starting is illegal at state level (can() gate)
 {
-  const a = freshActor();
-  launchOk(a);
-  a.send({ type: "LAUNCH_DONE", mode: "fresh", port: 9333, pid: 1, userDataDir: null, browser: null, error: null });
-  ok(ctx(a).browser?.port === 9222, "LAUNCH_DONE in running ignored");
+  const stub = makeStubs({ next: () => new Promise<LaunchOutput>(() => {}) }); // never settles
+  const a = freshActor(stub);
+  a.send({ type: "BEGIN_LAUNCH", mode: "fresh" });
+  ok(value(a) === "starting", "BEGIN_LAUNCH enters starting");
+  ok(a.getSnapshot().can({ type: "BEGIN_LAUNCH", mode: "fresh" }) === false, "BEGIN_LAUNCH illegal while starting (can gate)");
+  ok(a.getSnapshot().can({ type: "PROBE", up: true, port: 1, browser: null, pid: null, mode: "fresh", userDataDir: null, startedAt: null }) === true, "PROBE legal while starting (adoption path)");
 }
 
 // 6. probe adoption: stopped + up -> running
@@ -123,8 +192,7 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
 
 // 7. probe refresh in running updates evidence
 {
-  const a = freshActor();
-  launchOk(a);
+  const a = await launchOk();
   probe(a, true, "attach");
   ok(value(a) === "running", "PROBE up in running stays running");
   ok(ctx(a).browser?.mode === "attach", "PROBE updates browser info");
@@ -132,8 +200,7 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
 
 // 8. probe drift: running + !up -> stopped, error recorded, caches cleared
 {
-  const a = freshActor();
-  launchOk(a);
+  const a = await launchOk();
   a.send({ type: "NAV", url: "https://example.com", newTab: false });
   probe(a, false);
   ok(value(a) === "stopped", "PROBE down from running marks stopped");
@@ -155,16 +222,15 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
   const a = freshActor();
   a.send({ type: "NAV", url: "https://example.com", newTab: true });
   ok(ctx(a).activeTab === null, "NAV in stopped ignored");
-  launchOk(a);
-  a.send({ type: "NAV", url: "https://example.com", newTab: true });
-  ok(ctx(a).activeTab?.url === "https://example.com", "NAV in running records active tab");
-  ok(typeof ctx(a).activeTab?.at === "string", "NAV records timestamp");
+  const b = await launchOk();
+  b.send({ type: "NAV", url: "https://example.com", newTab: true });
+  ok(ctx(b).activeTab?.url === "https://example.com", "NAV in running records active tab");
+  ok(typeof ctx(b).activeTab?.at === "string", "NAV records timestamp");
 }
 
 // 11. TAB_SWITCH records targetId
 {
-  const a = freshActor();
-  launchOk(a);
+  const a = await launchOk();
   a.send({ type: "TAB_SWITCH", targetId: "ABC123", url: "https://x.dev" });
   ok(ctx(a).activeTab?.targetId === "ABC123", "TAB_SWITCH records targetId");
   ok(ctx(a).activeTab?.url === "https://x.dev", "TAB_SWITCH records url");
@@ -172,8 +238,7 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
 
 // 12. EMULATE_SET: known device applies, unknown rejected
 {
-  const a = freshActor();
-  launchOk(a);
+  const a = await launchOk();
   a.send({ type: "EMULATE_SET", device: "iphone-14", landscape: true });
   ok(ctx(a).emulation?.device === "iphone-14", "EMULATE_SET records preset");
   ok(ctx(a).emulation?.landscape === true, "EMULATE_SET records landscape");
@@ -192,8 +257,7 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
 
 // 14. STOP clears browser + active tab, keeps emulation preference
 {
-  const a = freshActor();
-  launchOk(a);
+  const a = await launchOk();
   a.send({ type: "EMULATE_SET", device: "pixel-7", landscape: false });
   a.send({ type: "NAV", url: "https://example.com", newTab: false });
   a.send({ type: "STOP", reason: "user stop" });
@@ -205,7 +269,49 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
   ok(value(a) === "stopped", "STOP in stopped is a no-op");
 }
 
-// 15. RESTORE fills caches, never the browser
+// 15. STOP during launch: starting -> stopped, service aborted, ring entry
+{
+  const gate = { resolve: (_: LaunchOutput) => {} };
+  const stub = makeStubs({
+    next: () => new Promise<LaunchOutput>((res) => { gate.resolve = res; }),
+  });
+  const a = freshActor(stub);
+  a.send({ type: "BEGIN_LAUNCH", mode: "fresh" });
+  ok(value(a) === "starting", "launch in flight");
+  a.send({ type: "STOP", reason: "user abort" });
+  ok(value(a) === "stopped", "STOP during launch moves to stopped");
+  ok(ctx(a).browser === null, "STOP during launch clears browser");
+  ok(ctx(a).errors.some((e) => e.includes("stopped during launch: user abort")), "STOP during launch recorded in ring");
+  await tick();
+  ok(stub.aborted, "service AbortSignal fired (executor kills spawned pid)");
+  // late service result: no handler in stopped — dropped, never resurrected
+  gate.resolve({ browser: browserInfo(), text: "late" });
+  await tick();
+  ok(value(a) === "stopped", "late launch result dropped after STOP");
+  ok(ctx(a).browser === null, "late launch result never sets browser");
+}
+
+// 16. PROBE during launch: up adopts (drops the in-flight result); !up stays
+{
+  // up: fresh evidence wins over the in-flight launch
+  const stub = makeStubs({ next: () => new Promise<LaunchOutput>(() => {}) });
+  const a = freshActor(stub);
+  a.send({ type: "BEGIN_LAUNCH", mode: "fresh" });
+  probe(a, true, "attach");
+  ok(value(a) === "running", "PROBE up during starting adopts into running");
+  ok(ctx(a).browser?.mode === "attach", "probe evidence recorded on adoption");
+  ok(stub.aborted, "in-flight launch service aborted by adoption");
+
+  // !up: proves nothing while a launch is in flight — stay, no drift record
+  const stub2 = makeStubs({ next: () => new Promise<LaunchOutput>(() => {}) });
+  const b = freshActor(stub2);
+  b.send({ type: "BEGIN_LAUNCH", mode: "fresh" });
+  probe(b, false);
+  ok(value(b) === "starting", "PROBE down during starting stays starting");
+  ok(!ctx(b).errors.some((e) => e.includes("browser gone")), "no drift record while launch in flight");
+}
+
+// 17. RESTORE fills caches, never the browser
 {
   const a = freshActor();
   const activeTab: ActiveTab = { targetId: "T1", url: "https://old.dev", at: "t0" };
@@ -222,7 +328,7 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
   ok(ctx(a).activeTab?.url === "https://old.dev", "restored active tab survives adoption");
 }
 
-// 16. RESTORE with bad shape is rejected
+// 18. RESTORE with bad shape is rejected
 {
   const a = freshActor();
   a.send({
@@ -249,44 +355,58 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
   ok(ctx(a).activeTab === null, "malformed RESTORE targetId rejected by guard");
 }
 
-// 17. DEVICES refresh works in every state
+// 19. DEVICES refresh works in every state
 {
   const a = freshActor();
   a.send({ type: "DEVICES", ids: ["a", "b"] });
   ok(JSON.stringify(ctx(a).devices) === JSON.stringify(["a", "b"]), "DEVICES sets presets in stopped");
-  launchOk(a);
-  a.send({ type: "DEVICES", ids: ["c"] });
-  ok(JSON.stringify(ctx(a).devices) === JSON.stringify(["c"]), "DEVICES sets presets in running");
-  a.send({ type: "DEVICES", ids: [] });
-  ok(JSON.stringify(ctx(a).devices) === JSON.stringify(["c"]), "empty DEVICES ignored");
+  const b = await launchOk();
+  b.send({ type: "DEVICES", ids: ["c"] });
+  ok(JSON.stringify(ctx(b).devices) === JSON.stringify(["c"]), "DEVICES sets presets in running");
+  b.send({ type: "DEVICES", ids: [] });
+  ok(JSON.stringify(ctx(b).devices) === JSON.stringify(["c"]), "empty DEVICES ignored");
 }
 
-// 18. validators: readable reasons
+// 20. validators: readable reasons
 {
   const a = freshActor();
   ok(launchViolation(ctx(a)) === null, "launchViolation null when stopped");
-  launchOk(a);
-  const lv = launchViolation(ctx(a)) ?? "";
+  const b = await launchOk();
+  const lv = launchViolation(ctx(b)) ?? "";
   ok(lv.includes("already running") && lv.includes("browser_stop"), "launchViolation names state + next step", lv);
-  const ev = emulateViolation(ctx(a), "nokia-3310") ?? "";
+  const ev = emulateViolation(ctx(b), "nokia-3310") ?? "";
   ok(ev.includes("unknown device preset") && ev.includes("iphone-14"), "emulateViolation names preset + known list", ev);
-  ok(emulateViolation(ctx(a), "iphone-14") === null, "emulateViolation null for known preset");
+  ok(emulateViolation(ctx(b), "iphone-14") === null, "emulateViolation null for known preset");
   const nr = notRunningReason("stopped");
   ok(nr.includes("browser_start"), "notRunningReason names next step", nr);
   const nrs = notRunningReason("starting");
   ok(nrs.includes("starting"), "notRunningReason covers starting state", nrs);
 }
 
-// 19. attach semantics: launch without pid still runs
+// 21. attach semantics: launch without pid still runs
 {
-  const a = freshActor();
+  const stub = makeStubs({
+    next: async (input) => ({ browser: browserInfo({ mode: input.mode, pid: null, userDataDir: null, browser: "Arc/1.0" }), text: "attached" }),
+  });
+  const a = freshActor(stub);
   a.send({ type: "BEGIN_LAUNCH", mode: "attach" });
-  a.send({ type: "LAUNCH_DONE", mode: "attach", port: 9222, pid: null, userDataDir: null, browser: "Arc/1.0", error: null });
+  await settle(a);
   ok(value(a) === "running", "attach launch reaches running without pid");
   ok(ctx(a).browser?.mode === "attach", "attach mode recorded");
 }
 
-// 20. resolveAuto: smart-start decision table (pure — no IO, no TUI)
+// 22. unwired machine: entering starting lands in stopped, never wedged
+{
+  const a = createActor(browserMachine, { input: undefined });
+  a.start();
+  a.send({ type: "BEGIN_LAUNCH", mode: "fresh" });
+  await settle(a);
+  ok(value(a) === "stopped", "unwired launchService rejects -> stopped");
+  ok(ctx(a).errors.some((e) => e.includes("not wired")), "unwired stub error recorded in ring");
+  ok(a.getSnapshot().can({ type: "BEGIN_LAUNCH", mode: "fresh" }), "retry legal after unwired failure");
+}
+
+// 23. resolveAuto: smart-start decision table (pure — no IO, no TUI)
 {
   const chrome: InstalledEntry = { name: "Chrome", bin: "/x/Chrome", globalSingleton: false };
   const arc: InstalledEntry = { name: "Arc", bin: "/x/Arc", globalSingleton: true };
@@ -402,7 +522,7 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
   }
 }
 
-// 16. errors ring bounded: STOP spam cannot grow context without bound
+// 24. errors ring bounded: STOP spam cannot grow context without bound
 {
   const a = freshActor();
   for (let i = 0; i < 80; i++) {

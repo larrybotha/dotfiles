@@ -33,20 +33,23 @@ IO-free.
 ## States and tools
 
 ```
-idle → researching → planning → writing → building → validating → done
-                     ↘ fixing (validation failure; BEGIN_BUILD retry loop)
+authoring → building → validating → done
+         ↘ fixing (validation failure; BEGIN_BUILD retry loop)
 ```
 
-The authoring phases are **optional announcements** — the fast path (one
-`BEGIN_BUILD` from `idle`) is legal because what needs enforcing is the
-pipeline, not the ceremony. `RESET` from any state; in-flight services are
-stopped by state exit (late results have no handler and are dropped).
+The authoring ceremony (start → research → plan → writing) is **one
+state** with the phase tracked in context (`phase: null | researching |
+planning | writing`) — **optional announcements**: the fast path (one
+`BEGIN_BUILD` from fresh `authoring`) is legal because what needs enforcing
+is the pipeline, not the ceremony. `RESET` from any state; in-flight
+services are stopped by state exit (late results have no handler and are
+dropped).
 
 | Tool                | Effect                                                                    |
 | ------------------- | ------------------------------------------------------------------------- |
-| `slide_deck_start`  | `idle` \| `done` → `researching` (records topic; new deck from `done`)     |
-| `slide_deck_research` | `researching` → `planning` (records sources)                            |
-| `slide_deck_plan`   | `planning` → `writing` (records planned slide ids)                        |
+| `slide_deck_start`  | records topic; phase → `researching` (fresh `authoring` or `done`; from `done` a NEW deck — authoring cleared, build history kept) |
+| `slide_deck_research` | records sources; phase → `planning` (research phase only)                |
+| `slide_deck_plan`   | records planned slide ids; phase → `writing` (replan legal mid-writing and mid-fix) |
 | `slide_deck_build`  | One event, full content → machine drives build → validate → `done` (opens the deck in the browser); failure lands in `fixing` with readable errors — resubmit fixed content with the same tool |
 | `slide_deck_status` | Snapshot + allowed next steps                                             |
 | `slide_deck_reset`  | Clear state, start over                                                   |
@@ -90,7 +93,7 @@ checked):
   authoritative)
 - plan conformance: when `slide_deck_plan` recorded a plan, every built
   slide id must be in it (trimming allowed; unplanned slides are drift —
-  `slide_deck_plan` is legal from planning/writing/fixing to replan)
+  `slide_deck_plan` is legal mid-writing and mid-fix to replan)
 
 **Authoritative post-build (validate.py — html5lib DOM truth):**
 

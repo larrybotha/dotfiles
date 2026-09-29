@@ -24,13 +24,20 @@ import { promisify } from "node:util";
 import { getMarkdownTheme, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import { Container, Markdown, Text, Spacer } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { createActor, type Actor } from "xstate";
+import { createActor, fromPromise, waitFor, type Actor } from "xstate";
 import {
+	type CollectServiceInput,
+	type CollectServiceOutput,
 	delegateMachine,
+	type MonitorServiceInput,
+	type MonitorServiceOutput,
 	paramsViolation,
+	type SpawnServiceInput,
+	type SpawnServiceOutput,
 	statusOf,
 	type ArtifactEntry,
 	type DelegateContext,
+	type SpawnFiles,
 } from "./machine.ts";
 
 // ---------------------------------------------------------------------------
@@ -56,6 +63,7 @@ const EXECUTOR_TIMEOUT_MS = 15_000;
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
+// (SpawnFiles moved to machine.ts — the spawn service output carries it)
 
 interface DelegateDetails {
 	status: "success" | "error" | "timeout" | "running" | "aborted";
@@ -67,14 +75,6 @@ interface DelegateDetails {
 	exitCode: number | null;
 	monitor: boolean;
 	rejected?: string;
-}
-
-interface SpawnFiles {
-	signalFile: string;
-	stderrFile: string;
-	taskFile: string;
-	scriptFile: string;
-	promptFile: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -134,10 +134,101 @@ function resolvePiBinary(): { command: string; args: string[] } {
 }
 
 // ---------------------------------------------------------------------------
+// Wired machine — real services around the executors (machine.ts ships
+// typed stubs; test.ts wires controlled stubs — slide-deck pattern). The
+// machine drives the whole lifecycle: spawn → monitor (poll loop, deadline
+// kill) → collect; the tool is thin (precheck → BEGIN → wait → hygiene).
+// ---------------------------------------------------------------------------
+
+/** Spawn executor wrapper. On abort (KILL during spawning — exiting
+ *  `spawning` aborted this actor): best-effort kill the session (it may
+ *  not exist yet; the tool's post-settle kill pass closes the race), then
+ *  throw — the machine is already in `aborted`; the late result drops. */
+async function runSpawnExecutor(
+	input: SpawnServiceInput,
+	signal: AbortSignal,
+): Promise<SpawnServiceOutput> {
+	const spawn = await runExecutor<SpawnServiceOutput>(SPAWN, {
+		sessionId: input.sessionId,
+		socketDir: input.launch.socketDir,
+		workingDir: input.workingDir,
+		task: input.task,
+		agentPrompt: input.launch.agentPrompt,
+		parentPid: input.launch.parentPid,
+		timeoutSecs: input.timeoutSecs,
+		pi: input.launch.pi,
+	});
+	if (!spawn.ok) throw new Error(spawn.error);
+	if (signal.aborted) {
+		await runExecutor(KILL, { socketPath: input.socketPath, sessionId: input.sessionId });
+		throw new Error("spawn aborted");
+	}
+	return spawn;
+}
+
+/** Monitor executor wrapper — the poll loop the tool used to own. Probe
+ *  every POLL_INTERVAL_MS: done → exit outcome, not-alive → dead (readable
+ *  error, not a slow timeout), deadline → kill then timeout outcome. On
+ *  abort: kill the session, throw (machine already `aborted`). A persistent
+ *  probe failure is treated as not-done/alive and caught by the deadline. */
+async function runMonitorExecutor(
+	input: MonitorServiceInput,
+	signal: AbortSignal,
+): Promise<MonitorServiceOutput> {
+	const kill = () => runExecutor(KILL, { socketPath: input.socketPath, sessionId: input.sessionId });
+	const deadline = Date.now() + input.timeoutSecs * 1000;
+	while (Date.now() < deadline) {
+		if (signal.aborted) {
+			await kill();
+			throw new Error("monitor aborted");
+		}
+		const probe = await runExecutor<{ done: boolean; exitCode: number | null; alive: boolean }>(PROBE, {
+			signalFile: input.files.signalFile,
+			socketPath: input.socketPath,
+			sessionId: input.sessionId,
+		});
+		if (probe.ok) {
+			if (probe.done) return { kind: "exit", exitCode: probe.exitCode ?? 1 };
+			if (!probe.alive) return { kind: "dead" };
+		}
+		await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
+	}
+	// deadline — kill immediately (bash may be mid-write; collect follows)
+	await kill();
+	return { kind: "deadline" };
+}
+
+/** Collect executor wrapper: reads artifacts + stderr; failures throw (the
+ *  machine's collectFailed records them as empty artifacts + error stderr). */
+async function runCollectExecutor(input: CollectServiceInput): Promise<CollectServiceOutput> {
+	const collect = await runExecutor<CollectServiceOutput>(COLLECT, {
+		artifactPaths: input.artifactPaths,
+		workingDir: input.workingDir,
+		stderrFile: input.stderrFile ?? "",
+	});
+	if (!collect.ok) throw new Error(collect.error);
+	return collect;
+}
+
+export const wiredMachine = delegateMachine.provide({
+	actors: {
+		spawnService: fromPromise<SpawnServiceOutput, SpawnServiceInput>(({ input, signal }) =>
+			runSpawnExecutor(input, signal),
+		),
+		monitorService: fromPromise<MonitorServiceOutput, MonitorServiceInput>(({ input, signal }) =>
+			runMonitorExecutor(input, signal),
+		),
+		collectService: fromPromise<CollectServiceOutput, CollectServiceInput>(
+			({ input }) => runCollectExecutor(input),
+		),
+	},
+});
+
+// ---------------------------------------------------------------------------
 // Tool result builders — from machine snapshot only
 // ---------------------------------------------------------------------------
 
-function detailsFromSnapshot(a: Actor<typeof delegateMachine>): DelegateDetails {
+function detailsFromSnapshot(a: Actor<typeof wiredMachine>): DelegateDetails {
 	const snap = a.getSnapshot();
 	const c: DelegateContext = snap.context;
 	// failureDetail (spawn error / died-without-signal) leads the summary;
@@ -201,7 +292,7 @@ function buildResultText(
 	return text;
 }
 
-function resultFromSnapshot(a: Actor<typeof delegateMachine>, rejected?: string) {
+function resultFromSnapshot(a: Actor<typeof wiredMachine>, rejected?: string) {
 	const d = detailsFromSnapshot(a);
 	if (rejected) d.rejected = rejected;
 	const text = buildResultText(
@@ -292,12 +383,19 @@ export default function (pi: ExtensionAPI) {
 				};
 			}
 
-			const a = createActor(delegateMachine);
+			const a = createActor(wiredMachine);
 			a.start();
 
 			const sessionId = `delegate-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 			const socketDir = getSocketDir();
 			const socketPath = path.join(socketDir, "agent.sock");
+
+			// Abort always wins: the tool's signal → KILL (legal in spawning
+			// and running — exiting either aborts the invoked service, which
+			// kills the tmux session best-effort). A late KILL after terminal
+			// is dropped by the machine.
+			const startTime = Date.now();
+			signal?.addEventListener("abort", () => a.send({ type: "KILL" }), { once: true });
 
 			a.send({
 				type: "BEGIN_DELEGATION",
@@ -308,105 +406,72 @@ export default function (pi: ExtensionAPI) {
 				timeoutSecs: timeout,
 				workingDir,
 				artifactPaths: artifacts,
+				// spawn params flow through the event into the service input
+				// (never into the snapshot — content-through-events pattern)
+				launch: {
+					socketDir,
+					agentPrompt: agentPrompt ?? null,
+					parentPid: process.pid,
+					pi: resolvePiBinary(),
+				},
 			});
 
-			// --- Spawn (executor IO → SPAWN_OK | SPAWN_FAIL; failure self-cleans) ---
-			const spawn = await runExecutor<{ sessionId: string; socketPath: string; files: SpawnFiles }>(SPAWN, {
-				sessionId,
-				socketDir,
-				workingDir,
-				task,
-				agentPrompt: agentPrompt ?? null,
-				parentPid: process.pid,
-				timeoutSecs: timeout,
-				pi: resolvePiBinary(),
-			});
+			// Progress: tool-side UX (machine-driven IO; the monitor service
+			// stays pure IO — no onUpdate plumbing through service inputs)
+			const progress = onUpdate
+				? setInterval(() => {
+						const elapsed = Math.round((Date.now() - startTime) / 1000);
+						onUpdate({
+							content: [{ type: "text", text: `Running… (${elapsed}s / ${timeout}s)` }],
+							details: detailsFromSnapshot(a),
+						});
+					}, STATUS_UPDATE_MS)
+				: null;
 
-			if (!spawn.ok) {
-				a.send({ type: "SPAWN_FAIL", error: spawn.error });
-				return resultFromSnapshot(a);
+			// Wait for the machine to drive itself out: spawn (≤15s) + monitor
+			// (≤ timeoutSecs) + collect (≤15s). Spawn-fail `error` has no
+			// collect — settled once terminal; every other terminal waits for
+			// the collected flag.
+			let settled: boolean;
+			try {
+				await waitFor(
+					a,
+					(s) =>
+						s.matches("aborted") ||
+						((s.matches("success") || s.matches("error") || s.matches("timeout")) &&
+							(s.context.files === null || s.context.collected)),
+					{ timeout: timeout * 1000 + 45_000 },
+				);
+				settled = true;
+			} catch {
+				settled = false;
+			} finally {
+				if (progress) clearInterval(progress);
 			}
-			const files: SpawnFiles = spawn.files;
-			a.send({ type: "SPAWN_OK" });
+			if (!settled) {
+				// honest state — the machine keeps driving in the background
+				return {
+					content: [
+						{
+							type: "text",
+							text: `Delegation still in flight (${statusOf(String(a.getSnapshot().value))}) after ${Math.round((Date.now() - startTime) / 1000)}s — the machine continues in the background; check the session: tmux -S "${socketPath}" list-sessions`,
+						},
+					],
+					details: detailsFromSnapshot(a),
+					isError: true,
+				};
+			}
 
-			// --- Poll (probe IO → EXIT_SEEN | SESSION_DEAD | DEADLINE_HIT | KILL) ---
-			const deadline = Date.now() + timeout * 1000;
-			const startTime = Date.now();
-			let lastStatusUpdate = Date.now();
-			let ended = false;
-
-			while (Date.now() < deadline) {
-				if (signal?.aborted) {
+			// --- Cleanup + kill policy (tool-side hygiene; executors
+			// idempotent — deadline/abort paths already killed) ---
+			const files = a.getSnapshot().context.files;
+			if (files) {
+				await runExecutor(CLEANUP, { files: Object.values(files) });
+				if (!monitor) {
 					await runExecutor(KILL, { socketPath, sessionId });
-					a.send({ type: "KILL" });
-					ended = true;
-					break;
-				}
-
-				const probe = await runExecutor<{ done: boolean; exitCode: number | null; alive: boolean }>(PROBE, {
-					signalFile: files.signalFile,
-					socketPath,
-					sessionId,
-				});
-
-				if (probe.ok) {
-					if (probe.done) {
-						a.send({ type: "EXIT_SEEN", exitCode: probe.exitCode ?? 1 });
-						ended = true;
-						break;
-					}
-					if (!probe.alive) {
-						// died without writing the signal file — readable error, not a slow timeout
-						a.send({ type: "SESSION_DEAD" });
-						ended = true;
-						break;
-					}
-				}
-				// executor failure: treated as not-done/alive — a persistent failure is
-				// caught by the deadline and lands in `timeout`
-
-				if (onUpdate && Date.now() - lastStatusUpdate > STATUS_UPDATE_MS) {
-					const elapsed = Math.round((Date.now() - startTime) / 1000);
-					onUpdate({
-						content: [{ type: "text", text: `Running… (${elapsed}s / ${timeout}s)` }],
-						details: detailsFromSnapshot(a),
-					});
-					lastStatusUpdate = Date.now();
-				}
-
-				await new Promise((r) => setTimeout(r, POLL_INTERVAL_MS));
-			}
-
-			if (!ended) {
-				// Deadline — kill immediately (bash may be mid-write; collect after)
-				await runExecutor(KILL, { socketPath, sessionId });
-				a.send({ type: "DEADLINE_HIT" });
-			}
-
-			// --- Collect (executor IO → COLLECT_DONE; legal in terminal states only) ---
-			const snapStatus = statusOf(String(a.getSnapshot().value));
-			if (snapStatus !== "aborted") {
-				const collect = await runExecutor<{ artifacts: ArtifactEntry[]; stderr: string }>(COLLECT, {
-					artifactPaths: artifacts,
-					workingDir,
-					stderrFile: files.stderrFile,
-				});
-
-				if (collect.ok) {
-					a.send({ type: "COLLECT_DONE", artifacts: collect.artifacts, stderr: collect.stderr });
-				} else {
-					// collect failed — surface the reason as stderr, no artifacts
-					a.send({ type: "COLLECT_DONE", artifacts: [], stderr: collect.error });
 				}
 			}
-			// aborted: user cancelled — no artifact read (legacy behavior)
-
-			// --- Cleanup + kill policy ---
-			await runExecutor(CLEANUP, { files: Object.values(files) });
-			if (!monitor) {
-				// idempotent — timeout/abort paths already killed
-				await runExecutor(KILL, { socketPath, sessionId });
-			}
+			// spawn-fail (files null): the session self-cleans — nothing to do
 
 			return resultFromSnapshot(a);
 		},

@@ -15,17 +15,25 @@
  * - the model may only send legal events via tools; illegal events are
  *   rejected
  *
- * States (authoring phases tracked when announced; the fast path — one
- * BEGIN_BUILD from idle — is legal because the pipeline, not the phases,
- * is what needs enforcing):
- *   idle -> researching -> planning -> writing -> building -> validating -> done
- *                                \-> fixing (validation failure; retry loop)
+ * States (the authoring ceremony — start/research/plan — is ONE state,
+ * `authoring`: phases are optional announcements tracked as `phase` in
+ * context (null|researching|planning|writing ≡ the old idle/researching/
+ * planning/writing states); what the machine enforces is the pipeline —
+ * so the fast path, one BEGIN_BUILD from a fresh authoring state, is
+ * legal):
+ *   authoring -> building -> validating -> done
+ *             \-> fixing (validation failure; retry loop)
  *
- * Event flow:
- *   START {topic}                  idle|done -> researching
- *   RESEARCH_DONE {sources}        researching -> planning
- *   PLAN_DONE {slides}             planning -> writing
- *   BEGIN_BUILD {content}         * -> building  (invoke buildService)
+ * Event flow (authoring events are phase-gated in context, ≡ the old
+ * per-state handlers; pipeline events are state-gated):
+ *   START {topic}                  authoring(phase null)|done -> authoring(phase researching)
+ *                                  (from done: NEW deck — authoring cleared,
+ *                                  build history kept)
+ *   RESEARCH_DONE {sources}        authoring(phase researching) -> authoring(phase planning)
+ *   PLAN_DONE {slides}             authoring(phase planning|writing) -> authoring(phase writing)
+ *                                  (replan mid-authoring; also legal in fixing,
+ *                                  phase-agnostic — the plan is load-bearing)
+ *   BEGIN_BUILD {content}          authoring|fixing|done -> building  (invoke buildService)
  *     buildService ok             building -> validating (outPath evidence)
  *     buildService error (infra)  building -> fixing (attempt untouched)
  *   validating: invoke validateService
@@ -33,9 +41,10 @@
  *     fail cause "deck"           validating -> fixing (errors, attempt +1)
  *     fail cause "infra"          validating -> fixing (attempt untouched)
  *   BEGIN_BUILD from fixing        retry loop; capped by maxValidateAttempts
- *   RESET                         any -> idle (context cleared; in-flight
- *                                 services are stopped by state exit, late
- *                                 results have no handler and are dropped)
+ *   RESET                         any -> authoring (context cleared, phase
+ *                                 null; in-flight services are stopped by
+ *                                 state exit, late results have no handler
+ *                                 and are dropped)
  *
  * Failure taxonomy (mirrors mermaid): "deck" — the content itself failed
  * validation (bumped attempt, fix loop); "infra" — the pipeline broke
@@ -45,6 +54,8 @@
  * keeping persisted snapshots small.
  */
 import { assign, fromPromise, setup } from "xstate";
+
+import { normalizeServiceFailure } from "../_kit/machine-kit.ts";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -68,7 +79,15 @@ export interface SlideDeckLimits {
   maxValidateAttempts: number;
 }
 
+/**
+ * Authoring ceremony phase — ≡ the old authoring states. The pipeline
+ * states (building/validating/fixing/done) do not change it.
+ */
+export type AuthoringPhase = "researching" | "planning" | "writing";
+
 export interface SlideDeckContext {
+  /** Ceremony phase; null ≡ old idle (nothing announced yet — START legal). */
+  phase: AuthoringPhase | null;
   topic: string | null;
   sources: string[];
   plannedSlides: string[];
@@ -117,6 +136,7 @@ export type SlideDeckEvent =
 
 export function initialContext(limits: SlideDeckLimits): SlideDeckContext {
   return {
+    phase: null,
     topic: null,
     sources: [],
     plannedSlides: [],
@@ -311,24 +331,14 @@ export function buildViolation(
 
 /** Normalize an unknown service-error output into readable failure data. */
 export function failureOf(output: unknown): ValidateServiceFailure {
-  if (
-    typeof output === "object" &&
-    output !== null &&
-    Array.isArray((output as ValidateServiceFailure).errors) &&
-    ((output as ValidateServiceFailure).cause === "deck" ||
-      (output as ValidateServiceFailure).cause === "infra")
-  ) {
-    return {
-      errors: (output as ValidateServiceFailure).errors.map((e) => String(e)),
-      cause: (output as ValidateServiceFailure).cause,
-    };
-  }
-  // Non-shaped rejection (e.g. an Error from an unwired stub): infra — the
-  // content was never checked.
-  return {
-    errors: [String((output as Error | undefined)?.message ?? output ?? "service failed")],
-    cause: "infra",
-  };
+  // Only a shaped failure carrying a KNOWN cause is trusted: a non-shaped
+  // rejection (e.g. an Error from an unwired stub), or a shaped one without
+  // a known cause, is infra — the content was never checked.
+  return normalizeServiceFailure(output, {
+    causes: ["deck", "infra"],
+    defaultCause: null,
+    nonShapedCause: "infra",
+  });
 }
 
 // ---------------------------------------------------------------------------
@@ -364,30 +374,69 @@ export const slideDeckMachine = setup({
     ),
   },
   guards: {
-    startLegal: ({ event }) =>
+    // Ceremony legality lives in context (phase ≡ the old per-state
+    // handlers); each authoring guard = phase + content precheck.
+    // buildLegal is phase-agnostic everywhere — the pipeline, not the
+    // ceremony, is what needs enforcing.
+    startLegal: ({ context, event }) =>
+      event.type === "START" &&
+      // Fresh authoring only (phase null ≡ old idle); `done` keeps its own
+      // START (newDeckStartLegal) — this guard never runs there.
+      context.phase === null &&
+      startViolation(event.topic) === null,
+    newDeckStartLegal: ({ event }) =>
+      // START from done: a NEW deck begins whatever phase the finished
+      // deck used — the start action clears authoring, keeps build history
       event.type === "START" && startViolation(event.topic) === null,
-    researchLegal: ({ event }) =>
+    researchLegal: ({ context, event }) =>
       event.type === "RESEARCH_DONE" &&
+      // Research phase only (≡ old researching state)
+      context.phase === "researching" &&
       researchViolation(event.sources) === null,
-    planLegal: ({ event }) =>
+    planLegal: ({ context, event }) =>
+      event.type === "PLAN_DONE" &&
+      // Replan mid-authoring (phase planning|writing ≡ old planning|writing
+      // states); mid-fix replans are fixPlanLegal (fixing's own handler)
+      (context.phase === "planning" || context.phase === "writing") &&
+      planViolation(event.slides) === null,
+    fixPlanLegal: ({ event }) =>
+      // Replan mid-fix: phase-agnostic (≡ old fixing state) — the plan is
+      // load-bearing for the retry loop, whatever phase led here
       event.type === "PLAN_DONE" && planViolation(event.slides) === null,
     buildLegal: ({ context, event }) =>
-      event.type === "BEGIN_BUILD" &&
-      buildViolation(context, event) === null,
+      event.type === "BEGIN_BUILD" && buildViolation(context, event) === null,
   },
   actions: {
     start: assign(({ event }) => {
       if (event.type !== "START") return {};
+      // Phase researching ≡ old researching state (RESEARCH_DONE legal).
       // From `done` this is a NEW deck: clear authoring state, keep build history.
-      return { topic: event.topic, sources: [], plannedSlides: [], deck: null, outPath: null, errors: [] };
+      return {
+        phase: "researching" as const,
+        topic: event.topic,
+        sources: [],
+        plannedSlides: [],
+        deck: null,
+        outPath: null,
+        errors: [],
+      };
     }),
     recordResearch: assign(({ event }) => {
       if (event.type !== "RESEARCH_DONE") return {};
-      return { sources: event.sources.map((s) => s.trim()).filter(Boolean) };
+      // Phase planning ≡ old planning state (PLAN_DONE legal)
+      return {
+        phase: "planning" as const,
+        sources: event.sources.map((s) => s.trim()).filter(Boolean),
+      };
     }),
     recordPlan: assign(({ event }) => {
       if (event.type !== "PLAN_DONE") return {};
-      return { plannedSlides: event.slides.map((s) => s.trim()).filter(Boolean) };
+      // Phase writing ≡ old writing state (replan legal); also runs from
+      // fixing (fixPlanLegal) — phase is inert there, only the plan matters
+      return {
+        phase: "writing" as const,
+        plannedSlides: event.slides.map((s) => s.trim()).filter(Boolean),
+      };
     }),
     beginBuild: assign(({ event }) => {
       if (event.type !== "BEGIN_BUILD") return {};
@@ -404,7 +453,9 @@ export const slideDeckMachine = setup({
     buildDone: assign(({ event }) => {
       // onDone of buildService — output carries outPath evidence
       if (!("output" in event)) return {};
-      return { outPath: (event as { output: BuildServiceOutput }).output.outPath };
+      return {
+        outPath: (event as { output: BuildServiceOutput }).output.outPath,
+      };
     }),
     buildFailed: assign(({ event }) => {
       // Build failures are always infra (template/IO) — attempt untouched.
@@ -417,7 +468,9 @@ export const slideDeckMachine = setup({
       // (set by buildDone) — recorded into builds history
       const outPath = context.outPath ?? "";
       return {
-        builds: context.builds.includes(outPath) ? context.builds : [...context.builds, outPath],
+        builds: context.builds.includes(outPath)
+          ? context.builds
+          : [...context.builds, outPath],
         errors: [],
       };
     }),
@@ -430,7 +483,9 @@ export const slideDeckMachine = setup({
         // "deck" failures burn an attempt (fix loop capped); "infra"
         // failures do not — the content was never checked.
         validateAttempts:
-          failure.cause === "deck" ? context.validateAttempts + 1 : context.validateAttempts,
+          failure.cause === "deck"
+            ? context.validateAttempts + 1
+            : context.validateAttempts,
       };
     }),
     resetContext: assign(({ context }) => initialContext(context.limits)),
@@ -439,39 +494,31 @@ export const slideDeckMachine = setup({
   id: "slide-deck",
   context: ({ input }) =>
     initialContext(input?.limits ?? { maxValidateAttempts: 8 }),
-  initial: "idle",
+  initial: "authoring",
   states: {
-    idle: {
+    // ONE authoring state — the ceremony (start/research/plan/write) is
+    // optional announcements tracked as `phase` in context; per-phase
+    // legality is the phase guards above (≡ the old idle/researching/
+    // planning/writing handlers). Targetless transitions are pure
+    // assigns — the state never exits.
+    authoring: {
       on: {
+        // START: fresh authoring only (phase null ≡ old idle); `done`
+        // keeps its own START (newDeckStartLegal: new-deck semantics)
+        START: { guard: "startLegal", actions: "start" },
+        RESEARCH_DONE: { guard: "researchLegal", actions: "recordResearch" },
+        // Replan mid-authoring: the plan is load-bearing (buildLegal checks
+        // built ids against it), so changing it must stay legal here
+        PLAN_DONE: { guard: "planLegal", actions: "recordPlan" },
         // Fast path: one event carries the content; phases are optional
         // announcements. The pipeline (build -> validate -> open) is what
         // the machine enforces, not the authoring ceremony.
-        START: { guard: "startLegal", target: "researching", actions: "start" },
-        BEGIN_BUILD: { guard: "buildLegal", target: "building", actions: "beginBuild" },
-        RESET: { target: "idle", actions: "resetContext" },
-      },
-    },
-    researching: {
-      on: {
-        RESEARCH_DONE: { guard: "researchLegal", target: "planning", actions: "recordResearch" },
-        BEGIN_BUILD: { guard: "buildLegal", target: "building", actions: "beginBuild" },
-        RESET: { target: "idle", actions: "resetContext" },
-      },
-    },
-    planning: {
-      on: {
-        PLAN_DONE: { guard: "planLegal", target: "writing", actions: "recordPlan" },
-        BEGIN_BUILD: { guard: "buildLegal", target: "building", actions: "beginBuild" },
-        RESET: { target: "idle", actions: "resetContext" },
-      },
-    },
-    writing: {
-      on: {
-        BEGIN_BUILD: { guard: "buildLegal", target: "building", actions: "beginBuild" },
-        // Replan mid-authoring: the plan is load-bearing (buildLegal checks
-        // built ids against it), so changing it must stay legal here
-        PLAN_DONE: { guard: "planLegal", target: "writing", actions: "recordPlan" },
-        RESET: { target: "idle", actions: "resetContext" },
+        BEGIN_BUILD: {
+          guard: "buildLegal",
+          target: "building",
+          actions: "beginBuild",
+        },
+        RESET: { actions: "resetContext" },
       },
     },
     building: {
@@ -494,9 +541,9 @@ export const slideDeckMachine = setup({
         onError: { target: "fixing", actions: "buildFailed" },
       },
       // RESET wins over the in-flight build: exiting the state stops the
-      // invoked service; a late result has no handler in idle and is dropped.
+      // invoked service; a late result has no handler in authoring and is dropped.
       on: {
-        RESET: { target: "idle", actions: "resetContext" },
+        RESET: { target: "authoring", actions: "resetContext" },
       },
     },
     validating: {
@@ -504,7 +551,9 @@ export const slideDeckMachine = setup({
         src: "validateService",
         input: ({ context }) => {
           if (!context.outPath) {
-            throw new Error("validating without outPath — buildDone must set it");
+            throw new Error(
+              "validating without outPath — buildDone must set it",
+            );
           }
           return { outPath: context.outPath };
         },
@@ -512,26 +561,39 @@ export const slideDeckMachine = setup({
         onError: { target: "fixing", actions: "validateFailed" },
       },
       on: {
-        RESET: { target: "idle", actions: "resetContext" },
+        RESET: { target: "authoring", actions: "resetContext" },
       },
     },
     fixing: {
       on: {
         // Retry loop: resubmit content (fixed) — guarded by buildLegal,
         // which caps failed deck validations until RESET
-        BEGIN_BUILD: { guard: "buildLegal", target: "building", actions: "beginBuild" },
-        // Replan mid-fix: same rationale as `writing`
-        PLAN_DONE: { guard: "planLegal", target: "fixing", actions: "recordPlan" },
-        RESET: { target: "idle", actions: "resetContext" },
+        BEGIN_BUILD: {
+          guard: "buildLegal",
+          target: "building",
+          actions: "beginBuild",
+        },
+        // Replan mid-fix: phase-agnostic (≡ old fixing) — the plan is
+        // load-bearing for the retry loop, whatever phase led here
+        PLAN_DONE: { guard: "fixPlanLegal", actions: "recordPlan" },
+        RESET: { target: "authoring", actions: "resetContext" },
       },
     },
     done: {
       on: {
         // Rebuild with tweaked content stays in the same workflow
-        BEGIN_BUILD: { guard: "buildLegal", target: "building", actions: "beginBuild" },
-        // New deck: fresh authoring state, build history kept
-        START: { guard: "startLegal", target: "researching", actions: "start" },
-        RESET: { target: "idle", actions: "resetContext" },
+        BEGIN_BUILD: {
+          guard: "buildLegal",
+          target: "building",
+          actions: "beginBuild",
+        },
+        // New deck: fresh authoring (phase researching), build history kept
+        START: {
+          guard: "newDeckStartLegal",
+          target: "authoring",
+          actions: "start",
+        },
+        RESET: { target: "authoring", actions: "resetContext" },
       },
     },
   },
