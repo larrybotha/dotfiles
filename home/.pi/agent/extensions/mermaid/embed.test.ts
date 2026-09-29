@@ -7,7 +7,12 @@ import assert from "node:assert/strict";
 import { mkdtempSync, writeFileSync, readFileSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { embedBlock, markerPath, svgPathFor } from "./embed.ts";
+import {
+  defaultOutPath,
+  embedBlock,
+  markerPath,
+  svgPathFor,
+} from "./embed.ts";
 
 const DIR = mkdtempSync(join(tmpdir(), "mermaid-embed-"));
 
@@ -43,6 +48,17 @@ await ok("svgPathFor: other extensions append .svg", () => {
 	assert.equal(svgPathFor("/a/b/diagram.txt"), "/a/b/diagram.txt.svg");
 });
 
+await ok("defaultOutPath: basename + .svg swap into the given dir", () => {
+	assert.equal(
+		defaultOutPath("/tmp/out", "/proj/diagram.mmd"),
+		"/tmp/out/diagram.svg",
+	);
+	assert.equal(
+		defaultOutPath("/tmp/out", "/proj/nested/auth-flow.MMD"),
+		"/tmp/out/auth-flow.svg",
+	);
+});
+
 await ok("embedBlock appends at end (no after), trailing newlines trimmed", async () => {
 	writeFileSync(target, "# Notes\n\nSome text.\n", "utf8");
 	const r = await embedBlock(target, sourceAbs, `${content}\n\n`);
@@ -63,9 +79,9 @@ await ok("embedBlock re-embed replaces the marked block in place (idempotent)", 
 	assert.equal(out.match(/```mermaid/g)?.length, 1);
 });
 
-await ok("embedBlock replaces a legacy absolute-path marker in place", async () => {
-	const legacy = `# T\n\n<!-- mermaid: ${sourceAbs} -->\n\`\`\`mermaid\nold\n\`\`\`\n`;
-	writeFileSync(target, legacy, "utf8");
+await ok("embedBlock replaces an absolute-path marker in place", async () => {
+	const absolute = `# T\n\n<!-- mermaid: ${sourceAbs} -->\n\`\`\`mermaid\nold\n\`\`\`\n`;
+	writeFileSync(target, absolute, "utf8");
 	const r = await embedBlock(target, sourceAbs, content);
 	assert.equal(r.action, "replaced");
 	const out = readFileSync(target, "utf8");

@@ -5,16 +5,24 @@
  * cap) lives in an XState machine; the model may only act via legal events,
  * selected through tools:
  *
- *   mermaid_validate — draft -> validated (Docker ascii.sh; ASCII preview returned)
- *   mermaid_render   — validated source only -> SVG (Docker svg.sh)
+ *   mermaid_validate — fix -> validated (two-phase: the tool runs Docker
+ *                      ascii.sh between BEGIN_VALIDATE and VALIDATE_DONE —
+ *                      the model round-trip is the point of validate; ASCII
+ *                      preview returned)
+ *   mermaid_render   — validated source only -> SVG (BEGIN_RENDER invokes
+ *                      the machine-driven renderService: Docker svg.sh;
+ *                      the tool waits for settle and reports from context)
  *   mermaid_embed    — validated source only -> fenced block into Markdown
- *                      (idempotent: same source marker replaced, not duplicated)
- *   mermaid_reset    — clear state, start over
+ *                      (BEGIN_EMBED invokes the embedService: embedBlock
+ *                      file IO; idempotent: same source marker replaced, not
+ *                      duplicated)
+ *   mermaid_reset    — clear state, start over (exiting a state stops its
+ *                      invoked service; late results are dropped)
  *
  * Deterministic aspects (validation-first, path+hash freshness, attempt cap,
  * state order) are enforced in code, not requested in a prompt. Judgment
- * (diagram wording, where to embed, whether SVG is wanted) stays with the
- * model, constrained to legal events.
+ * (diagram wording, where to embed, whether SVG is wanted) is the model's,
+ * constrained to legal events.
  *
  * The Docker render pipeline ships with this extension (executors/) — a
  * swappable implementation detail like web-search's backend: replace
@@ -32,10 +40,9 @@ import {
   readFileSync,
   writeFileSync,
 } from "node:fs";
-import { readFile } from "node:fs/promises";
-import { homedir } from "node:os";
-import { basename, isAbsolute, join, resolve } from "node:path";
-import { pathToFileURL } from "node:url";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { homedir, tmpdir } from "node:os";
+import { basename, dirname, isAbsolute, join, resolve } from "node:path";
 import type {
   AgentToolUpdateCallback,
   ExtensionAPI,
@@ -53,15 +60,21 @@ import {
   Text,
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
-import { type Actor, createActor } from "xstate";
+import { type Actor, createActor, fromPromise, waitFor } from "xstate";
 import { makeViz, type VizResult } from "../_viz/viz-kit.ts";
-import { embedBlock, svgPathFor } from "./embed.ts";
+import { defaultOutPath, embedBlock, svgPathFor } from "./embed.ts";
 import {
+  type EmbedAction,
+  type EmbedServiceInput,
+  type EmbedServiceOutput,
   embedViolation,
   initialContext,
   type MermaidLimits,
   mermaidMachine,
+  type RenderServiceInput,
+  type RenderServiceOutput,
   renderViolation,
+  type ServiceFailure,
   validateViolation,
 } from "./machine.ts";
 
@@ -79,6 +92,11 @@ const LIMITS: MermaidLimits = {
   maxValidateAttempts: intEnv("MERMAID_MAX_VALIDATE_ATTEMPTS", 8),
 };
 const SCRIPT_TIMEOUT_MS = intEnv("MERMAID_SCRIPT_TIMEOUT_MS", 180_000);
+/** Render/embed settle timeout (service timeout + slack): the tool reports "still in flight" past this. */
+const SETTLE_TIMEOUT_MS = intEnv(
+  "MERMAID_SETTLE_TIMEOUT_MS",
+  SCRIPT_TIMEOUT_MS + 60_000,
+);
 const ASCII_TRUNCATE = intEnv("MERMAID_ASCII_TRUNCATE", 8000);
 const INSPECT_PORT = (() => {
   const n = intEnv("MERMAID_INSPECT_PORT", 8082);
@@ -95,7 +113,7 @@ const EXEC_DIR = resolve(
 );
 const ASCII_SCRIPT = join(EXEC_DIR, "ascii.sh");
 const SVG_SCRIPT = join(EXEC_DIR, "svg.sh");
-
+const OUT_DIR = join(homedir(), ".pi/agent/extensions/mermaid/tmp");
 const LOG_DIR =
   process.env.MERMAID_LOG_DIR ?? join(homedir(), ".cache", "mermaid");
 
@@ -145,7 +163,7 @@ type MermaidDetails = {
 // Actor management (reconstructed from branch, like web-search)
 // ---------------------------------------------------------------------------
 
-let actor: Actor<typeof mermaidMachine> | null = null;
+let actor: Actor<typeof wiredMachine> | null = null;
 let unsubscribeActor: { unsubscribe: () => void } | null = null;
 let uiCtx: {
   ui: {
@@ -158,12 +176,14 @@ let uiCtx: {
 // Output mode (extension-driven output: what the user sees after validation)
 // ---------------------------------------------------------------------------
 
-type OutputMode = "ascii" | "png-tui" | "svg" | "png" | "none";
+type OutputMode = "ascii" | "png-tui" | "finder" | "none";
 const OUTPUT_MODES: ReadonlyMap<OutputMode, string> = new Map([
-  ["ascii", "ASCII preview in TUI (no render)"],
+  [
+    "ascii",
+    "ASCII preview inline in the tool result (ctrl+e to expand; no overlay)",
+  ],
   ["png-tui", "render PNG, show inline in TUI (kitty/iTerm2 images)"],
-  ["svg", "render SVG, open it in the browser"],
-  ["png", "render PNG, open it in the browser"],
+  ["finder", "render SVG next to the diagram, reveal it in Finder"],
   ["none", "no auto-output"],
 ]);
 const OUTPUT_MODE_FILE = join(LOG_DIR, "output-mode");
@@ -231,7 +251,7 @@ async function attachInspector(): Promise<VizResult> {
 /** Compact live status for the TUI footer. */
 function statusText(c: ReturnType<typeof initialContext>): string {
   const src = c.validated ? basename(c.validated.path) : "no source";
-  return `mermaid ${stateValue()} · ${src} · failed validations ${c.validateAttempts}/${c.limits.maxValidateAttempts} · renders ${c.renders.length} · embeds ${c.embeds.length}`;
+  return `mermaid ${stateValue()} · ${src} · diagram failures ${c.validateAttempts}/${c.limits.maxValidateAttempts} · renders ${c.renders.length} · embeds ${c.embeds.length}`;
 }
 
 function refreshStatus() {
@@ -248,7 +268,7 @@ function refreshStatus() {
 }
 
 /** Set the active actor, wiring the live-status subscription. */
-function setActor(a: Actor<typeof mermaidMachine>) {
+function setActor(a: Actor<typeof wiredMachine>) {
   unsubscribeActor?.unsubscribe();
   unsubscribeActor = a.subscribe(() => refreshStatus());
   actor = a;
@@ -258,8 +278,10 @@ function setActor(a: Actor<typeof mermaidMachine>) {
 /** Single actor-creation site — fresh input or persisted-snapshot restore. */
 function createMermaidActor(
   opts: { input: { limits: MermaidLimits } } | { snapshot: unknown },
-): Actor<typeof mermaidMachine> {
-  const a = createActor(mermaidMachine, {
+): Actor<typeof wiredMachine> {
+  // wiredMachine = mermaidMachine with the service slots provided (the
+  // unwired machine throws "not wired" if a render/embed ever runs through it)
+  const a = createActor(wiredMachine, {
     input: "input" in opts ? opts.input : undefined,
     // XState's persisted-snapshot type is internal; snapshots passed here
     // come from getPersistedSnapshot() of this same machine — one cast at
@@ -272,11 +294,11 @@ function createMermaidActor(
   return a;
 }
 
-function freshActor(): Actor<typeof mermaidMachine> {
+function freshActor(): Actor<typeof wiredMachine> {
   return createMermaidActor({ input: { limits: LIMITS } });
 }
 
-function getActor(): Actor<typeof mermaidMachine> {
+function getActor(): Actor<typeof wiredMachine> {
   if (!actor) freshActor();
   return actor!;
 }
@@ -378,59 +400,175 @@ async function readSource(
   return { content, hash: createHash("sha256").update(content).digest("hex") };
 }
 
-/** Render outcome: ok, or failure tagged diagram-vs-infra (drives machine cause). */
+// ---------------------------------------------------------------------------
+// Service wiring (machine.ts ships typed stubs; this is the one place they
+// are provided — slide-deck pattern)
+// ---------------------------------------------------------------------------
+
+/**
+ * Last successful embed evidence from the wired embedService — tool-result
+ * text only (the machine context stays evidence-only; snapshot shape
+ * unchanged). Guarded by target match so a stale entry is never reported.
+ */
+let lastEmbed: { target: string; action: EmbedAction } | null = null;
+
+/** Render outcome after machine settle: ok, still in flight, or failure tagged diagram-vs-infra (all fields on all members — clean narrowing). */
 type RenderOutcome =
-  | { ok: true; error: null }
-  | { ok: false; error: string; cause: "diagram" | "infra" };
+  | { ok: true; error: null; inFlight: false; cause: null }
+  | { ok: false; inFlight: true; error: string; cause: null }
+  | { ok: false; inFlight: false; cause: "diagram" | "infra"; error: string };
 
 /**
  * Shared render path (mermaid_render tool + auto-output): sends BEGIN_RENDER
- * (caller has prechecked renderViolation + can()) -> runs the Docker executor
- * -> sends RENDER_DONE with a cause. Returns failure as data.
+ * with content (the validated bytes — the hash was computed over them; the
+ * caller has prechecked renderViolation + can()) — the machine invokes the
+ * wired renderService (Docker svg.sh over a temp copy of the bytes) and
+ * routes its result; this waits for settle (validated | drafting) and derives
+ * the outcome from context: renders history for success, state + errors for
+ * the failure cause. Returns failure as data.
  */
-async function runRender(
+async function machineRender(
   path: string,
   hash: string,
+  /** Validated bytes — evidence parity into the event (never a re-read). */
+  content: string,
   outPath: string,
   theme: string,
   onUpdate?: AgentToolUpdateCallback<MermaidDetails>,
 ): Promise<RenderOutcome> {
-  getActor().send({ type: "BEGIN_RENDER", path, hash, outPath });
-  log("INFO", `render: ${path} -> ${outPath} (theme ${theme})`);
+  getActor().send({
+    type: "BEGIN_RENDER",
+    path,
+    hash,
+    content,
+    outPath,
+    theme,
+  });
   onUpdate?.({
     content: text(
       `Rendering ${basename(path)} -> ${basename(outPath)} via Docker…`,
     ),
     details: detailsFor("render"),
   });
-  const { code, stderr } = await run(SVG_SCRIPT, ["-t", theme, path, outPath]);
-  if (code === EXIT_OK) {
-    getActor().send({ type: "RENDER_DONE", ok: true, outPath, error: null });
-    log("INFO", `render ok: ${outPath}`);
-    return { ok: true, error: null };
+  try {
+    await waitFor(
+      getActor(),
+      (s) => s.matches("validated") || s.matches("drafting"),
+      { timeout: SETTLE_TIMEOUT_MS },
+    );
+  } catch {
+    return {
+      ok: false,
+      inFlight: true,
+      cause: null,
+      error: `render still in flight after ${Math.round(SETTLE_TIMEOUT_MS / 1000)}s (state: ${stateValue()}) — it continues in the background; check /mermaid status`,
+    };
   }
-  const cause = causeFor(code);
-  const msg = errorLines(stderr, `svg.sh exited ${code}`).join("\n");
-  log("ERROR", `render failed (${cause}): ${msg.split("\n")[0]}`);
-  getActor().send({
-    type: "RENDER_DONE",
-    ok: false,
-    outPath,
-    error: msg,
-    cause,
-  });
-  return { ok: false, error: msg, cause };
+  const snap = getActor().getSnapshot();
+  const c = snap.context;
+  // Success: renderDone pushed outPath and cleared errors — no other exit of
+  // `rendering` leaves `validated` with empty errors: renderFailed never
+  // records an empty error list (machine-side fallback), diagram failure
+  // lands in `drafting`, RESET clears everything.
+  if (
+    snap.matches("validated") &&
+    c.errors.length === 0 &&
+    c.renders.includes(outPath)
+  ) {
+    return { ok: true, error: null, inFlight: false, cause: null };
+  }
+  if (c.errors.length === 0) {
+    // Neither recorded: the render was in flight when a RESET arrived (the
+    // only unlocked sender — `/mermaid reset`) — the outcome was dropped.
+    return {
+      ok: false,
+      inFlight: false,
+      cause: "infra",
+      error: `render result unavailable — the workflow was reset while rendering (${outPath})`,
+    };
+  }
+  const cause = snap.matches("drafting") ? "diagram" : "infra";
+  return { ok: false, inFlight: false, cause, error: c.errors.join("\n") };
 }
+
+// Wire the machine's service slots to the executors (machine.ts ships typed
+// stubs only — this is the one place they are provided). Exported so a live
+// harness can drive the real wiring without a pi instance.
+export const wiredMachine = mermaidMachine.provide({
+  actors: {
+    renderService: fromPromise<RenderServiceOutput, RenderServiceInput>(
+      async ({ input }) => {
+        const theme = input.theme ?? process.env.MERMAID_THEME ?? "dark";
+        log(
+          "INFO",
+          `render: ${input.path} -> ${input.outPath} (theme ${theme})`,
+        );
+        // Content parity (TOCTOU): render the exact validated bytes — a
+        // temp copy of `content`, never a re-read of `path` (a disk edit
+        // between validation and render must not leak into an output the
+        // machine reports as the validated diagram).
+        const tmp = await mkdtemp(join(tmpdir(), "mermaid-render-"));
+        try {
+          const src = join(tmp, basename(input.path));
+          await writeFile(src, input.content, "utf8");
+          const { code, stderr } = await run(SVG_SCRIPT, [
+            "-t",
+            theme,
+            src,
+            input.outPath,
+          ]);
+          if (code === EXIT_OK) {
+            log("INFO", `render ok: ${input.outPath}`);
+            return { outPath: input.outPath };
+          }
+          const cause = causeFor(code);
+          const error = errorLines(stderr, `svg.sh exited ${code}`).join("\n");
+          log("ERROR", `render failed (${cause}): ${error.split("\n")[0]}`);
+          // run() never rejects; non-zero exits become the failure data
+          // here — the machine's onError routes by cause.
+          throw { errors: [error], cause } satisfies ServiceFailure;
+        } finally {
+          await rm(tmp, { recursive: true, force: true }).catch(() => {});
+        }
+      },
+    ),
+    embedService: fromPromise<EmbedServiceOutput, EmbedServiceInput>(
+      async ({ input }) => {
+        log(
+          "INFO",
+          `embed: ${input.path} -> ${input.target}${input.after ? ` (after "${input.after}")` : ""}`,
+        );
+        // Content normally flows through the event (hash-consistent
+        // evidence — the machine guarded THIS content); re-read only for
+        // non-tool callers that pass none.
+        const content = input.content ?? (await readFile(input.path, "utf8"));
+        // embedBlock throws on failure (anchor missing, unwritable target)
+        // — the machine's onError records it; the pass is kept. No manual
+        // DONE plumbing: throw, onError handles.
+        const r = await embedBlock(
+          input.target,
+          input.path,
+          content,
+          input.after,
+        );
+        log("INFO", `embed ok: ${input.target} (${r.action})`);
+        lastEmbed = { target: input.target, action: r.action };
+        return { action: r.action, target: input.target };
+      },
+    ),
+  },
+});
 
 // ---------------------------------------------------------------------------
 // User-facing output (extension-driven, not model-mediated)
 // ---------------------------------------------------------------------------
 
 /**
- * Preview overlay: the validated diagram shown directly in the TUI (ASCII
- * art, or a rendered PNG via kitty/iTerm2 images with a text fallback).
- * Esc/q/Enter closes; j/k/arrows/PgUp/PgDn/g/G scroll. Wheel events the
- * component does not handle scroll the nearest ScrollView (this one).
+ * Preview overlay: a rendered PNG shown directly in the TUI (kitty/iTerm2
+ * images with a text fallback) — the `png-tui` output mode only; the ascii
+ * mode renders inline in the tool result instead. Esc/q/Enter closes;
+ * j/k/arrows/PgUp/PgDn/g/G scroll. Wheel events the component does not
+ * handle scroll the nearest ScrollView (this one).
  */
 class PreviewOverlay implements Focusable {
   focused = false; // set by the TUI; no cursor to place
@@ -510,11 +648,6 @@ function showPreview(
     .catch(() => {});
 }
 
-/** ASCII preview (ascii.sh stdout) in a TUI overlay. */
-function showAsciiPreview(execCtx: unknown, title: string, art: string) {
-  showPreview(execCtx, title, () => new Text(art, 1, 1));
-}
-
 /** Rendered PNG in a TUI overlay (kitty/iTerm2 images; dim filename fallback otherwise). */
 function showImagePreview(execCtx: unknown, title: string, pngPath: string) {
   let base64: string;
@@ -541,23 +674,22 @@ function showImagePreview(execCtx: unknown, title: string, pngPath: string) {
 }
 
 /**
- * Best-effort "open in browser" (executor): the rendered file displayed in
- * the default web browser. `open <file>` would follow the file-type handler
- * (Preview/editor for SVG/PNG), so macOS uses AppleScript `open location`,
- * which always targets the default browser. Never throws.
+ * Best-effort "reveal in Finder" (macOS `open -R` reveals the file itself —
+ * unlike `open <file>`, which follows the file-type handler and would open
+ * it; non-macOS opens the parent dir in the file manager). Never throws.
+ * Showing/opening a render is the user's call — this extension never
+ * launches a browser (other tools own that, e.g. web-browser).
  */
-function openInBrowser(
+function revealInFinder(
   outPath: string,
 ): Promise<{ ok: boolean; error: string | null }> {
-  const url = pathToFileURL(outPath).href; // percent-encoded, safe to embed
   return new Promise((resolve_) => {
     const darwin = process.platform === "darwin";
-    // -e splits words; pass the whole AppleScript line as ONE argv element.
-    const cmd = darwin ? "osascript" : "xdg-open";
-    const args = darwin ? ["-e", `open location "${url}"`] : [url];
+    const cmd = darwin ? "open" : "xdg-open";
+    const args = darwin ? ["-R", outPath] : [dirname(outPath)];
     execFile(cmd, args, (err) => {
       if (err) {
-        log("WARN", `open in browser failed: ${err.message}`);
+        log("WARN", `reveal in Finder failed: ${err.message}`);
         resolve_({ ok: false, error: err.message });
       } else {
         resolve_({ ok: true, error: null });
@@ -570,59 +702,78 @@ function openInBrowser(
  * Deliver the mode's output side effect for a validated source (validate
  * success + '/mermaid output' selection demo). Render modes go through the
  * machine-gated path (fresh pass required); the overlay is fire-and-forget.
- * `ascii` is the validate stdout when available; null re-runs ascii.sh
- * display-only (no machine events) for a demo. Returns a note for the
- * caller (tool result text or log). Never throws.
+ * `content` is the validated bytes when the caller just read them (validate
+ * tool); null re-reads the source and skips render modes if the file no
+ * longer matches the validated hash (never renders unvalidated bytes).
+ * `ascii` needs no side effect — the preview already rides the
+ * tool-result content; renderResult shows it inline on expand (ctrl+e).
+ * Returns a note for the caller (tool result text or log). Never throws.
  */
 async function deliverOutput(
   mode: OutputMode,
   path: string,
   hash: string,
-  ascii: string | null,
+  /** Validated bytes when the caller just read them (validate tool); null re-reads + verifies the hash. */
+  content: string | null,
   execCtx: unknown,
   onUpdate?: AgentToolUpdateCallback<MermaidDetails>,
 ): Promise<string> {
   if (mode === "none") return "";
   if (mode === "ascii") {
-    if (ascii === null) {
-      const { stdout } = await run(ASCII_SCRIPT, [
-        "-t",
-        process.env.MERMAID_THEME ?? "dark",
-        path,
-      ]);
-      ascii = stdout.trim() === "" ? null : stdout;
-    }
-    if (ascii !== null && ascii.trim() !== "") {
-      showAsciiPreview(execCtx, basename(path), ascii);
-      return "\nOutput (ascii): ASCII preview shown in TUI";
-    }
-    return "\nOutput (ascii): preview unavailable (mmdc passed; the preview renderer failed)";
+    // No side effect: the preview rides the tool-result content —
+    // renderResult shows it inline on expand (ctrl+e). No overlay, no
+    // ascii.sh re-run (the validate stdout is the same preview).
+    return "\nOutput (ascii): preview inline in the tool result (ctrl+e to expand)";
   }
   const outPath =
-    mode === "svg" ? svgPathFor(path) : pngPreviewPath(path, hash);
+    mode === "finder" ? svgPathFor(path) : pngPreviewPath(path, hash);
   const violation = renderViolation(
     getActor().getSnapshot().context,
     path,
     hash,
   );
   if (violation) return `\nOutput skipped: ${violation}`;
-  const r = await runRender(
+  // Content parity: render the exact bytes the validated hash was computed
+  // over. A re-read (picker demo) verifies the hash first — a changed file
+  // skips the demo instead of rendering unvalidated bytes.
+  let bytes = content;
+  if (bytes === null) {
+    try {
+      const fresh = await readSource(path);
+      if (fresh.hash !== hash) {
+        return `\nOutput skipped: source changed since validation (${path}) — re-run mermaid_validate`;
+      }
+      bytes = fresh.content;
+    } catch {
+      return `\nOutput skipped: cannot read ${path}`;
+    }
+  }
+  const r = await machineRender(
     path,
     hash,
+    bytes,
     outPath,
     process.env.MERMAID_THEME ?? "dark",
     onUpdate,
   );
   if (!r.ok) {
-    return `\nOutput render failed — the diagram stays validated; mermaid_render ${outPath} can retry.`;
+    if (r.inFlight) {
+      return `\nOutput render still in flight (${outPath}) — it continues in the background.`;
+    }
+    return r.cause === "diagram"
+      ? `\nOutput render failed — the diagram needs drafting; mermaid_validate again, then mermaid_render ${outPath}.`
+      : `\nOutput render failed — the diagram stays validated; mermaid_render ${outPath} can retry.`;
   }
   let shown = "shown in TUI";
-  if (mode === "png-tui") {
-    showImagePreview(execCtx, basename(outPath), outPath);
+  if (mode === "finder") {
+    // reveal the render in Finder — opening it (browser or otherwise) stays
+    // the user's call; this extension never launches a browser
+    const revealed = await revealInFinder(outPath);
+    shown = revealed.ok
+      ? "revealed in Finder"
+      : `reveal failed (${revealed.error})`;
   } else {
-    // svg / png: display the rendered file in the browser
-    const opened = await openInBrowser(outPath);
-    shown = opened.ok ? "opened in browser" : `open failed (${opened.error})`;
+    showImagePreview(execCtx, basename(outPath), outPath);
   }
   log("INFO", `auto-output ${mode}: ${outPath}`);
   return `\nOutput (${mode}): ${outPath} — ${shown}`;
@@ -632,8 +783,27 @@ async function deliverOutput(
 // Formatting (model-facing content)
 // ---------------------------------------------------------------------------
 
+/**
+ * ASCII preview from a validate-success content block — the preview rides
+ * the tool-result content (the transcript already holds it; no duplicate
+ * storage, no re-run). Bounded by the first `\n\n` (the header line) and
+ * the first trailing marker (`\nOutput (` note or the status line).
+ * null when the block has no preview section.
+ */
+function previewOf(body: string): string | null {
+  const start = body.indexOf("\n\n");
+  if (start === -1) return null;
+  const rest = body.slice(start + 2);
+  const note = rest.indexOf("\nOutput (");
+  const status = rest.indexOf("\n\nDiagram failures (validate+render):");
+  const ends = [note, status].filter((i) => i !== -1);
+  const end = ends.length > 0 ? Math.min(...ends) : rest.length;
+  const art = rest.slice(0, end).replace(/\n+$/, "");
+  return art.length > 0 ? art : null;
+}
+
 function statusLine(ctx: ReturnType<typeof initialContext>): string {
-  return `Failed validations: ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}. Renders: ${ctx.renders.length}. Embeds: ${ctx.embeds.length}. Machine state: ${stateValue()}.`;
+  return `Diagram failures (validate+render): ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}. Renders: ${ctx.renders.length}. Embeds: ${ctx.embeds.length}. Machine state: ${stateValue()}.`;
 }
 
 /**
@@ -642,14 +812,16 @@ function statusLine(ctx: ReturnType<typeof initialContext>): string {
  */
 function allowedNext(): string {
   switch (stateValue()) {
-    case "drafting":
-      return "Allowed next: mermaid_validate (a diagram).";
     case "validating":
       return "Allowed next: none — a validation is in flight; wait for its result.";
     case "rendering":
       return "Allowed next: none — a render is in flight; wait for its result.";
-    case "fixing":
-      return "Allowed next: mermaid_validate (re-validate this or another diagram), or mermaid_reset.";
+    case "embedding":
+      return "Allowed next: none — an embed is in flight; wait for its result.";
+    case "drafting":
+      // fresh start (nothing validated yet) or a failed validation —
+      // both mean "validate a diagram next"
+      return "Allowed next: mermaid_validate (this or another diagram), or mermaid_reset.";
     case "validated":
       return "Allowed next: mermaid_render, mermaid_embed, mermaid_validate (edited/new diagram), or mermaid_reset.";
     default:
@@ -700,7 +872,7 @@ const SUBCOMMANDS: { value: string; description: string }[] = [
   {
     value: "output",
     description:
-      "set output on validation: ascii | png-tui | svg | png | none (persisted; picker with no argument)",
+      "set output on validation: ascii | png-tui | finder | none (persisted; picker with no argument)",
   },
   { value: "footer", description: "toggle live footer status line" },
   {
@@ -845,12 +1017,13 @@ export default function (pi: ExtensionAPI) {
         const snap = getActor().getSnapshot();
         const violation = validateViolation(snap.context);
         // can(): state-level legality — same pattern as render/embed (a
-        // validation or render already in flight makes BEGIN_VALIDATE illegal).
+        // validation, render, or embed already in flight makes
+        // BEGIN_VALIDATE illegal).
         const canValidate = snap.can({ type: "BEGIN_VALIDATE" });
         if (violation || !canValidate) {
           const reason =
             violation ??
-            `not legal from state \`${stateValue()}\` — a validation or render is in flight`;
+            `not legal from state \`${stateValue()}\` — a validation, render, or embed is in flight`;
           log("WARN", `validate rejected: ${reason}`);
           return {
             content: text(
@@ -903,10 +1076,11 @@ export default function (pi: ExtensionAPI) {
               }),
             };
           }
+
           return {
             content: text(
               `Diagram is invalid: ${basename(path)}\n\n${errors.join("\n")}\n\n${statusLine(getActor().getSnapshot().context)}\n` +
-                "Fix the diagram, then mermaid_validate again (machine is in `fixing`).",
+                "Fix the diagram, then mermaid_validate again (machine is in `drafting` — the no-validated-diagram state; a fresh start lands here too).",
             ),
             details: detailsFor("validate", {
               error: errors[0] ?? "invalid diagram",
@@ -931,11 +1105,12 @@ export default function (pi: ExtensionAPI) {
 
         // Output comes from the extension, not the model: what the user
         // sees after validation is set by '/mermaid output' (persisted;
-        // default ASCII overlay). Auto-renders go through the same
-        // machine-gated path as mermaid_render (fresh pass, BEGIN/RENDER
-        // DONE) and are recorded in the result text, so the model stays
-        // in sync. Interactive modes only — print/JSON sessions are
-        // background; a failed preview renderer falls back to text.
+        // default ASCII inline — renderResult shows the preview on
+        // expand). Auto-renders go through the same machine-gated path as
+        // mermaid_render (fresh pass, BEGIN/RENDER DONE) and are recorded
+        // in the result text, so the model stays in sync. Interactive
+        // modes only — print/JSON sessions are background; a failed
+        // preview renderer falls back to text.
         let outputNote = "";
         if (
           (execCtx as { mode?: string } | undefined)?.mode === "tui" &&
@@ -945,13 +1120,14 @@ export default function (pi: ExtensionAPI) {
             outputMode,
             path,
             hash,
-            stdout,
+            content,
             execCtx,
             _onUpdate,
           );
         }
 
         const next = allowedNext();
+
         return {
           content: text(
             `Diagram is valid (validated: ${basename(path)}).\n\n${preview}${outputNote}\n\n${statusLine(getActor().getSnapshot().context)}\n${next}`,
@@ -965,15 +1141,31 @@ export default function (pi: ExtensionAPI) {
       return new Text(`mermaid_validate ${args.path ?? ""}`, 0, 0);
     },
 
-    renderResult(result) {
+    renderResult(result, { expanded }, theme) {
       const details = result.details as MermaidDetails | undefined;
       if (details?.rejected) return new Text(`✗ ${details.rejected}`, 0, 0);
       if (details?.error) return new Text(`✗ ${details.error}`, 0, 0);
-      return new Text(
+
+      // ascii output mode: the preview rides the tool-result content —
+      // inline on expand (ctrl+e), no overlay, no duplicate storage. The
+      // mode is read at render time: switching modes re-styles past
+      // results (cosmetic; branch-safe).
+      const body = result.content[0];
+      const art =
+        outputMode === "ascii" && body?.type === "text"
+          ? previewOf(body.text)
+          : null;
+      if (expanded && art !== null) return new Text(art, 0, 0);
+
+      const summary =
         `✓ validated ${details?.file ?? ""} (${details?.state ?? ""})`.replace(
           "  ",
           " ",
-        ),
+        );
+      return new Text(
+        art === null
+          ? summary
+          : `${summary}${theme.fg("dim", " · ctrl+e preview")}`,
         0,
         0,
       );
@@ -986,13 +1178,20 @@ export default function (pi: ExtensionAPI) {
     description:
       "Render the validated diagram to SVG or PNG (Docker; format follows the outPath extension). Only legal for the source " +
       "that last passed mermaid_validate, with unchanged content — an edit invalidates the pass (re-validate). " +
-      "The rendered file is opened in the default browser (interactive sessions only). " +
+      "outPath optional: omitted, the extension places the render in its out dir (deterministic default — " +
+      "pass outPath only when the render belongs at a specific location). " +
+      "Returns the output path — opening/showing the file is left to other tools or the user (this extension never launches a browser). " +
       "Optional theme: default|dark|forest|neutral.",
     parameters: Type.Object({
       path: Type.String({
         description: "Path to the validated .mmd diagram file",
       }),
-      outPath: Type.String({ description: "Output .svg or .png path" }),
+      outPath: Type.Optional(
+        Type.String({
+          description:
+            "Output .svg or .png path (omit for the extension default: its out dir, .svg)",
+        }),
+      ),
       theme: Type.Optional(
         Type.String({
           description: "default|dark|forest|neutral (default dark)",
@@ -1000,11 +1199,17 @@ export default function (pi: ExtensionAPI) {
       ),
     }),
 
-    async execute(_toolCallId, params, _signal, onUpdate, execCtx) {
+    async execute(_toolCallId, params, _signal, onUpdate, _execCtx) {
       return withToolLock(async () => {
         const path = absPath(params.path);
-        const outPath = absPath(params.outPath);
+        // No outPath -> extension-owned default (out dir): where an
+        // unplaced render lands is deterministic, never a model choice —
+        // renders do not land in the project cwd by accident.
+        const outPath = absPath(
+          params.outPath ?? defaultOutPath(OUT_DIR, path),
+        );
         const theme = params.theme ?? process.env.MERMAID_THEME ?? "dark";
+
         if (!THEMES.has(theme)) {
           return {
             content: text(
@@ -1014,9 +1219,10 @@ export default function (pi: ExtensionAPI) {
           };
         }
 
+        let content: string;
         let hash: string;
         try {
-          ({ hash } = await readSource(path));
+          ({ content, hash } = await readSource(path));
         } catch (e) {
           return {
             content: text(
@@ -1030,21 +1236,25 @@ export default function (pi: ExtensionAPI) {
 
         const snap = getActor().getSnapshot();
         const violation = renderViolation(snap.context, path, hash);
-        // can() closes the state-level hole a context-only check leaves: after
-        // a diagram-failed render the machine is in `fixing` while context may
-        // still hold the pass — without can(), the machine would silently drop
-        // BEGIN_RENDER while the tool reported success.
+        // can() closes the state-level hole a context-only check leaves: a
+        // render or embed in flight (machine in `rendering`/`embedding`) or
+        // the mid-fix state (`drafting`) still satisfies the context check —
+        // without can(), the machine would silently drop BEGIN_RENDER while
+        // the tool reported success.
         const canRender = snap.can({
           type: "BEGIN_RENDER",
           path,
           hash,
+          content,
           outPath,
+          theme,
         });
         if (violation || !canRender) {
           const reason =
             violation ??
             `not legal from state \`${stateValue()}\` — an action is in flight or the workflow is mid-fix`;
           log("WARN", `render rejected: ${reason}`);
+
           return {
             content: text(
               `Render rejected: ${reason}\n${statusLine(snap.context)}\n${allowedNext()}`,
@@ -1053,33 +1263,35 @@ export default function (pi: ExtensionAPI) {
           };
         }
 
-        const r = await runRender(path, hash, outPath, theme, onUpdate);
-        if (r.ok) {
-          // Output comes from the extension: open the rendered file in the
-          // browser right away — no need to ask. Interactive only:
-          // print/JSON/RPC sessions are background — launching a browser
-          // from them would be a surprise.
-          let openedNote = "";
-          if (
-            outputMode !== "none" &&
-            (execCtx as { mode?: string } | undefined)?.mode === "tui"
-          ) {
-            const opened = await openInBrowser(outPath);
-            openedNote = opened.ok
-              ? `\nOpened in browser: ${outPath}`
-              : `\nOpen failed (${opened.error}) — open it manually: ${outPath}`;
-            log(
-              opened.ok ? "INFO" : "WARN",
-              `open ${outPath}: ${opened.ok ? "ok" : opened.error}`,
-            );
-          }
+        const r = await machineRender(
+          path,
+          hash,
+          content,
+          outPath,
+          theme,
+          onUpdate,
+        );
+        if (r.inFlight) {
           return {
             content: text(
-              `Rendered: ${outPath}${openedNote}\n${statusLine(getActor().getSnapshot().context)}`,
+              `${r.error}\n${statusLine(getActor().getSnapshot().context)}`,
             ),
             details: detailsFor("render", { file: basename(path) }),
           };
         }
+        if (r.ok) {
+          // Passive result: the path is the deliverable — opening/showing
+          // the file (browser via another tool, Finder, TUI preview) is the
+          // caller's or the user's call; this extension never launches a
+          // browser.
+          return {
+            content: text(
+              `Rendered: ${outPath}\n${statusLine(getActor().getSnapshot().context)}`,
+            ),
+            details: detailsFor("render", { file: basename(path) }),
+          };
+        }
+
         if (r.cause === "infra") {
           return {
             content: text(
@@ -1091,6 +1303,7 @@ export default function (pi: ExtensionAPI) {
             }),
           };
         }
+
         return {
           content: text(
             `Render failed: ${outPath}\n${r.error}\n\n${statusLine(getActor().getSnapshot().context)}\n` +
@@ -1105,7 +1318,7 @@ export default function (pi: ExtensionAPI) {
 
     renderCall(args) {
       return new Text(
-        `mermaid_render ${args.path ?? ""} -> ${args.outPath ?? ""}`,
+        `mermaid_render ${args.path ?? ""} -> ${args.outPath ?? "(out dir default)"}`,
         0,
         0,
       );
@@ -1115,6 +1328,7 @@ export default function (pi: ExtensionAPI) {
       const details = result.details as MermaidDetails | undefined;
       if (details?.rejected) return new Text(`✗ ${details.rejected}`, 0, 0);
       if (details?.error) return new Text(`✗ ${details.error}`, 0, 0);
+
       return new Text(
         `✓ rendered ${details?.file ?? ""} (${details?.state ?? ""})`.replace(
           "  ",
@@ -1153,6 +1367,7 @@ export default function (pi: ExtensionAPI) {
 
         let content: string;
         let hash: string;
+
         try {
           ({ content, hash } = await readSource(path));
         } catch (e) {
@@ -1169,12 +1384,20 @@ export default function (pi: ExtensionAPI) {
         const snap = getActor().getSnapshot();
         const violation = embedViolation(snap.context, path, hash, target);
         // can(): state-level legality — same rationale as mermaid_render.
-        const canEmbed = snap.can({ type: "BEGIN_EMBED", path, hash, target });
+        const canEmbed = snap.can({
+          type: "BEGIN_EMBED",
+          path,
+          hash,
+          target,
+          content,
+          after: params.after,
+        });
         if (violation || !canEmbed) {
           const reason =
             violation ??
             `not legal from state \`${stateValue()}\` — an action is in flight or the workflow is mid-fix`;
           log("WARN", `embed rejected: ${reason}`);
+
           return {
             content: text(
               `Embed rejected: ${reason}\n${statusLine(snap.context)}\n${allowedNext()}`,
@@ -1196,45 +1419,80 @@ export default function (pi: ExtensionAPI) {
           };
         }
 
-        getActor().send({ type: "BEGIN_EMBED", path, hash, target });
-        log(
-          "INFO",
-          `embed: ${path} -> ${target}${params.after ? ` (after "${params.after}")` : ""}`,
-        );
-
+        // BEGIN_EMBED invokes the machine-driven embedService (the wired
+        // embedBlock): it throws on failure — the machine's onError records
+        // the error; no manual DONE plumbing here.
+        getActor().send({
+          type: "BEGIN_EMBED",
+          path,
+          hash,
+          target,
+          content,
+          after: params.after,
+        });
         try {
-          const r = await embedBlock(target, path, content, params.after);
-          getActor().send({
-            type: "EMBED_DONE",
-            ok: true,
-            target,
-            error: null,
-          });
-          log("INFO", `embed ok: ${target} (${r.action})`);
+          await waitFor(
+            getActor(),
+            (s) => s.matches("validated") || s.matches("drafting"),
+            { timeout: SETTLE_TIMEOUT_MS },
+          );
+        } catch {
           return {
             content: text(
-              `Embedded ${basename(path)} into ${target} (${r.action}${params.after ? ` after "${params.after}"` : ""}).\n${statusLine(getActor().getSnapshot().context)}`,
+              `Embed still in flight after ${Math.round(SETTLE_TIMEOUT_MS / 1000)}s (state: ${stateValue()}) — it continues in the background; check /mermaid status.\n${statusLine(getActor().getSnapshot().context)}`,
             ),
             details: detailsFor("embed", { file: basename(path) }),
           };
-        } catch (e) {
-          const msg = String((e as Error).message ?? e);
-          log("ERROR", `embed failed: ${msg.split("\n")[0]}`);
-          getActor().send({
-            type: "EMBED_DONE",
-            ok: false,
-            target,
-            error: msg,
-          });
+        }
+
+        const snapAfter = getActor().getSnapshot();
+        const c = snapAfter.context;
+        // Success: embedDone pushed target and cleared errors (embeds already
+        // holding the target from a PREVIOUS embed is not enough — non-empty
+        // errors mean THIS embed failed).
+        if (
+          snapAfter.matches("validated") &&
+          c.errors.length === 0 &&
+          c.embeds.includes(target)
+        ) {
+          // Action from the wired service's evidence (machine context stays
+          // evidence-only); guarded by target so a stale entry never shows.
+          const action = lastEmbed?.target === target ? lastEmbed.action : null;
+          const actionText = action
+            ? ` (${action}${params.after ? ` after "${params.after}"` : ""})`
+            : params.after
+              ? ` (after "${params.after}")`
+              : "";
+          log("INFO", `embed ok: ${target}${action ? ` (${action})` : ""}`);
           return {
             content: text(
-              `Embed failed: ${target}\n${msg}\n\n${statusLine(getActor().getSnapshot().context)}`,
+              `Embedded ${basename(path)} into ${target}${actionText}.\n${statusLine(c)}`,
+            ),
+            details: detailsFor("embed", { file: basename(path) }),
+          };
+        }
+
+        if (c.errors.length > 0) {
+          log("ERROR", `embed failed: ${c.errors[0].split("\n")[0]}`);
+          return {
+            content: text(
+              `Embed failed: ${target}\n${c.errors.join("\n")}\n\n${statusLine(c)}\nThe validated pass is kept — embedding is replace-safe; fix the target and retry.`,
             ),
             details: detailsFor("embed", {
-              error: msg.split("\n")[0] ?? "embed failed",
+              error: c.errors[0].split("\n")[0] ?? "embed failed",
             }),
           };
         }
+        // Neither recorded: the embed was in flight when a RESET arrived (the
+        // only unlocked sender — `/mermaid reset`) — the outcome was dropped.
+        return {
+          content: text(
+            `Embed result unavailable — the workflow was reset while embedding (${target}).\n${statusLine(c)}`,
+          ),
+          details: detailsFor("embed", {
+            error: "embed outcome dropped by reset",
+          }),
+        };
       });
     },
 
@@ -1248,8 +1506,11 @@ export default function (pi: ExtensionAPI) {
 
     renderResult(result) {
       const details = result.details as MermaidDetails | undefined;
+
       if (details?.rejected) return new Text(`✗ ${details.rejected}`, 0, 0);
+
       if (details?.error) return new Text(`✗ ${details.error}`, 0, 0);
+
       return new Text(
         `✓ embedded ${details?.file ?? ""} (${details?.state ?? ""})`.replace(
           "  ",
@@ -1270,7 +1531,7 @@ export default function (pi: ExtensionAPI) {
     async execute() {
       return withToolLock(async () => {
         const ctx = getActor().getSnapshot().context;
-        const prior = `validated: ${ctx.validated ? basename(ctx.validated.path) : "none"}, failed validations ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}, renders ${ctx.renders.length}, embeds ${ctx.embeds.length}, machine state ${stateValue()}`;
+        const prior = `validated: ${ctx.validated ? basename(ctx.validated.path) : "none"}, diagram failures ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}, renders ${ctx.renders.length}, embeds ${ctx.embeds.length}, machine state ${stateValue()}`;
         getActor().send({ type: "RESET" });
         log("INFO", `reset (was: ${prior})`);
         return {
@@ -1296,12 +1557,14 @@ export default function (pi: ExtensionAPI) {
       "Mermaid diagram workflow: status | reset | output (what the user sees on validation) | footer (live status line) | viz (live machine visualisation)",
     handler: async (args, ctx) => {
       const sub = args.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
+
       if (sub === "footer") {
         statusEnabled = !statusEnabled;
         refreshStatus();
         ctx.ui.notify(`Footer status ${statusEnabled ? "on" : "off"}`, "info");
         return;
       }
+
       if (sub === "output") {
         // '/mermaid output <mode>' sets directly; no argument opens a
         // picker. The choice persists — the last selection is the default.
@@ -1309,6 +1572,7 @@ export default function (pi: ExtensionAPI) {
         let mode: OutputMode | undefined = OUTPUT_MODES.has(arg as OutputMode)
           ? (arg as OutputMode)
           : undefined;
+
         if (arg && arg !== "?" && !mode) {
           ctx.ui.notify(
             `Unknown output mode '${arg}'. Modes: ${[...OUTPUT_MODES.keys()].join(", ")}`,
@@ -1316,6 +1580,7 @@ export default function (pi: ExtensionAPI) {
           );
           return;
         }
+
         if (!mode) {
           if (!ctx.hasUI) {
             ctx.ui.notify(
@@ -1329,9 +1594,12 @@ export default function (pi: ExtensionAPI) {
             [...OUTPUT_MODES].map(([m, d]) => `${m} — ${d}`),
           );
           mode = pick?.split(" — ")[0] as OutputMode | undefined;
+
           if (!mode || !OUTPUT_MODES.has(mode)) return; // dismissed
         }
+
         setOutputMode(mode);
+
         ctx.ui.notify(
           `Output on validation: ${mode} — ${OUTPUT_MODES.get(mode)}`,
           "info",
@@ -1341,10 +1609,12 @@ export default function (pi: ExtensionAPI) {
         // demo without a validated source — the mode applies from the next
         // mermaid_validate on.
         const v = getActor().getSnapshot().context.validated;
+
         if (mode !== "none" && v) {
           await withToolLock(async () => {
             const note = await deliverOutput(mode, v.path, v.hash, null, ctx);
             log("INFO", `output demo (${mode})${note}`);
+
             if (/failed|skipped|unavailable/.test(note)) {
               ctx.ui.notify(`Output demo: ${note.trim()}`, "warning");
             }
@@ -1352,24 +1622,34 @@ export default function (pi: ExtensionAPI) {
         }
         return;
       }
+
       if (sub === "reset") {
         getActor().send({ type: "RESET" });
+
         ctx.ui.notify("Mermaid state reset", "info");
+
         return;
       }
+
       if (sub === "viz") {
         const r = await attachInspector();
+
         ctx.ui.notify(r.message, r.ok ? "info" : "error");
+
         if (!r.ok) log("ERROR", `inspector attach failed: ${r.message}`);
+
         return;
       }
+
       if (sub !== "" && sub !== "status") {
         ctx.ui.notify(
           `Unknown subcommand '${sub}'. Use '/mermaid status', '/mermaid reset', '/mermaid output', '/mermaid footer', or '/mermaid viz'.`,
           "error",
         );
+
         return;
       }
+
       const snap = getActor().getSnapshot();
       const c = snap.context;
       const lines = [
@@ -1379,12 +1659,14 @@ export default function (pi: ExtensionAPI) {
         `Renders: ${c.renders.length ? c.renders.join(", ") : "(none)"}`,
         `Embeds: ${c.embeds.length ? c.embeds.join(", ") : "(none)"}`,
       ];
+
       if (c.errors.length > 0) {
         lines.push(
           `Last errors:`,
           ...c.errors.slice(0, 10).map((e) => `- ${e.slice(0, 400)}`),
         );
       }
+
       ctx.ui.notify(lines.join("\n"), "info");
     },
   });

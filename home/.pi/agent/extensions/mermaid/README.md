@@ -27,27 +27,32 @@ replaces the marked block instead of duplicating it.
 
 ## Failure taxonomy
 
-Every DONE failure carries a cause — **diagram** (the source itself: mmdc
-parse error) or **infra** (the pipeline around it: Docker build/run, daemon,
-IO). The distinction is enforced end to end:
+Every failure carries a cause — **diagram** (the source itself: mmdc parse
+error) or **infra** (the pipeline around it: Docker build/run, daemon, IO).
+Validate failures carry it on `VALIDATE_DONE`; render/embed failures throw
+`{ errors, cause }` from the invoked service (the machine's `failureOf`
+normalizes it). The distinction is enforced end to end:
 
 - executor exit codes: `0` success, `1` invalid diagram, `2` infra
   (docker-run rc 125/126/127 and unexpected codes map to 2 inside the
   scripts; usage/file errors are caller-side → 2)
-- machine: diagram failures bump the attempt count / clear the pass and go
-  to `fixing`; infra failures keep the pass, consume no attempt, and return
-  the machine to the state it was in — retry is legal immediately
+- machine: diagram failures bump the attempt count (failed validations AND
+  diagram-failed renders — the render fix loop gets the same flail stop; the
+  count is a cumulative session budget: successes never decay, or a
+  validate-ok between render failures would reset it) / clear the pass and
+  go to `drafting`; infra failures keep the pass, consume no attempt, and
+  return the machine to its prior state — retry is legal immediately
 - tools: an infra failure is reported as "pipeline failed, the diagram was
   NOT checked", never as "invalid diagram"
 
 ## Tools
 
-| Tool               | Effect                                                                                                                            |
-| ------------------ | --------------------------------------------------------------------------------------------------------------------------------- |
-| `mermaid_validate` | Validate diagram (Docker `ascii.sh`), returns ASCII preview (optional theme); moves to `validated`                                |
-| `mermaid_render`   | Render validated source to SVG/PNG (Docker `svg.sh`; format follows outPath); optional theme; opens the file in the default browser |
-| `mermaid_embed`    | Insert fenced mermaid block into Markdown (validated source only); idempotent; optional `after` anchor                            |
-| `mermaid_reset`    | Clear state, start over                                                                                                           |
+| Tool               | Effect                                                                                                                                                                                                                                                                                  |
+| ------------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `mermaid_validate` | Validate diagram (Docker `ascii.sh`), returns ASCII preview (optional theme); moves to `validated`                                                                                                                                                                                      |
+| `mermaid_render`   | Render validated source to SVG/PNG (Docker `svg.sh`; format follows outPath; **outPath optional — default is the extension's out dir**, `~/.pi/agent/extensions/tmp/`, never the project cwd); optional theme; returns the path — opening/showing it is left to other tools or the user |
+| `mermaid_embed`    | Insert fenced mermaid block into Markdown (validated source only); idempotent; optional `after` anchor                                                                                                                                                                                  |
+| `mermaid_reset`    | Clear state, start over                                                                                                                                                                                                                                                                 |
 
 `/mermaid` (or `/mermaid status`) shows state; `/mermaid reset` clears it;
 `/mermaid output [mode]` sets what the user sees on validation (picker with
@@ -68,33 +73,39 @@ validate there is nothing to demo). The last selection persists in
 `~/.cache/mermaid/output-mode` and is the default for the next session.
 `MERMAID_OUTPUT` beats the persisted mode at startup.
 
-| Mode              | On validation                                                                                                                                                    |
-| ----------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `ascii` (default) | ASCII preview overlay in the TUI — fire-and-forget (j/k/arrows/PgUp/PgDn/g/G scroll; Esc/q/Enter closes), never blocks the tool result or the agent turn         |
-| `png-tui`         | render PNG to the preview cache (`~/.cache/mermaid/previews/`, content-hashed), show it inline in the TUI (kitty/iTerm2 images; dim filename fallback otherwise) |
-| `svg`             | render SVG next to the diagram, open it in the default browser                                                                                                   |
-| `png`             | render PNG to the preview cache, open it in the default browser                                                                                                  |
-| `none`            | no auto-output                                                                                                                                                   |
+| Mode              | On validation                                                                                                                                                                          |
+| ----------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `ascii` (default) | ASCII preview inline in the tool result — no overlay, no re-run (the preview already rides the tool-result content); compact one-liner + dim `ctrl+e preview` hint, full art on expand |
+| `png-tui`         | render PNG to the preview cache (`~/.cache/mermaid/previews/`, content-hashed), show it inline in the TUI (kitty/iTerm2 images; dim filename fallback otherwise)                       |
+| `finder`          | render SVG next to the diagram, reveal it in Finder (macOS `open -R`; non-macOS opens the parent dir) — opening the file stays the user's call                                         |
+| `none`            | no auto-output                                                                                                                                                                         |
 
 Auto-renders go through the same machine-gated path as `mermaid_render`
 (fresh pass required); the result text records what the user got, so the
 model stays in sync. Interactive modes only — print/JSON/RPC sessions skip
-auto-output (background; a browser launch would be a surprise).
+auto-output (background; Finder/TUI output would be a surprise).
 
 **`mermaid_render`** itself renders `.svg` or `.png` (format follows the
-outPath extension) and — unless the mode is `none` — opens the file in the
-default browser immediately (AppleScript `open location` on macOS —
-`open <file>` would follow the file-type handler, i.e. Preview/editor);
-the result names what was opened.
+outPath extension). **outPath is optional**: omitted, the render lands in
+the extension's out dir (`~/.pi/agent/extensions/tmp/`, svg) — a
+deterministic, extension-owned default, so renders never pollute the
+project cwd by accident; the model passes outPath only when the render
+belongs at a specific location. The result names the output path —
+opening/showing the file (browser via another tool, Finder, TUI preview)
+is left to other tools or the user; the extension never launches a
+browser.
 
 ## Layout
 
 ```
 mermaid/
-  index.ts      extension: tools, command, footer, logging, tool lock
-  machine.ts    XState machine: states, guards, events, context
+  index.ts      extension: tools, command, footer, logging, tool lock,
+                service wiring (mermaidMachine.provide → wiredMachine)
+  machine.ts    XState machine: states, guards, events, context, invoked
+                render/embed services (typed stubs; wired in index.ts)
   embed.ts      Markdown embed executor (pure file IO) + marker/svgPath helpers
-  test.ts       machine tests — no LLM, no Docker (node test.ts)
+  test.ts       machine tests — no LLM, no Docker, stubbed services
+                (node test.ts)
   embed.test.ts embed executor tests — no LLM, no Docker (node embed.test.ts)
   executors/    Docker pipeline (implementation detail, swappable)
     Dockerfile, ascii.sh, svg.sh, entrypoint.sh, ascii-preview.mjs
@@ -124,15 +135,29 @@ can drift under pinned `mermaid-cli@11`; re-run the tests after a rebuild).
 
 ## Machine
 
-`drafting → validating → validated → rendering → validated`, with
-`validating → fixing` / `rendering → fixing` on diagram failures and
-`fixing → validating` as the fix loop. Infra failures return the machine to
-its prior state (pass kept). There is no separate `rendered` state —
-`context.renders` records render history; after a successful render the
-machine is `validated` again, so re-render and embed stay legal. Re-validation
-is legal from `validated` (edited or different source). RESET → `drafting`
-from anywhere. Full control flow lives in `machine.ts`; paste the
-`createMachine({...})` config into [Stately
+`drafting → validating → validated → rendering | embedding → validated`,
+with `validating → drafting` / `rendering → drafting` on diagram failures and
+`drafting → validating` as the fix loop. `drafting` is the
+no-validated-diagram state: a fresh start and a failed validation both mean
+"no trustworthy diagram, validate next".
+Infra failures return the machine to its prior state (pass kept). There is
+no separate `rendered` state — `context.renders` records render history;
+after a successful render the machine is `validated` again, so re-render
+and embed stay legal. Re-validation is legal from `validated` (edited or
+different source). RESET → `drafting` from anywhere.
+
+Validate is two-phase (`BEGIN_VALIDATE` → `VALIDATE_DONE`) — the model
+round-trip is the point of validate (the tool runs `ascii.sh` between the
+events). Render and embed are machine-driven: `BEGIN_RENDER` / `BEGIN_EMBED`
+invoke the wired `renderService` / `embedService` (Docker `svg.sh` /
+`embedBlock`) and the machine routes the result; the tools wait for settle
+and report from context. Both events carry the validated content — the
+render is made from a temp copy of those exact bytes (never a re-read of
+the source path), so a disk edit between validation and render cannot leak
+into an output reported as the validated diagram. RESET wins over any in-flight action structurally:
+leaving a state stops its invoked service and a late result is dropped.
+Full control flow lives in `machine.ts`; paste the `createMachine({...})`
+config into [Stately
 Studio](https://stately.ai) to visualize, or watch the running machine live:
 `/mermaid viz` (port 8082 by default; viz-kit walks to the first free port —
 tmux owns 8080, web-browser 8081).
@@ -140,26 +165,30 @@ tmux owns 8080, web-browser 8081).
 Tool-result `details` carry the persisted machine snapshot (error text
 truncated — transcript already holds full output), so diagram state follows
 the conversation branch (rewind/branch-safe; reconstructed on
-`session_start` / `session_tree`). Tool bodies run under a lock
-(`withToolLock`) — concurrent tool calls queue instead of interleaving
-BEGIN/DONE events the machine would drop.
+`session_start` / `session_tree`; a snapshot taken mid-invoke restores and
+re-runs the service — render/embed are idempotent, so that is safe). Tool
+bodies run under a lock (`withToolLock`) — concurrent tool calls queue
+instead of interleaving events the machine would drop.
 
 Embed markers use the diagram path **relative to the target file's
 directory** (portable — no absolute local layout in committed docs;
 diagrams outside the target's tree fall back to basename, so same-named
-diagrams from different dirs share a marker in one target). Legacy
-absolute-path markers still match, so pre-existing embeds keep updating in
-place.
+diagrams from different dirs share a marker in one target). Absolute-path
+markers also match, so embeds carrying one update in place.
 
 ## Config (env)
 
-- `MERMAID_MAX_VALIDATE_ATTEMPTS` (default 8, failed validations)
+- `MERMAID_MAX_VALIDATE_ATTEMPTS` (default 8, diagram-side failures —
+  failed validations + diagram-failed renders; cumulative session budget:
+  successes never decay, `mermaid_reset` frees)
 - `MERMAID_SCRIPT_TIMEOUT_MS` (default 180000 — first run builds the Docker
   image, which installs mermaid-cli)
+- `MERMAID_SETTLE_TIMEOUT_MS` (default script timeout + 60s — render/embed
+  tool settle wait; past it the tool reports "still in flight")
 - `MERMAID_ASCII_TRUNCATE` (default 8000 chars)
 - `MERMAID_EXEC_DIR` (default this extension's `executors/`)
 - `MERMAID_IMAGE` (override the image name; default `pi-mermaid-validate:<content-hash>`)
-- `MERMAID_OUTPUT` (output mode on validation: `ascii` | `png-tui` | `svg` | `png` | `none`; beats the persisted `~/.cache/mermaid/output-mode`; `/mermaid output` changes it)
+- `MERMAID_OUTPUT` (output mode on validation: `ascii` | `png-tui` | `finder` | `none`; beats the persisted `~/.cache/mermaid/output-mode`; `/mermaid output` changes it)
 - `MERMAID_THEME` (default theme for auto-renders and `mermaid_render`: default|dark|forest|neutral; default dark)
 - `MERMAID_FOOTER` (set to 1 for the live footer line; `/mermaid footer` toggles in-session)
 - `MERMAID_LOG_DIR` (default `~/.cache/mermaid`)
