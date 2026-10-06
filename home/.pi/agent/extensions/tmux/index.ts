@@ -23,6 +23,7 @@ import { fileURLToPath } from "node:url";
 import { promisify } from "node:util";
 import { createActor } from "xstate";
 import type { Actor } from "xstate";
+import { ensureSketch, stopSketch } from "../_viz/sketch.ts";
 import { makeViz } from "../_viz/viz-kit.ts";
 import type {
 	AgentToolResult,
@@ -301,10 +302,15 @@ function rewireActor(): void {
 }
 
 async function enableViz(open: boolean): Promise<string> {
-	const r = await viz.enable({ open });
+	const host = await ensureSketch(); // local Sketch /inspect; falls back to remote UI
+	const r = await viz.enable({
+		open,
+		...(host.ok ? { inspectorUrl: host.host.url } : {}),
+	});
 	if (!r.ok) return r.message;
 	rewireActor();
-	return `${r.message} (registry: ${registry().sessions.length} session(s))`;
+	const fallback = host.ok ? "" : ` — no local sketch host (${host.reason}); remote stately.ai UI`;
+	return `${r.message}${fallback} (registry: ${registry().sessions.length} session(s))`;
 }
 
 function disableViz(): string {
@@ -903,6 +909,10 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 		}
 		footerOn = false;
 		viz.stop();
+		// Sketch host: kill if this session spawned it (detached host otherwise
+		// survives for the next session; stop explicitly via sketch.ts stop)
+		const sr = stopSketch({ onlyIfOwner: process.pid });
+		if (sr.ok) console.error(`[tmux] ${sr.message}`);
 	});
 }
 

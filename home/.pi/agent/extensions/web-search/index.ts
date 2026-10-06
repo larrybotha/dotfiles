@@ -33,6 +33,7 @@ import {
 } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { createActor, type Actor } from "xstate";
+import { ensureSketch, stopSketch } from "../_viz/sketch.ts";
 import { makeViz, type VizResult } from "../_viz/viz-kit.ts";
 import {
 	fetchViolation,
@@ -123,8 +124,15 @@ const viz = makeViz({ name: "web-search", preferredPort: INSPECT_PORT });
  * pure data — budgets, results, fetched links carry over exactly.
  */
 async function attachInspector(): Promise<VizResult> {
-	const r = await viz.enable({ open: true });
+	const host = await ensureSketch(); // local Sketch /inspect; falls back to remote UI
+	const r = await viz.enable({
+		open: true,
+		...(host.ok ? { inspectorUrl: host.host.url } : {}),
+	});
 	if (r.ok) createResearchActor({ snapshot: getActor().getPersistedSnapshot() });
+	if (r.ok && !host.ok) {
+		return { ...r, message: `${r.message} — no local sketch host (${host.reason}); remote stately.ai UI` };
+	}
 	return r;
 }
 
@@ -361,7 +369,11 @@ export default function (pi: ExtensionAPI) {
 		// attachInspector() here — it would recurse through getActor() when no
 		// actor exists yet.
 		if (process.env.WEB_SEARCH_INSPECT) {
-			const r = await viz.enable({ open: true });
+			const host = await ensureSketch();
+			const r = await viz.enable({
+				open: true,
+				...(host.ok ? { inspectorUrl: host.host.url } : {}),
+			});
 			if (!r.ok) log("ERROR", `inspector not started: ${r.message}`);
 		}
 		reconstructState(ctx);
@@ -375,8 +387,12 @@ export default function (pi: ExtensionAPI) {
 	});
 	pi.on("session_shutdown", async () => {
 		// Idempotent teardown: WS client + relay server (clean-stop adapter —
-		// the stock one retries forever, leaking timers past shutdown).
+		// the stock one retries forever, leaking timers past shutdown) + the
+		// Sketch host if this session spawned it (detached host otherwise
+		// survives for the next session; stop explicitly via sketch.ts stop).
 		viz.stop();
+		const sr = stopSketch({ onlyIfOwner: process.pid });
+		if (sr.ok) console.error(`[web-search] ${sr.message}`);
 	});
 
 	pi.registerTool({
