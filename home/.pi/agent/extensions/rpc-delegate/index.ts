@@ -58,6 +58,7 @@ import {
 	rpcMachine,
 	paramsViolation,
 	statusOf,
+	summaryForSnapshot,
 	type TransportHandle,
 } from "./machine.ts";
 import { RpcTransport } from "./transport.ts";
@@ -333,11 +334,8 @@ export const wiredMachine = rpcMachine.provide({
 function detailsFromSnapshot(a: Actor<typeof wiredMachine>, assistantTextTail: string, stderr: string): RpcDelegateDetails {
 	const snap = a.getSnapshot();
 	const c: RpcContext = snap.context;
-	const evalReason = evaluateSuccess(c);
-	const summary =
-		c.failureDetail ??
-		(c.summary ||
-			(evalReason.ok ? assistantTextTail || "run completed" : `run failed: ${evalReason.reason}`));
+	const stateName = String(snap.value);
+	const summary = summaryForSnapshot(stateName, c, assistantTextTail);
 	return {
 		status: statusOf(String(snap.value)),
 		sessionId: c.sessionId,

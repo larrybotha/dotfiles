@@ -92,7 +92,7 @@ still succeeds if at least one declared artifact was collected.
 ## Tests
 
 ```
-node test.ts            # 42 machine tests (stub services, no child)
+node test.ts            # 44 machine tests (stub services, no child)
 node transport.test.ts  # 21 transport tests against fixtures/fake-child.mjs
 node live.test.ts       # live: 22 checks — real pi child + real model
                        # (few cents, ~4 min): success, hard-cap deadline,

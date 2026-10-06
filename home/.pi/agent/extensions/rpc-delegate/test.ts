@@ -21,6 +21,7 @@ import {
 	rpcMachine,
 	statusOf,
 	stopReasonFails,
+	summaryForSnapshot,
 	type ArtifactEntry,
 	type CancelInput,
 	type CancelOutput,
@@ -410,6 +411,40 @@ await ok("statusOf: terminal names pass through; the rest collapse to running", 
 	for (const s of ["idle", "spawning", "handshaking", "prompting", "running", "collecting", "cancelling", "stopping"]) {
 		assert.equal(statusOf(s), "running");
 	}
+});
+
+await ok("summaryForSnapshot: non-final states get a progress line, never a premature 'run failed'", () => {
+	const c = { ...initialContext(), promptDisposition: "started", runStartedSeen: true };
+	for (const state of ["handshaking", "prompting", "running", "cancelling", "collecting", "stopping"]) {
+		const summary = summaryForSnapshot(state, c, "");
+		assert.match(summary, new RegExp(`^in progress \\(${state}\\)`), `state ${state}: ${summary}`);
+		assert.doesNotMatch(summary, /run failed/);
+	}
+});
+
+await ok("summaryForSnapshot: terminal states — failureDetail, collect summary, tail, reason", () => {
+	// failureDetail wins on every terminal
+	assert.equal(summaryForSnapshot("timeout", { ...initialContext(), failureDetail: "boom" }, "x"), "boom");
+	// collect summary (abort/deadline still collect — buildSummary text)
+	assert.equal(
+		summaryForSnapshot("aborted", { ...initialContext(), summary: "Collected 1/1 artifacts." }, ""),
+		"Collected 1/1 artifacts.",
+	);
+	// settled success → assistant tail, else "run completed"
+	const settledOk = {
+		...initialContext(),
+		promptDisposition: "started",
+		runStartedSeen: true,
+		agentSettledSeen: true,
+		lastAssistantStopReason: "stop",
+	};
+	assert.equal(summaryForSnapshot("success", settledOk, "PONG."), "PONG.");
+	assert.equal(summaryForSnapshot("success", settledOk, ""), "run completed");
+	// settled-but-failed semantics → run failed: reason
+	assert.match(
+		summaryForSnapshot("error", { ...settledOk, lastAssistantStopReason: "error" }, ""),
+		/run failed: final assistant stopReason 'error'/,
+	);
 });
 
 // --- happy path ---------------------------------------------------------------

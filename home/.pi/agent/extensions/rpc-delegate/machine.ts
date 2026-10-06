@@ -362,6 +362,27 @@ export function evaluateSuccess(c: RpcContext): { ok: boolean; reason: string | 
 }
 
 
+/** Summary text for a snapshot. evaluateSuccess is a verdict about a
+ *  COMPLETED run — "agent never settled" is true by definition on a live
+ *  snapshot, so a non-final state gets a progress line, never a premature
+ *  "run failed" (the TUI renders partial results through the expanded
+ *  result view while the tool runs). Terminal states: failureDetail,
+ *  collect summary, else the success semantics (assistant tail or reason). */
+export function summaryForSnapshot(
+	stateName: string,
+	c: RpcContext,
+	assistantTextTail: string,
+): string {
+	if (statusOf(stateName) === "running") {
+		return `in progress (${stateName}) — no verdict until the run settles`;
+	}
+	const evalReason = evaluateSuccess(c);
+	return (
+		c.failureDetail ??
+		(c.summary || (evalReason.ok ? assistantTextTail || "run completed" : `run failed: ${evalReason.reason}`))
+	);
+}
+
 export function paramsViolation(
 	task: string,
 	timeoutSecs: number,
