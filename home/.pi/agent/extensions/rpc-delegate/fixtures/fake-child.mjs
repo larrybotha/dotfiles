@@ -166,7 +166,9 @@ process.stdin.on("data", (chunk) => {
 				logLine(`cmd:${r.type}`);
 				if (r.type === "extension_ui_response") {
 					logLine(`ui:${r.id}:${r.cancelled === true ? "cancelled" : "value"}`);
-				} else {
+				} else if (MODE !== "mute") {
+					// mute: never write — a child that never speaks (boot hang);
+					// the handshake timeout / watchdog deadline own it, not stall
 					handlers[r.type]?.(r);
 				}
 			} catch {

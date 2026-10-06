@@ -308,6 +308,13 @@ await ok("stall suppressed while a child tool is open; re-arms after tool end", 
 	h.transport.killHard();
 });
 
+await ok("silent boot never stalls (timer arms on first byte; boot is the handshake timeout's job)", async () => {
+	const h = await startTransport("mute", { gapMs: 80 });
+	await new Promise((r) => setTimeout(r, 300)); // never spoke — nothing armed
+	assert.equal(h.events.length, 0);
+	h.transport.killHard();
+});
+
 await ok("agent_settled disarms the stall timer (post-settle silence is not a stall)", async () => {
 	const h = await startTransport("ok", { gapMs: 100 });
 	await h.transport.sendCommand({ type: "prompt", message: "go" }, 2000);

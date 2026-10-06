@@ -217,13 +217,17 @@ export class RpcTransport implements TransportHandle {
 		}
 
 		// Stall supervision config (armed before the watchdog: the watchdog
-		// consumes the heartbeat path + gap).
+		// consumes the heartbeat path + gap). The timer itself is NOT armed
+		// here — it arms on the FIRST stdout byte (markAlive): silence before
+		// the child has ever spoken is boot, not a mid-run stall — the
+		// handshake command timeout and the watchdog deadline own that
+		// window (and arming at spawn would race the child's boot time
+		// against the gap).
 		const stall = this.opts.stall;
 		if (stall) {
 			this.stallGapMs = stall.gapMs > 0 ? stall.gapMs : null;
 			this.hbPath = stall.heartbeatPath ?? null;
 			this.hbIntervalMs = stall.heartbeatIntervalMs ?? 1000;
-			this.armStall();
 		}
 
 		// External watchdog — detached + unref so it survives parent SIGKILL.

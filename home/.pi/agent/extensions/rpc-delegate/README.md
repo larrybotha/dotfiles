@@ -93,7 +93,7 @@ still succeeds if at least one declared artifact was collected.
 
 ```
 node test.ts            # 44 machine tests (stub services, no child)
-node transport.test.ts  # 21 transport tests against fixtures/fake-child.mjs
+node transport.test.ts  # 22 transport tests against fixtures/fake-child.mjs
 node live.test.ts       # live: 22 checks — real pi child + real model
                        # (few cents, ~4 min): success, hard-cap deadline,
                        # abort, provider/model flags, 136 KB prompt,
@@ -105,7 +105,8 @@ node live.test.ts       # live: 22 checks — real pi child + real model
 `fixtures/fake-child.mjs` is a scripted fake RPC child (`FAKE_MODE`:
 ok / handled / prompt-rejected / malformed / parse-no-id / unmatched /
 die-mid / extui / flood / oversized / stderr / noreply / stall /
-stall-open) — every protocol failure mode (including a silent hung
+stall-open, mute — a child that never speaks) — every protocol
+failure mode (including a silent hung
 child and a silently-running child tool) is testable without a model.
 
 ## Differences from tmux-delegate
