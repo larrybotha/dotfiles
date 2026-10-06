@@ -8,7 +8,9 @@ hosts that can spawn `pi` directly.
 rpc_delegate_task: {
   task: string         // full task text, sent as one prompt
   cwd?: string         // working dir for the child (default: session cwd)
-  timeout?: number     // seconds (default 300)
+  timeout?: number     // hard cap in seconds (default 1800) — backstop,
+                       // NOT expected duration: the call returns when the
+                       // child settles; a silent child is stall-cancelled
   artifacts?: string[] // declared artifact paths, collected after the run
   provider?: string    // child's model provider (optional)
   model?: string       // child's model id (optional)
@@ -25,9 +27,9 @@ Same separation as tmux-delegate, one layer deeper:
 | file | owns |
 | --- | --- |
 | `machine.ts` | XState v5 machine: lifecycle, legality, success evaluation. Ships typed service stubs that throw — tests run without any child. |
-| `transport.ts` | The child process + raw JSONL protocol: LF-split byte reader, pending-ID correlation, ext-UI auto-cancel, cancellation ladder, external watchdog. |
+| `transport.ts` | The child process + raw JSONL protocol: LF-split byte reader, pending-ID correlation, ext-UI auto-cancel, cancellation ladder, external watchdog, stall supervision (liveness timer + heartbeat file). |
 | `collector.ts` | Honest artifact collection (missing / read-error / truncated, 50 KB cap). |
-| `watchdog.mjs` | External orphan watchdog: TERMs the child process group if the parent dies (SIGKILL leaves no atexit) or the deadline lapses. |
+| `watchdog.mjs` | External orphan watchdog: TERMs the child process group if the parent dies (SIGKILL leaves no atexit), the hard cap lapses, or the heartbeat goes stale (a wedged extension's timers are dead — the file is the backstop). |
 | `index.ts` | Extension wiring: `registerTool`, typebox params, wired services, result rendering. |
 
 The machine never sees RPC records — the transport converts them to a small
@@ -44,6 +46,16 @@ idle → spawning → handshaking → prompting → running → collecting → s
 ```
 
 - **One child per call.** `--no-session` is ephemeral and never resumed.
+- **Stall detection, not duration guessing.** The call returns when the
+  child settles; `timeout` is only a hard-cap backstop. A silent child
+  (no protocol bytes for 180s, no child tool open) is cancelled by the
+  transport's liveness timer → cancellation ladder → `timeout` outcome
+  with `stallHit: true`. Silence *inside* a child tool (`bash` running a
+  build for minutes) is legitimate — the timer is suppressed while a
+  tool is open; a hung child tool is the hard cap's job. A throttled
+  heartbeat file (`{t, open}` JSON) lets the watchdog enforce the same
+  policy if the extension process itself wedges; the watchdog unlinks it
+  on every exit path.
 - Deadline and abort still collect declared artifacts — tmux-delegate skips
   collection there; this protocol can read the transcript of a killed child.
 - **Cancellation ladder** (deadline / abort): `clear_queue` → `abort` →
@@ -80,17 +92,21 @@ still succeeds if at least one declared artifact was collected.
 ## Tests
 
 ```
-node test.ts            # 39 machine tests (stub services, no child)
-node transport.test.ts  # 16 transport tests against fixtures/fake-child.mjs
-node dogfood.ts         # live: 18 checks — success, deadline, abort,
-                       # provider/model flags, 136 KB prompt, SIGKILL'd
-                       # parent (orphan watchdog reaps child + sleep + watchdog)
+node test.ts            # 42 machine tests (stub services, no child)
+node transport.test.ts  # 21 transport tests against fixtures/fake-child.mjs
+node live.test.ts       # live: 22 checks — real pi child + real model
+                       # (few cents, ~4 min): success, hard-cap deadline,
+                       # abort, provider/model flags, 136 KB prompt,
+                       # SIGKILL'd parent (orphan watchdog reaps child +
+                       # sleep + watchdog), stall supervision (open-tool
+                       # suppression + heartbeat file)
 ```
 
 `fixtures/fake-child.mjs` is a scripted fake RPC child (`FAKE_MODE`:
 ok / handled / prompt-rejected / malformed / parse-no-id / unmatched /
-die-mid / extui / flood / oversized / stderr / noreply) — every protocol
-failure mode is testable without a model.
+die-mid / extui / flood / oversized / stderr / noreply / stall /
+stall-open) — every protocol failure mode (including a silent hung
+child and a silently-running child tool) is testable without a model.
 
 ## Differences from tmux-delegate
 

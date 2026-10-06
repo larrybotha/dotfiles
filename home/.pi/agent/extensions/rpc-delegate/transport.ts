@@ -27,8 +27,15 @@
  * - Watchdog: external runner (watchdog.mjs) holding parentPid + hard
  *   deadline, TERMed separately so it survives parent SIGKILL — direct
  *   spawn does not kill the child when the parent dies (orphan guard).
+ * - Stall supervision: a liveness timer reset by ANY protocol bytes on
+ *   stdout, suppressed while a child tool is open (a child bash may run
+ *   silently for minutes). Silence beyond the gap → STALL_DETECTED. A
+ *   throttled heartbeat file ({t, open} JSON) lets the external watchdog
+ *   enforce the same policy if this process wedges. Hang detection is
+ *   liveness-based, never duration-guessed.
  */
 import { spawn, type ChildProcess } from "node:child_process";
+import * as fs from "node:fs";
 import type {
 	CommandResponse,
 	RpcEvent,
@@ -94,6 +101,16 @@ export interface TransportOptions {
 	};
 	/** Diagnostic log (evidence; defaults to no-op). */
 	onLog?: (msg: string) => void;
+	/** Stall supervision: the transport arms a liveness timer reset by any
+	 *  protocol bytes; suppressed while child tools are open (a tool may
+	 *  run silently for minutes); silence beyond gapMs → STALL_DETECTED.
+	 *  The optional heartbeat file ({t, open} JSON, write-throttled) lets
+	 *  the external watchdog enforce the same policy if this process wedges. */
+	stall?: {
+		gapMs: number;
+		heartbeatPath?: string;
+		heartbeatIntervalMs?: number;
+	};
 }
 
 interface PendingEntry {
@@ -128,6 +145,19 @@ export class RpcTransport implements TransportHandle {
 	private lastUsage: unknown = null;
 	private uiAutoCancelled = 0;
 	private started = false;
+	// Stall supervision (liveness timer + watchdog heartbeat)
+	private stallGapMs: number | null = null;
+	private stallTimer: NodeJS.Timeout | null = null;
+	private stallFired = false;
+	/** Run over (agent_settled / fatal / exit) — post-settle silence is
+	 *  not a stall, and a chunk-end re-arm must not defeat the disarm. */
+	private runOver = false;
+	private openTools = 0;
+	private lastRecordAt: number | null = null;
+	private hbPath: string | null = null;
+	private hbIntervalMs = 1000;
+	private hbLastWrite = 0;
+	private hbLastOpen = -1;
 	public readonly diagnostics: TransportDiagnostics = {
 		compactions: 0,
 		autoRetries: 0,
@@ -186,15 +216,33 @@ export class RpcTransport implements TransportHandle {
 			throw new Error("spawn aborted");
 		}
 
+		// Stall supervision config (armed before the watchdog: the watchdog
+		// consumes the heartbeat path + gap).
+		const stall = this.opts.stall;
+		if (stall) {
+			this.stallGapMs = stall.gapMs > 0 ? stall.gapMs : null;
+			this.hbPath = stall.heartbeatPath ?? null;
+			this.hbIntervalMs = stall.heartbeatIntervalMs ?? 1000;
+			this.armStall();
+		}
+
 		// External watchdog — detached + unref so it survives parent SIGKILL.
+		// With a heartbeat configured, it also enforces the stall policy
+		// (belt-and-suspenders for a wedged extension process).
 		const wd = this.opts.watchdog;
 		if (wd) {
 			const deadline = Date.now() + wd.graceMs;
-			const w = spawn(
-				process.execPath,
-				[wd.scriptPath, String(wd.parentPid), String(child.pid), String(deadline), String(wd.pollMs ?? 5000)],
-				{ stdio: "ignore", detached: true },
-			);
+			const wdArgs = [
+				wd.scriptPath,
+				String(wd.parentPid),
+				String(child.pid),
+				String(deadline),
+				String(wd.pollMs ?? 5000),
+			];
+			if (this.hbPath && this.stallGapMs) {
+				wdArgs.push(this.hbPath, String(this.stallGapMs));
+			}
+			const w = spawn(process.execPath, wdArgs, { stdio: "ignore", detached: true });
 			w.unref();
 			this.watchdogPid = w.pid ?? null;
 		}
@@ -326,7 +374,80 @@ export class RpcTransport implements TransportHandle {
 			lastUsage: this.lastUsage,
 			uiAutoCancelled: this.uiAutoCancelled,
 			fatalReason: this.fatalReason,
+			lastRecordAt: this.lastRecordAt,
+			openTools: this.openTools,
 		};
+	}
+
+	// -- stall supervision ----------------------------------------------------
+
+	/** Any protocol byte from the child is liveness: reset the timer, refresh
+	 *  the watchdog heartbeat (write-throttled). Called on every stdout
+	 *  chunk — records, deltas, responses, even dropped oversized noise. */
+	private markAlive(): void {
+		this.lastRecordAt = Date.now();
+		this.writeHeartbeat();
+		this.armStall();
+	}
+
+	/** (Re)arm the stall timer — cleared first, then armed only when the
+	 *  child is running, no child tool is open (a tool may run silently for
+	 *  minutes — its hang is the hard cap's job), and nothing ended the run. */
+	private armStall(): void {
+		if (this.stallTimer) {
+			clearTimeout(this.stallTimer);
+			this.stallTimer = null;
+		}
+		if (
+			this.stallGapMs === null ||
+			this.stallFired ||
+			this.runOver ||
+			this.exited ||
+			this.fatalReason !== null ||
+			this.openTools > 0
+		) {
+			return;
+		}
+		const t = setTimeout(() => this.onStall(), this.stallGapMs);
+		t.unref?.();
+		this.stallTimer = t;
+	}
+
+	private disarmStall(): void {
+		if (this.stallTimer) {
+			clearTimeout(this.stallTimer);
+			this.stallTimer = null;
+		}
+	}
+
+	private onStall(): void {
+		this.stallTimer = null;
+		if (this.exited || this.fatalReason !== null || this.openTools > 0) return;
+		this.stallFired = true; // one-shot per transport (one child per call)
+		this.log(
+			`stall: no protocol activity for ${this.stallGapMs}ms (no child tool open) — STALL_DETECTED`,
+		);
+		this.opts.sink({ type: "STALL_DETECTED", stallMs: this.stallGapMs! });
+	}
+
+	/** Watchdog heartbeat ({t, open} JSON), throttled to one write/interval —
+	 *  the external watchdog reaps on staleness only when open === 0. */
+	private writeHeartbeat(): void {
+		if (!this.hbPath) return;
+		const now = Date.now();
+		// Throttled — EXCEPT on open-count changes: a transition write must
+		// never be throttled away, or the watchdog would see a stale open:0
+		// while a child tool legitimately runs (and reap it on staleness).
+		if (now - this.hbLastWrite < this.hbIntervalMs && this.openTools === this.hbLastOpen) {
+			return;
+		}
+		this.hbLastWrite = now;
+		this.hbLastOpen = this.openTools;
+		try {
+			fs.writeFileSync(this.hbPath, JSON.stringify({ t: now, open: this.openTools }));
+		} catch (err) {
+			this.log(`heartbeat write failed: ${err instanceof Error ? err.message : String(err)}`);
+		}
 	}
 
 	// -- internals -----------------------------------------------------------
@@ -390,6 +511,12 @@ export class RpcTransport implements TransportHandle {
 			this.tail = Buffer.alloc(0);
 			this.dropping = true;
 		}
+		// Bytes on the protocol pipe = the child is doing something — liveness.
+		// At chunk END so record effects (openTools) are reflected in the same
+		// heartbeat: a heartbeat written at chunk start would show open:0 while
+		// a child tool runs (incremented later in this chunk) — the watchdog
+		// would reap a legitimately-running tool on staleness.
+		this.markAlive();
 	}
 
 	private handleLine(line: Buffer): void {
@@ -447,6 +574,12 @@ export class RpcTransport implements TransportHandle {
 				this.opts.sink({ type: "AGENT_END", willRetry: r.willRetry === true });
 				return;
 			case "agent_settled":
+				// Run over — post-settle silence is not a stall (the stop ladder
+				// owns shutdown; it is bounded and conversational on the pipe).
+				// runOver (not just disarmStall): markAlive at chunk end would
+				// otherwise re-arm the timer past this disarm.
+				this.runOver = true;
+				this.disarmStall();
 				this.opts.sink({ type: "AGENT_SETTLED" });
 				return;
 			case "message_end":
@@ -457,9 +590,13 @@ export class RpcTransport implements TransportHandle {
 				if (r.usage) this.lastUsage = r.usage;
 				return;
 			case "tool_execution_start":
+				this.openTools++;
+				this.armStall(); // suppressed while open — a tool may run silently
 				this.opts.sink({ type: "TOOL_START", toolName: str(r.toolName) });
 				return;
 			case "tool_execution_end":
+				this.openTools = Math.max(0, this.openTools - 1);
+				this.armStall(); // re-armed if this was the last open tool
 				this.opts.sink({
 					type: "TOOL_END",
 					toolName: str(r.toolName),
@@ -554,6 +691,8 @@ export class RpcTransport implements TransportHandle {
 	/** Well-defined protocol violations only. */
 	private fatal(reason: string): void {
 		if (this.fatalReason) return;
+		this.runOver = true;
+		this.disarmStall();
 		this.fatalReason = reason;
 		this.log(`PROTOCOL_FATAL: ${reason}`);
 		for (const [id, e] of this.pending) {
@@ -566,6 +705,8 @@ export class RpcTransport implements TransportHandle {
 
 	private handleExit(code: number | null, signal: string | null): void {
 		if (this.exited) return;
+		this.runOver = true;
+		this.disarmStall();
 		this.exited = true;
 		this.deadCode = code;
 		this.deadSignal = signal;

@@ -8,7 +8,8 @@
  * spawn/handshake/prompt failures, handled/started/queued dispositions, fast
  * settled race, provider error after accepted prompt, auto-retry then settle,
  * CHILD_DEAD in every state, deadline ladder, KILL in every legal state,
- * artifact-policy routing, evidence rings, terminal stability.
+ * stall detection (STALL_DETECTED → ladder → timeout), artifact-policy
+ * routing, evidence rings, terminal stability.
  */
 import assert from "node:assert/strict";
 import { createActor, type Actor, fromPromise, waitFor } from "xstate";
@@ -93,6 +94,8 @@ class FakeTransport implements TransportHandle {
 			lastUsage: null,
 			uiAutoCancelled: 0,
 			fatalReason: null,
+			lastRecordAt: null,
+			openTools: 0,
 		};
 	}
 }
@@ -227,6 +230,8 @@ function begin(a: A, overrides: Record<string, unknown> = {}) {
 			parentPid: 42,
 			sink: sinkFor(a),
 			watchdogPath: "/tmp/watchdog.mjs",
+			stallGapMs: 180_000,
+			heartbeatPath: null,
 		},
 		...overrides,
 	} as never);
@@ -287,7 +292,7 @@ await ok("idle: illegal BEGIN rejected (validator shared with the tool precheck)
 		timeoutSecs: 300,
 		workingDir: "w",
 		artifactPaths: [],
-		launch: { pi: { command: "pi", args: [] }, parentPid: 1, sink: sinkFor(a), watchdogPath: "/w" },
+		launch: { pi: { command: "pi", args: [] }, parentPid: 1, sink: sinkFor(a), watchdogPath: "/w", stallGapMs: 180_000, heartbeatPath: null },
 	} as never);
 	assert.equal(a.getSnapshot().value, "idle");
 	assert.equal(a.getSnapshot().context.sessionId, "");
@@ -745,9 +750,57 @@ await ok("deadline → cancelling (ladder) → timeout; deadlineHit + failureDet
 	assert.equal(a.getSnapshot().value, "timeout");
 	const c = a.getSnapshot().context;
 	assert.equal(c.deadlineHit, true);
-	assert.match(c.failureDetail!, /run deadline exceeded/);
+	assert.match(c.failureDetail!, /run hard cap exceeded/);
 	assert.equal(stub.cancelInputs.length, 1); // ladder ran before collect
 	assert.equal(stub.collectInputs.length, 1); // deadline collects (explicit policy)
+});
+
+// --- stall detection (transport liveness timer; machine receives STALL_DETECTED) ---
+
+await ok("stall during running → cancelling (ladder) → timeout; stallHit + readable failureDetail", async () => {
+	const stub = makeStubs();
+	const a = makeActor(stub);
+	begin(a);
+	await waitFor(a, (s) => s.matches("running"), { timeout: 2000 });
+	a.send({ type: "STALL_DETECTED", stallMs: 180_000 });
+	await waitFor(a, (s) => s.matches("cancelling"), { timeout: 2000 });
+	await waitFor(a, (s) => isFinal(s), { timeout: 2000 });
+	assert.equal(a.getSnapshot().value, "timeout");
+	const c = a.getSnapshot().context;
+	assert.equal(c.stallHit, true);
+	assert.equal(c.deadlineHit, false); // stall, not the hard cap
+	assert.match(c.failureDetail!, /stalled/);
+	assert.match(c.failureDetail!, /no child tool running/);
+	assert.equal(stub.cancelInputs.length, 1); // ladder ran before collect
+	assert.equal(stub.collectInputs.length, 1); // stall outcome collects (explicit policy)
+});
+
+await ok("STALL_DETECTED during prompting → ignored (command timeouts own pre-run silence)", async () => {
+	const gate = { resolve: (_: PromptOutput) => {} };
+	const stub = makeStubs({
+		prompt: () =>
+			new Promise<PromptOutput>((res) => {
+				gate.resolve = res;
+			}),
+	});
+	const a = makeActor(stub);
+	begin(a);
+	await waitFor(a, (s) => s.matches("prompting"), { timeout: 2000 });
+	a.send({ type: "STALL_DETECTED", stallMs: 180_000 });
+	assert.equal(a.getSnapshot().value, "prompting"); // dropped, no cancellation
+	gate.resolve({ disposition: "started" });
+	await waitFor(a, (s) => s.matches("running"), { timeout: 2000 });
+	a.send({ type: "AGENT_SETTLED" });
+	await waitFor(a, (s) => isFinal(s), { timeout: 2000 });
+	assert.equal(a.getSnapshot().value, "success");
+	assert.equal(a.getSnapshot().context.stallHit, false);
+});
+
+await ok("late STALL_DETECTED after terminal is dropped", async () => {
+	const a = await drive();
+	a.send({ type: "STALL_DETECTED", stallMs: 180_000 });
+	assert.equal(a.getSnapshot().value, "success");
+	assert.equal(a.getSnapshot().context.stallHit, false);
 });
 
 // --- KILL (user abort) ------------------------------------------------------------

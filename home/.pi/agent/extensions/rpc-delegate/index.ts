@@ -66,7 +66,14 @@ import { RpcTransport } from "./transport.ts";
 // Config
 // ---------------------------------------------------------------------------
 
-const DEFAULT_TIMEOUT = 300;
+/** Hard cap for the whole delegation — a backstop, NOT the expected
+ *  duration: the call returns as soon as the child settles, and a silent
+ *  (hung) child is cancelled by stall detection long before this. */
+const DEFAULT_TIMEOUT = 1800;
+/** Stall supervision: silence window with no child tool open. Any protocol
+ *  bytes reset the transport's liveness timer — a healthy agent streams
+ *  continuously, so the gap is duration-agnostic. */
+const STALL_GAP_MS = 180_000;
 const STATUS_UPDATE_MS = 5000;
 
 const EXEC_DIR =
@@ -116,6 +123,8 @@ interface RpcDelegateDetails {
 	uiRequests: number;
 	usage: SessionStatsData | null;
 	deadlineHit: boolean;
+	/** Stall detection fired (silent child) — distinct from the hard-cap deadline. */
+	stallHit: boolean;
 	failureDetail: string | null;
 	protoFatal: string | null;
 	rejected?: string;
@@ -186,6 +195,13 @@ async function runSpawnService(input: SpawnInput, signal: AbortSignal): Promise<
 			parentPid: input.launch.parentPid,
 			graceMs: input.timeoutSecs * 1000 + WATCHDOG_GRACE_MS,
 		},
+		stall:
+			input.launch.stallGapMs > 0
+				? {
+					gapMs: input.launch.stallGapMs,
+					heartbeatPath: input.launch.heartbeatPath ?? undefined,
+				}
+				: undefined,
 	});
 	try {
 		// spawn() resolves on the 'spawn' event (fast); the cap is insurance
@@ -344,6 +360,7 @@ function detailsFromSnapshot(a: Actor<typeof wiredMachine>, assistantTextTail: s
 		uiRequests: c.uiRequests,
 		usage: c.usage,
 		deadlineHit: c.deadlineHit,
+		stallHit: c.stallHit,
 		failureDetail: c.failureDetail,
 		protoFatal: c.protoFatal,
 	};
@@ -360,6 +377,9 @@ function buildResultText(d: RpcDelegateDetails): string {
 	}
 	if (d.stopReason) {
 		text += `\nFinal assistant stopReason: ${d.stopReason}`;
+	}
+	if (d.stallHit) {
+		text += `\nStall: the child produced no protocol activity for the stall window (${Math.round(STALL_GAP_MS / 1000)}s) while no child tool was open — treated as a hang and cancelled; the timeout hard cap was not the trigger.`;
 	}
 	if (d.status === "error" && d.childExit !== null && d.childExit !== 0) {
 		text += `\nChild exit code: ${d.childExit}`;
@@ -424,6 +444,7 @@ export default function (pi: ExtensionAPI) {
 		description: [
 			"Delegate a task to an ephemeral child pi supervised through the raw RPC protocol.",
 			"Streaming evidence (tool activity, final assistant text) and honest outcomes (agent_settled ≠ success — the final stopReason decides).",
+			"Stall detection cancels a silent child (no protocol activity for 180s with no child tool open) — timeout is a hard-cap backstop, not the expected duration; the call returns as soon as the child settles.",
 			"Results are read from declared artifact files; deadline/abort outcomes still collect partial artifacts.",
 		].join(" "),
 		parameters: Type.Object({
@@ -434,7 +455,10 @@ export default function (pi: ExtensionAPI) {
 				Type.String({ description: "Working directory (defaults to current session cwd)" }),
 			),
 			timeout: Type.Optional(
-				Type.Number({ description: "Max seconds for the run (default 300)" }),
+				Type.Number({
+					description:
+						"Hard cap in seconds for the whole delegation (default 1800) — a backstop, not the expected duration: the call returns as soon as the child settles, and a silent (hung) child is cancelled by stall detection well before this",
+				}),
 			),
 			artifacts: Type.Optional(
 				Type.Array(Type.String(), {
@@ -514,6 +538,7 @@ export default function (pi: ExtensionAPI) {
 						uiRequests: 0,
 						usage: null,
 						deadlineHit: false,
+						stallHit: false,
 						failureDetail: violation,
 						protoFatal: null,
 						rejected: violation,
@@ -526,6 +551,10 @@ export default function (pi: ExtensionAPI) {
 			a.start();
 
 			const sessionId = `rpc-delegate-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+			// Watchdog heartbeat file — the external orphan watchdog enforces
+			// the same stall policy if this process wedges; unlinked on settle
+			// here and by the watchdog on every exit path.
+			const heartbeatPath = path.join(os.tmpdir(), `rpc-delegate-hb-${sessionId}.json`);
 			// Machine-event sink: the transport forwards typed events here.
 			// (STEER would be intercepted tool-side — v1 sends none; the
 			// machine + transport capability is tested and documented.)
@@ -553,6 +582,8 @@ export default function (pi: ExtensionAPI) {
 					parentPid: process.pid,
 					sink,
 					watchdogPath: WATCHDOG,
+					stallGapMs: STALL_GAP_MS,
+					heartbeatPath,
 				},
 			});
 
@@ -562,7 +593,18 @@ export default function (pi: ExtensionAPI) {
 				? setInterval(() => {
 						const elapsed = Math.round((Date.now() - startTime) / 1000);
 						const c = a.getSnapshot().context;
-						const bits = [`Running… (${elapsed}s / ${timeout}s)`];
+						const bits = [`Running… (${elapsed}s / ${timeout}s hard cap)`];
+						// Liveness UX: silence is visible (and distinguished from a
+						// silently-running child tool) — no duration guessing.
+						const ev = c.transport?.getEvidence();
+						if (ev?.lastRecordAt != null) {
+							const silent = Math.round((Date.now() - ev.lastRecordAt) / 1000);
+							if (silent >= 30) {
+								bits.push(
+									ev.openTools > 0 ? `child tool running (${silent}s)` : `silent ${silent}s`,
+								);
+							}
+						}
 						if (c.toolCalls > 0) {
 							bits.push(`${c.toolCalls} tool call(s)`);
 							if (c.lastToolNames.length > 0) {
@@ -578,7 +620,8 @@ export default function (pi: ExtensionAPI) {
 				: null;
 
 			// Wait for the machine to drive itself out: spawn (≤15s) +
-			// handshake (≤30s) + prompt response (≤60s) + run (≤ timeoutSecs) +
+			// handshake (≤30s) + prompt response (≤60s) + run (≤ timeoutSecs
+			// hard cap — stall detection usually ends a hung run far sooner) +
 			// ladder (≤~30s) + collect (fast) + stop (≤~40s). Every path ends
 			// in a final state (spawn-fail `error` included).
 			let settled: boolean;
@@ -615,6 +658,14 @@ export default function (pi: ExtensionAPI) {
 			const transport = a.getSnapshot().context.transport;
 			if (transport?.alive()) transport.killHard();
 			a.stop();
+
+			// Heartbeat cleanup — the settled path owns the file; the watchdog
+			// unlinks it on the orphan/not-settled paths.
+			try {
+				fs.rmSync(heartbeatPath, { force: true });
+			} catch {
+				/* best-effort */
+			}
 
 			return resultFromSnapshot(a);
 		},
@@ -713,6 +764,8 @@ export default function (pi: ExtensionAPI) {
 				const bits: string[] = [];
 				if (d.promptDisposition) bits.push(`disposition: ${d.promptDisposition}`);
 				if (d.stopReason) bits.push(`stopReason: ${d.stopReason}`);
+				if (d.stallHit) bits.push("stall-cancelled");
+				if (d.deadlineHit) bits.push("hard-cap");
 				if (d.childExit !== null) bits.push(`child exit: ${d.childExit}`);
 				if (d.childModelId) bits.push(`model: ${d.childModelId}`);
 				if (bits.length > 0) {

@@ -7,7 +7,9 @@
  * parse response without id, unmatched response id, command timeout with a
  * late response tolerated (not fatal), child death rejecting pending
  * commands, extension-UI dialog auto-cancel, flood survivability with no
- * delta forwarding, oversized-record drop policy, stderr tail capture.
+ * delta forwarding, oversized-record drop policy, stderr tail capture,
+ * stall supervision (silent child detected; open-tool suppression;
+ * post-settle disarm; watchdog heartbeat file).
  */
 import assert from "node:assert/strict";
 import * as fs from "node:fs";
@@ -26,7 +28,10 @@ interface Harness {
 	logFile: string;
 }
 
-async function startTransport(mode: string): Promise<Harness> {
+async function startTransport(
+	mode: string,
+	stall?: { gapMs: number; heartbeatPath?: string; heartbeatIntervalMs?: number },
+	): Promise<Harness> {
 	const events: RpcEvent[] = [];
 	const logs: string[] = [];
 	const logFile = path.join(os.tmpdir(), `fake-child-${mode}-${Date.now()}.log`);
@@ -37,6 +42,7 @@ async function startTransport(mode: string): Promise<Harness> {
 		sink: (ev) => events.push(ev),
 		env: { FAKE_MODE: mode, FAKE_LOG: logFile },
 		onLog: (msg) => logs.push(msg),
+		stall,
 	});
 	await transport.start();
 	return { transport, events, logs, logFile };
@@ -276,6 +282,67 @@ await ok("stderr tail captured (bounded), diagnostics never parsed as protocol",
 	assert.match(h.transport.getEvidence().stderrTail, /diagnostic noise/);
 	assert.equal(h.transport.exitCode(), 1);
 	h.transport.killHard();
+});
+
+// -- stall supervision (liveness timer, open-tool suppression, heartbeat) ------
+
+await ok("stall: silent child (no tool open) → STALL_DETECTED once, stallMs exact", async () => {
+	const h = await startTransport("stall", { gapMs: 150 });
+	await h.transport.sendCommand({ type: "prompt", message: "go" }, 2000);
+	await waitForEvent(h, "STALL_DETECTED", 5000);
+	const st = h.events.find((e) => e.type === "STALL_DETECTED");
+	assert.equal((st as { stallMs: number } | undefined)?.stallMs, 150);
+	await new Promise((r) => setTimeout(r, 400)); // one-shot: no duplicate events
+	assert.equal(h.events.filter((e) => e.type === "STALL_DETECTED").length, 1);
+	assert.ok(h.logs.some((l) => /stall: no protocol activity/.test(l)));
+	h.transport.killHard();
+});
+
+await ok("stall suppressed while a child tool is open; re-arms after tool end", async () => {
+	const h = await startTransport("stall-open", { gapMs: 150 });
+	await h.transport.sendCommand({ type: "prompt", message: "go" }, 2000);
+	// 400ms of silence INSIDE the open tool must not trip the 150ms gap
+	await waitForEvent(h, "AGENT_SETTLED", 10_000);
+	assert.equal(h.events.filter((e) => e.type === "STALL_DETECTED").length, 0);
+	assert.equal(h.transport.getEvidence().openTools, 0); // closed again
+	h.transport.killHard();
+});
+
+await ok("agent_settled disarms the stall timer (post-settle silence is not a stall)", async () => {
+	const h = await startTransport("ok", { gapMs: 100 });
+	await h.transport.sendCommand({ type: "prompt", message: "go" }, 2000);
+	await waitForEvent(h, "AGENT_SETTLED");
+	await new Promise((r) => setTimeout(r, 350)); // silence past the gap
+	assert.equal(h.events.filter((e) => e.type === "STALL_DETECTED").length, 0);
+	h.transport.killHard();
+});
+
+await ok("no stall option → no stall detection (opt-in behavior unchanged)", async () => {
+	const h = await startTransport("stall");
+	await h.transport.sendCommand({ type: "prompt", message: "go" }, 2000);
+	await waitForEvent(h, "AGENT_START");
+	await new Promise((r) => setTimeout(r, 300));
+	assert.equal(h.events.filter((e) => e.type === "STALL_DETECTED").length, 0);
+	h.transport.killHard();
+});
+
+await ok("heartbeat file written ({t, open}) for the external watchdog", async () => {
+	const hb = path.join(os.tmpdir(), `rpc-delegate-hb-test-${Date.now()}.json`);
+	const h = await startTransport("stall-open", {
+		gapMs: 150_000,
+		heartbeatPath: hb,
+		heartbeatIntervalMs: 50,
+	});
+	await h.transport.sendCommand({ type: "prompt", message: "go" }, 2000);
+	await waitForEvent(h, "TOOL_START", 5000);
+	await new Promise((r) => setTimeout(r, 200)); // heartbeat written mid-tool
+	const parsed = JSON.parse(fs.readFileSync(hb, "utf8")) as { t: number; open: number };
+	assert.equal(typeof parsed.t, "number");
+	assert.ok(Math.abs(Date.now() - parsed.t) < 5000, "heartbeat t is fresh");
+	assert.equal(parsed.open, 1); // mid-tool: open count surfaced for the watchdog
+	await waitForEvent(h, "AGENT_SETTLED", 10_000);
+	h.transport.killHard();
+	fs.rmSync(hb, { force: true });
 });
 
 console.log(`\n${passed} tests passed${failed > 0 ? `, ${failed} failed` : ""}`);

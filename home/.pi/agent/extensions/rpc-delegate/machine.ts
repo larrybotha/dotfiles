@@ -25,7 +25,8 @@
  *
  *   running ──AGENT_SETTLED──> collecting (outcome settled; success evaluated
  *             at final routing)        ──CHILD_DEAD──> collecting (error)
- *           ──DEADLINE (after timeoutSecs)──> cancelling (timeout)
+ *           ──DEADLINE (after timeoutSecs — hard-cap backstop)──> cancelling (timeout)
+ *           ──STALL_DETECTED (silent child, no tool open)──> cancelling (timeout)
  *           ──KILL──> cancelling (aborted)   ──PROTOCOL_FATAL──> cancelling
  *           ──STEER/TOOL_x/EXT_UI/AGENT_x──> running (self, evidence)
  *           fast completion: agent_settled seen while prompting → running's
@@ -87,6 +88,12 @@ export interface TransportEvidence {
 	lastUsage: unknown | null;
 	uiAutoCancelled: number;
 	fatalReason: string | null;
+	/** Millis of the last protocol byte from the child (null before any output)
+	 *  — progress surfaces silence; the stall timer resets on it. */
+	lastRecordAt: number | null;
+	/** Child tools currently open (tool_execution_start − end) — the stall
+	 *  timer is suppressed while > 0 (a child tool may run silently). */
+	openTools: number;
 }
 
 /**
@@ -155,6 +162,8 @@ export interface RpcContext {
 	// Outcome plumbing — set on the way into collecting/cancelling; routes finals
 	outcome: "settled" | "error" | "timeout" | "aborted" | null;
 	deadlineHit: boolean;
+	/** Stall detection fired (silent child) — distinct from the hard-cap deadline. */
+	stallHit: boolean;
 	failureDetail: string | null;
 	protoFatal: string | null;
 
@@ -179,6 +188,13 @@ export interface SpawnLaunch {
 	sink: (ev: RpcEvent) => void;
 	/** watchdog.mjs path (external orphan watchdog). */
 	watchdogPath: string;
+	/** Stall gap in ms (0 = disabled): the transport's liveness timer — any
+	 *  protocol bytes reset it, suppressed while a child tool is open, fires
+	 *  STALL_DETECTED on silence. Duration-agnostic hang detection. */
+	stallGapMs: number;
+	/** Heartbeat file path ({t, open} JSON) — the external watchdog enforces
+	 *  the same stall policy if the extension process itself wedges. */
+	heartbeatPath: string | null;
 }
 
 export type RpcEvent =
@@ -199,6 +215,8 @@ export type RpcEvent =
 	| { type: "KILL" }
 	| { type: "CHILD_DEAD"; code: number | null; signal: string | null }
 	| { type: "PROTOCOL_FATAL"; reason: string }
+	// Transport stall observer: silence beyond the gap with no child tool open.
+	| { type: "STALL_DETECTED"; stallMs: number }
 	| { type: "AGENT_START" }
 	| { type: "AGENT_END"; willRetry: boolean }
 	| { type: "AGENT_SETTLED" }
@@ -302,6 +320,7 @@ export function initialContext(): RpcContext {
 		lastSteer: null,
 		outcome: null,
 		deadlineHit: false,
+		stallHit: false,
 		failureDetail: null,
 		protoFatal: null,
 		artifacts: [],
@@ -545,8 +564,17 @@ export const rpcMachine = setup({
 		markDeadline: assign(({ context }) => ({
 			outcome: "timeout" as const,
 			deadlineHit: true,
-			failureDetail: `run deadline exceeded (${context.timeoutSecs}s)`,
+			failureDetail: `run hard cap exceeded (${context.timeoutSecs}s)`,
 		})),
+		markStalled: assign(({ event }) =>
+			event.type === "STALL_DETECTED"
+				? {
+						outcome: "timeout" as const,
+						stallHit: true,
+						failureDetail: `child stalled — no protocol activity for ${Math.round(event.stallMs / 1000)}s (no child tool running); cancelled by stall detection`,
+					}
+				: {},
+		),
 		markAborted: assign(({ context }) =>
 			context.outcome === null ? { outcome: "aborted" as const } : {},
 		),
@@ -712,7 +740,9 @@ export const rpcMachine = setup({
 			},
 		},
 		running: {
-			// Run deadline — separate from every command timeout; arms at run start.
+			// Run deadline = the HARD-CAP backstop (not expected duration — stall
+			// detection owns hang detection); separate from every command
+			// timeout; arms at run start.
 			after: { runDeadline: { target: "cancelling", actions: "markDeadline" } },
 			// Fast completion race: agent_settled observed during prompting.
 			always: [{ guard: "settledFast", target: "collecting", actions: "markSettled" }],
@@ -725,6 +755,11 @@ export const rpcMachine = setup({
 				TOOL_END: { actions: "seeToolEnd" },
 				EXT_UI_REQUEST: { actions: "seeUiRequest" },
 				STEER: { actions: "steerSent" },
+				// Silent child (no protocol bytes, no open child tool) — the
+				// transport's liveness timer fired. Pre-run states do NOT declare
+				// this: their command timeouts (≤60s) beat the stall gap, so a
+				// stall there is unreachable by construction.
+				STALL_DETECTED: { target: "cancelling", actions: "markStalled" },
 				KILL: { target: "cancelling", actions: "markAborted" },
 				CHILD_DEAD: { target: "collecting", actions: "markChildDead" },
 				PROTOCOL_FATAL: { target: "cancelling", actions: "markFatal" },

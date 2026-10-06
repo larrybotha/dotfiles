@@ -3,7 +3,8 @@
  * Fake RPC child for transport tests — scripted by FAKE_MODE env. Speaks the
  * pi RPC JSONL protocol well enough to exercise RpcTransport: correlated
  * responses, session events, extension-UI requests, protocol violations,
- * floods, oversized records, stderr noise, mid-run death.
+ * floods, oversized records, stderr noise, mid-run death, stalls
+ * (silent hung child; silent-but-open child tool).
  *
  * Manual LF-split stdin reader (same discipline as the transport — the real
  * protocol's U+2028/2029 caveat applies symmetrically).
@@ -67,6 +68,21 @@ const handlers = {
 		}
 		reply(r, { data: { disposition: "started" } });
 		write({ type: "agent_start" });
+		if (MODE === "stall") {
+			// the base flow above already replied + agent_start — total silence
+			// from here (hung child: alive, pipe open, nothing written)
+			return;
+		}
+		if (MODE === "stall-open") {
+			// base flow already replied + agent_start — one tool opens, 400ms of
+			// silence INSIDE the tool (legitimate: tools run silently), then done
+			write({ type: "tool_execution_start", toolCallId: "c1", toolName: "bash", args: {} });
+			setTimeout(() => {
+				write({ type: "tool_execution_end", toolCallId: "c1", toolName: "bash", result: {}, isError: false });
+				write({ type: "agent_settled" });
+			}, 400);
+			return;
+		}
 		if (MODE === "extui") {
 			write({
 				type: "extension_ui_request",

@@ -1,9 +1,9 @@
 /**
- * Live dogfood — the extension's wired machine + transport against a real
+ * Live checks — the extension's wired machine + transport against a real
  * child pi (`pi --mode rpc --no-session`), self-spawned:
  *
- *   node dogfood.ts                  # full run (real model, a few cents)
- *   node dogfood.ts --orphan-victim  # internal: parent-death watchdog victim
+ *   node live.test.ts                # full run (real model, a few cents)
+ *   node live.test.ts --orphan-victim  # internal: parent-death watchdog victim
  *
  * Runs:
  * 1. happy path — reply PONG + write an artifact; success, disposition
@@ -18,6 +18,9 @@
  * 6. orphan — self-spawned victim process is SIGKILLed mid-run; the external
  *    watchdog must TERM the child process group (the sleep task would
  *    otherwise outlive everything).
+ * 7. stall supervision — a 4s stall gap survives a 15s silently-running
+ *    child tool (open-tool suppression) and the watchdog heartbeat file
+ *    ({t, open}) is written live.
  *
  * The extension tool itself (rpc_delegate_task) runs the same wired machine
  * in-process — this script exercises the same wiring without a pi host.
@@ -42,6 +45,7 @@ interface RunResult {
 	stopReason: string | null;
 	childExit: number | null;
 	deadlineHit: boolean;
+	stallHit: boolean;
 	failureDetail: string | null;
 	artifacts: { path: string; content: string; missing: boolean; readError?: string }[];
 	summary: string;
@@ -57,8 +61,12 @@ async function run(input: {
 	abortAfterMs?: number;
 	provider?: string;
 	model?: string;
+	/** Stall gap override (default 180s) — small gaps prove suppression live. */
+	stallMs?: number;
+	/** Watchdog heartbeat file path (live check 7 asserts it). */
+	heartbeatPath?: string;
 }): Promise<RunResult> {
-	const sessionId = `dogfood-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+	const sessionId = `live-check-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 	const a = createActor(wiredMachine);
 	a.start();
 	const sink = (ev: RpcEvent) => a.send(ev);
@@ -76,12 +84,14 @@ async function run(input: {
 		workingDir: process.cwd(),
 		artifactPaths: input.artifactPaths ?? [],
 		launch: {
-			// dogfood runs under plain node — resolve pi from PATH, not from
-			// this process's argv (that points at dogfood.ts, not pi)
+			// live checks run under plain node — resolve pi from PATH, not from
+			// this process's argv (that points at live.test.ts, not pi)
 			pi: { command: "pi", args: [] },
 			parentPid: process.pid,
 			sink,
 			watchdogPath: path.join(import.meta.dirname, "watchdog.mjs"),
+			stallGapMs: input.stallMs ?? 180_000,
+			heartbeatPath: input.heartbeatPath ?? null,
 		},
 	});
 
@@ -102,6 +112,7 @@ async function run(input: {
 		stopReason: c.lastAssistantStopReason,
 		childExit: c.childExit,
 		deadlineHit: c.deadlineHit,
+		stallHit: c.stallHit,
 		failureDetail: c.failureDetail,
 		artifacts: c.artifacts,
 		summary: c.summary,
@@ -133,13 +144,13 @@ function sh(cmd: string): Promise<string> {
 	});
 }
 
-// --- 0. victim mode (spawned by dogfood 6) ---------------------------------
+// --- 0. victim mode (spawned by live check 6) ------------------------------
 
 if (process.argv.includes("--orphan-victim")) {
-	// Victim: start a delegated sleep task, then hold — the main dogfood
+	// Victim: start a delegated sleep task, then hold — the main live-check
 	// process SIGKILLs this one mid-run (no atexit, no signals reach the
 	// child group) and expects the external watchdog to reap everything.
-	const sessionId = `dogfood-orphan-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+	const sessionId = `live-check-orphan-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 	const a = createActor(wiredMachine);
 	a.start();
 	a.send({
@@ -159,6 +170,8 @@ if (process.argv.includes("--orphan-victim")) {
 			parentPid: process.pid,
 			sink: (ev: RpcEvent) => a.send(ev),
 			watchdogPath: path.join(import.meta.dirname, "watchdog.mjs"),
+			stallGapMs: 180_000,
+			heartbeatPath: null,
 		},
 	});
 	await waitFor(a, (s) => s.matches("running"), { timeout: 30_000 });
@@ -171,8 +184,8 @@ if (process.argv.includes("--orphan-victim")) {
 
 // --- 1. happy path -----------------------------------------------------------
 
-const artifactPath = path.join(os.tmpdir(), `rpc-delegate-dogfood-${Date.now()}.txt`);
-console.log("== dogfood 1: happy path (real pi child, real model) ==");
+const artifactPath = path.join(os.tmpdir(), `rpc-delegate-live-check-${Date.now()}.txt`);
+console.log("== live check 1: happy path (real pi child, real model) ==");
 const okRun = await run({
 	task: [
 		`Reply with exactly the single word PONG and nothing else.`,
@@ -192,9 +205,9 @@ check("artifact content PONG", artifact?.content.trim() === "PONG", `got ${JSON.
 check("assistant text tail present", okRun.assistantTextTail.length > 0, `tail: ${JSON.stringify(okRun.assistantTextTail.slice(0, 80))}`);
 check("usage recorded (get_session_stats)", okRun.usage !== null, "no usage");
 
-// --- 2. deadline path --------------------------------------------------------
+// --- 2. hard-cap deadline path -----------------------------------------------
 
-console.log("== dogfood 2: deadline (short timeout, sleeping child, ladder, export) ==");
+console.log("== live check 2: hard-cap deadline (sleeping child, ladder) ==");
 const deadlineRun = await run({
 	task: "Immediately run the bash tool with the command: sleep 137. This is mandatory: do not reply, do not stop, and do nothing else until it completes.",
 	timeoutSecs: 8,
@@ -205,7 +218,7 @@ check("deadline marked", deadlineRun.deadlineHit === true);
 check("child terminated (graceful exit 0 via stdin-close ladder rung is fine)", deadlineRun.childExit !== null, `exit=${deadlineRun.childExit} signal=${deadlineRun.childExitSignal}`);
 // --- 3. abort path -----------------------------------------------------------
 
-console.log("== dogfood 3: abort mid-run (ctx.signal → KILL event) ==");
+console.log("== live check 3: abort mid-run (ctx.signal → KILL event) ==");
 const abortRun = await run({
 	task: "Immediately run the bash tool with the command: sleep 137. This is mandatory: do not reply, do not stop, and do nothing else until it completes.",
 	timeoutSecs: 300,
@@ -217,7 +230,7 @@ check("child terminated by the ladder", abortRun.childExit !== null, `exit=${abo
 
 // --- 4. explicit provider/model flags ---------------------------------------
 
-console.log("== dogfood 4: explicit provider + model (flag assembly live) ==");
+console.log("== live check 4: explicit provider + model (flag assembly) ==");
 const pinnedRun = await run({
 	task: "Reply with exactly the single word PINNED and stop.",
 	provider: "opencode",
@@ -230,7 +243,7 @@ check("reply mentions PINNED", /PINNED/.test(pinnedRun.assistantTextTail), `tail
 
 // --- 5. big prompt (stdin backpressure) --------------------------------------
 
-console.log("== dogfood 5: ~100 KB task (stdin backpressure, drain path) ==");
+console.log("== live check 5: ~100 KB task (stdin backpressure, drain path) ==");
 const filler = "Reference material follows; ignore it entirely. ".repeat(1) +
 	Array.from({ length: 2600 }, (_, i) => `Fact ${i}: the quick brown fox jumps over 0123456789. `).join("");
 const bigTask = `${filler}\n\nIgnore all of the above. Reply with exactly the single word BIGPROMPT and stop.`;
@@ -242,7 +255,7 @@ check("reply mentions BIGPROMPT", /BIGPROMPT/.test(bigRun.assistantTextTail), `t
 
 // --- 6. orphan watchdog (parent SIGKILL) -------------------------------------
 
-console.log("== dogfood 6: orphan watchdog (SIGKILL the parent mid-run) ==");
+console.log("== live check 6: orphan watchdog (SIGKILL the parent mid-run) ==");
 const victim = spawn(process.execPath, [import.meta.filename, "--orphan-victim"], {
 	stdio: ["ignore", "pipe", "inherit"],
 });
@@ -294,6 +307,45 @@ if (childPid) {
 	try {
 		victim.kill("SIGKILL"); // no-op if already dead
 	} catch { /* already dead */ }
+}
+
+// --- 7. stall supervision (open-tool suppression + heartbeat) ------------------
+
+console.log("== live check 7: stall supervision (suppression during a child tool + heartbeat file) ==");
+const hbPath = path.join(os.tmpdir(), `rpc-delegate-live-check-hb-${Date.now()}.json`);
+let hbSeen = false;
+let hbOpenPeak = 0;
+const hbWatch = setInterval(() => {
+	try {
+		const hb = JSON.parse(fs.readFileSync(hbPath, "utf8")) as { t: number; open: number };
+		hbSeen = true;
+		hbOpenPeak = Math.max(hbOpenPeak, hb.open);
+	} catch {
+		/* not written yet */
+	}
+}, 250);
+// 4s stall gap vs 15s of silence INSIDE a child bash tool: without open-tool
+// suppression the stall timer would cancel the run at ~4s.
+const stallRun = await run({
+	task: "Immediately run the bash tool with the command: sleep 15. This is mandatory: do not reply, do not stop, and do nothing else until it completes. After it completes, reply with exactly the single word DONE and stop.",
+	timeoutSecs: 120,
+	stallMs: 4000,
+	heartbeatPath: hbPath,
+});
+clearInterval(hbWatch);
+console.log(`  status=${stallRun.status} stallHit=${stallRun.stallHit} exit=${stallRun.childExit} hbSeen=${hbSeen} hbOpenPeak=${hbOpenPeak}`);
+check(
+	"status is success (15s of silence inside a child tool must NOT trip the 4s stall gap)",
+	stallRun.status === "success",
+	`got ${stallRun.status} (${stallRun.failureDetail ?? ""})`,
+);
+check("stall not hit", stallRun.stallHit === false);
+check("heartbeat file written during the run", hbSeen);
+check("heartbeat observed an open child tool", hbOpenPeak >= 1, `peak open=${hbOpenPeak}`);
+try {
+	fs.rmSync(hbPath, { force: true });
+} catch {
+	/* already gone */
 }
 
 // --- cleanup -----------------------------------------------------------------
