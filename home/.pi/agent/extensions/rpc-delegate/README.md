@@ -95,7 +95,7 @@ failure mode is testable without a model.
 ## Differences from tmux-delegate
 
 - Child is a piped `pi --mode rpc --no-session` process, not a tmux pane.
-- Deadline/abort paths still collect artifacts and export the session.
+- Deadline/abort paths still collect artifacts (tmux-delegate skips there).
 - Stream events (message/tool) are observed live, not scraped from a pane.
 - `STEER` is machine/transport-supported (delivered mid-turn with
   `streamingBehavior: "steer"`) but not tool-exposed: the tool's `onUpdate`
