@@ -44,13 +44,14 @@ idle → spawning → handshaking → prompting → running → collecting → s
 ```
 
 - **One child per call.** `--no-session` is ephemeral and never resumed.
-- Deadline and abort still collect (then export the session) — tmux-delegate
-  skips collection there; this protocol can read the transcript of a killed
-  child.
+- Deadline and abort still collect declared artifacts — tmux-delegate skips
+  collection there; this protocol can read the transcript of a killed child.
 - **Cancellation ladder** (deadline / abort): `clear_queue` → `abort` →
   stdin-close → wait 10 s → SIGTERM → wait 5 s → SIGKILL.
-- **Stop ladder** (every final): `get_session_stats` → session export on
-  failure-ish outcomes → stdin-close → TERM → KILL.
+- **Stop ladder** (every final): `get_session_stats` (usage/cost evidence) →
+  stdin-close → TERM → KILL. No session export on any outcome:
+  `export_html` cannot export a `--no-session` child ("Cannot export
+  in-memory session to HTML") — protocol limitation, verified live.
 
 ## Honest success
 
@@ -79,9 +80,11 @@ still succeeds if at least one declared artifact was collected.
 ## Tests
 
 ```
-node test.ts            # 40 machine tests (stub services, no child)
+node test.ts            # 39 machine tests (stub services, no child)
 node transport.test.ts  # 16 transport tests against fixtures/fake-child.mjs
-node dogfood.ts         # live: real child pi, real model — success + deadline
+node dogfood.ts         # live: 18 checks — success, deadline, abort,
+                       # provider/model flags, 136 KB prompt, SIGKILL'd
+                       # parent (orphan watchdog reaps child + sleep + watchdog)
 ```
 
 `fixtures/fake-child.mjs` is a scripted fake RPC child (`FAKE_MODE`:
@@ -97,3 +100,17 @@ failure mode is testable without a model.
 - `STEER` is machine/transport-supported (delivered mid-turn with
   `streamingBehavior: "steer"`) but not tool-exposed: the tool's `onUpdate`
   progress channel is one-way. Capability-ready if a two-way channel appears.
+
+## Live-verified protocol facts
+
+- **pi rewrites its argv** (`process.title` = `pi`) — a delegated child is
+  invisible to `pgrep -f` by flag (`--name` included). Process identity is
+  the child PID (`childPid()` on the transport); the watchdog (node) does
+  not rewrite and stays greppable.
+- **Raw RPC pipe + immediate stdin EOF kills a child mid-turn** — keep stdin
+  open (the extension's transport never closes stdin early). 
+- **Host `PI_*` vars are inherited by children but are markers, not CLI
+  config** — an inherited `PI_MODEL` does not change the child's selected
+  model (verified live).
+- **`get_session_stats` works on `--no-session` children** — usage/cost
+  evidence (`tokens.total`, not `totalTokens`).

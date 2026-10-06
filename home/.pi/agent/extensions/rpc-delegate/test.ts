@@ -20,7 +20,6 @@ import {
 	rpcMachine,
 	statusOf,
 	stopReasonFails,
-	wantSessionExport,
 	type ArtifactEntry,
 	type CancelInput,
 	type CancelOutput,
@@ -74,6 +73,9 @@ class FakeTransport implements TransportHandle {
 	killHard() {
 		this.killed = true;
 		this.dead = true;
+	}
+	childPid() {
+		return 4242;
 	}
 	async waitForExit(ms: number): Promise<boolean> {
 		return ms >= 0; // fake: exits immediately
@@ -150,7 +152,7 @@ function makeStubs(
 				})) as ArtifactEntry[],
 			})),
 		cancelNext: over.cancel ?? (async () => ({ exitCode: 137 })),
-		stopNext: over.stop ?? (async () => ({ exitCode: 0, usage: null, exportPath: null })),
+		stopNext: over.stop ?? (async () => ({ exitCode: 0, usage: null })),
 	};
 }
 
@@ -394,17 +396,6 @@ await ok("evaluateSuccess + stopReasonFails: settled semantics (not settled ≠ 
 	assert.equal(stopReasonFails("pending"), true);
 });
 
-await ok("wantSessionExport: failure-ish outcomes export for debugging", () => {
-	const base = initialContext();
-	assert.equal(wantSessionExport({ ...base, outcome: "error" }), true);
-	assert.equal(wantSessionExport({ ...base, outcome: "timeout" }), true);
-	assert.equal(wantSessionExport({ ...base, outcome: "aborted" }), false);
-	assert.equal(wantSessionExport({ ...base, outcome: "settled", artifacts: [A_OK], runStartedSeen: true, agentSettledSeen: true, promptDisposition: "started", lastAssistantStopReason: "stop" }), false);
-	assert.equal(
-		wantSessionExport({ ...base, outcome: "settled", runStartedSeen: true, agentSettledSeen: true, promptDisposition: "started", lastAssistantStopReason: "error" }),
-		true,
-	);
-});
 
 await ok("statusOf: terminal names pass through; the rest collapse to running", () => {
 	assert.equal(statusOf("success"), "success");
@@ -450,9 +441,8 @@ await ok("settled run → success; evidence parity across all service inputs", a
 	assert.equal(stub.collectInputs.length, 1);
 	assert.deepEqual(stub.collectInputs[0]!.artifactPaths, ["out.txt"]);
 	assert.equal(stub.collectInputs[0]!.workingDir, "/tmp/work");
-	// stop input: no export on success; usage best-effort
+	// stop input: usage best-effort (no session export — protocol limitation)
 	assert.equal(stub.stopInputs.length, 1);
-	assert.equal(stub.stopInputs[0]!.exportSession, false);
 	assert.equal(c.usage, null);
 });
 
@@ -542,8 +532,6 @@ await ok("LLM error + settled → error, not false success (stopReason decides)"
 	const c = a.getSnapshot().context;
 	assert.equal(c.lastAssistantStopReason, "error");
 	assert.equal(c.lastAssistantError, "529 overloaded, gave up");
-	// failure path exported the session for debugging
-	assert.equal(stub.stopInputs[0]!.exportSession, true);
 });
 
 await ok("artifactPolicy=artifacts + collected artifacts forgive the bad stopReason", async () => {
@@ -739,7 +727,7 @@ await ok("CHILD_DEAD during stopping → exit recorded; stopService output route
 	a.send({ type: "CHILD_DEAD", code: 0, signal: null });
 	assert.equal(a.getSnapshot().value, "stopping");
 	assert.equal(a.getSnapshot().context.childExit, 0);
-	gate.resolve({ exitCode: 0, usage: { tokens: { totalTokens: 7 }, cost: 0.001 }, exportPath: null });
+	gate.resolve({ exitCode: 0, usage: { tokens: { totalTokens: 7 }, cost: 0.001 } });
 	await waitFor(a, (s) => isFinal(s), { timeout: 2000 });
 	assert.equal(a.getSnapshot().value, "success");
 	assert.equal(a.getSnapshot().context.usage?.tokens?.totalTokens, 7);
@@ -914,19 +902,17 @@ await ok("collect with missing artifacts → summary names them (honest accounti
 
 // --- stop output ------------------------------------------------------------------
 
-await ok("stopService output recorded: usage + exportPath (debug aid on failure)", async () => {
+await ok("stopService output recorded: usage (best-effort stop output)", async () => {
 	const stub = makeStubs({
 		stop: async () => ({
 			exitCode: 0,
 			usage: { tokens: { totalTokens: 1234 }, cost: 0.05 },
-			exportPath: "/tmp/session.html",
-		}),
+	}),
 	});
 	const a = await drive(stub);
 	assert.equal(a.getSnapshot().value, "success");
 	const c = a.getSnapshot().context;
 	assert.equal(c.usage?.tokens?.totalTokens, 1234);
-	assert.equal(c.sessionExportPath, "/tmp/session.html");
 });
 
 await ok("buildSummary: collected/missing/unreadable counts", () => {

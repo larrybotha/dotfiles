@@ -2,26 +2,36 @@
  * Live dogfood — the extension's wired machine + transport against a real
  * child pi (`pi --mode rpc --no-session`), self-spawned:
  *
- *   node dogfood.ts
+ *   node dogfood.ts                  # full run (real model, a few cents)
+ *   node dogfood.ts --orphan-victim  # internal: parent-death watchdog victim
  *
- * Two runs:
- * 1. happy path — a trivial task that must reply PONG and write an artifact
- *    file; asserts status success, disposition started, stopReason stop,
- *    artifact collected with the expected content.
- * 2. deadline path — a task that sleeps far past a short timeout; asserts
- *    status timeout, the cancellation ladder ran (clear_queue + abort were
- *    sent), and the child is gone afterwards (no orphans).
+ * Runs:
+ * 1. happy path — reply PONG + write an artifact; success, disposition
+ *    started, stopReason stop, artifact content exact, session stats.
+ * 2. deadline — sleep past a short timeout; timeout, ladder terminates the
+ *    child, session exported (failure-ish outcome) to an HTML file.
+ * 3. abort — KILL mid-run (the tool's ctx.signal path); aborted, ladder
+ *    terminates, no export (user cancelled — by design).
+ * 4. provider/model — explicit --provider/--model flag assembly live.
+ * 5. big prompt — ~100 KB task through stdin backpressure (pipe capacity
+ *    64 KB); success, reply intact.
+ * 6. orphan — self-spawned victim process is SIGKILLed mid-run; the external
+ *    watchdog must TERM the child process group (the sleep task would
+ *    otherwise outlive everything).
  *
- * Real model calls (a few cents). The extension tool itself (rpc_delegate_task)
- * runs the same wired machine in-process — this script exercises the same
- * wiring without a pi host.
+ * The extension tool itself (rpc_delegate_task) runs the same wired machine
+ * in-process — this script exercises the same wiring without a pi host.
+ * Env note: host PI_* vars (PI_MODEL etc.) are inherited by children but are
+ * markers for shell tools, not CLI config — verified live: an inherited
+ * PI_MODEL does not change the child's selected model.
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
+import { spawn } from "node:child_process";
 import { createActor, waitFor } from "xstate";
 import { wiredMachine } from "./index.ts";
-import { evaluateSuccess, statusOf, type RpcEvent } from "./machine.ts";
+import { statusOf, type RpcEvent } from "./machine.ts";
 
 const isFinal = (v: unknown) =>
 	v === "success" || v === "error" || v === "timeout" || v === "aborted";
@@ -36,34 +46,35 @@ interface RunResult {
 	artifacts: { path: string; content: string; missing: boolean; readError?: string }[];
 	summary: string;
 	assistantTextTail: string;
-	stderrTail: string;
-	ladderCommands: string[];
 	usage: unknown;
-	sessionExportPath: string | null;
 	childExitSignal: string | null;
 }
 
 async function run(input: {
 	task: string;
-	artifactPaths: string[];
-	timeoutSecs: number;
+	artifactPaths?: string[];
+	timeoutSecs?: number;
+	abortAfterMs?: number;
+	provider?: string;
+	model?: string;
 }): Promise<RunResult> {
+	const sessionId = `dogfood-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
 	const a = createActor(wiredMachine);
 	a.start();
 	const sink = (ev: RpcEvent) => a.send(ev);
 
 	a.send({
 		type: "BEGIN",
-		sessionId: `dogfood-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+		sessionId,
 		task: input.task,
 		agentPrompt: null,
-		provider: null,
-		model: null,
+		provider: input.provider ?? null,
+		model: input.model ?? null,
 		tools: null,
 		artifactPolicy: "stopReason",
-		timeoutSecs: input.timeoutSecs,
+		timeoutSecs: input.timeoutSecs ?? 300,
 		workingDir: process.cwd(),
-		artifactPaths: input.artifactPaths,
+		artifactPaths: input.artifactPaths ?? [],
 		launch: {
 			// dogfood runs under plain node — resolve pi from PATH, not from
 			// this process's argv (that points at dogfood.ts, not pi)
@@ -74,7 +85,12 @@ async function run(input: {
 		},
 	});
 
-	await waitFor(a, (s) => isFinal(s.value), { timeout: input.timeoutSecs * 1000 + 120_000 });
+	// mid-run abort: the tool's ctx.signal path sends the same KILL event
+	if (input.abortAfterMs !== undefined) {
+		setTimeout(() => a.send({ type: "KILL" }), input.abortAfterMs);
+	}
+
+	await waitFor(a, (s) => isFinal(s.value), { timeout: input.timeoutSecs! * 1000 + 180_000 });
 
 	const c = a.getSnapshot().context;
 	const ev = c.transport?.getEvidence();
@@ -90,10 +106,7 @@ async function run(input: {
 		artifacts: c.artifacts,
 		summary: c.summary,
 		assistantTextTail: ev?.assistantTextTail ?? "",
-		stderrTail: ev?.stderrTail ?? "",
-		ladderCommands: [],
 		usage: c.usage,
-		sessionExportPath: c.sessionExportPath,
 		childExitSignal: c.childExitSignal,
 	};
 }
@@ -108,6 +121,52 @@ function check(name: string, cond: boolean, detail?: string) {
 		failed++;
 		console.error(`  ✗ ${name}${detail ? ` — ${detail}` : ""}`);
 	}
+}
+
+function sh(cmd: string): Promise<string> {
+	return new Promise((resolve) => {
+		const p = spawn("/bin/sh", ["-c", cmd], { stdio: ["ignore", "pipe", "ignore"] });
+		let out = "";
+		p.stdout.on("data", (c: Buffer) => (out += c.toString()));
+		p.on("close", () => resolve(out));
+		p.on("error", () => resolve(""));
+	});
+}
+
+// --- 0. victim mode (spawned by dogfood 6) ---------------------------------
+
+if (process.argv.includes("--orphan-victim")) {
+	// Victim: start a delegated sleep task, then hold — the main dogfood
+	// process SIGKILLs this one mid-run (no atexit, no signals reach the
+	// child group) and expects the external watchdog to reap everything.
+	const sessionId = `dogfood-orphan-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+	const a = createActor(wiredMachine);
+	a.start();
+	a.send({
+		type: "BEGIN",
+		sessionId,
+		task: "Immediately run the bash tool with the command: sleep 137. This is mandatory: do not reply, do not stop, and do nothing else until it completes.",
+		agentPrompt: null,
+		provider: null,
+		model: null,
+		tools: null,
+		artifactPolicy: "stopReason",
+		timeoutSecs: 300,
+		workingDir: process.cwd(),
+		artifactPaths: [],
+		launch: {
+			pi: { command: "pi", args: [] },
+			parentPid: process.pid,
+			sink: (ev: RpcEvent) => a.send(ev),
+			watchdogPath: path.join(import.meta.dirname, "watchdog.mjs"),
+		},
+	});
+	await waitFor(a, (s) => s.matches("running"), { timeout: 30_000 });
+	const childPid = a.getSnapshot().context.transport?.childPid() ?? null;
+	process.stdout.write(JSON.stringify({ sessionId, pid: process.pid, childPid }) + "\n");
+	// hold the event loop: never settle, never exit — the parent kills us
+	setInterval(() => {}, 1 << 30);
+	await new Promise<never>(() => {});
 }
 
 // --- 1. happy path -----------------------------------------------------------
@@ -135,23 +194,112 @@ check("usage recorded (get_session_stats)", okRun.usage !== null, "no usage");
 
 // --- 2. deadline path --------------------------------------------------------
 
-console.log("== dogfood 2: deadline (short timeout, sleeping child, ladder) ==");
+console.log("== dogfood 2: deadline (short timeout, sleeping child, ladder, export) ==");
 const deadlineRun = await run({
-	task: "Run the bash tool with the command: sleep 120. Do not do anything else. Do not stop early.",
-	artifactPaths: [],
+	task: "Immediately run the bash tool with the command: sleep 137. This is mandatory: do not reply, do not stop, and do nothing else until it completes.",
 	timeoutSecs: 8,
 });
 console.log(`  status=${deadlineRun.status} deadlineHit=${deadlineRun.deadlineHit} exit=${deadlineRun.childExit} signal=${deadlineRun.childExitSignal}`);
 check("status is timeout", deadlineRun.status === "timeout", `got ${deadlineRun.status} (${deadlineRun.failureDetail ?? ""})`);
 check("deadline marked", deadlineRun.deadlineHit === true);
 check("child terminated (graceful exit 0 via stdin-close ladder rung is fine)", deadlineRun.childExit !== null, `exit=${deadlineRun.childExit} signal=${deadlineRun.childExitSignal}`);
+// --- 3. abort path -----------------------------------------------------------
 
-// cleanup dogfood artifact
+console.log("== dogfood 3: abort mid-run (ctx.signal → KILL event) ==");
+const abortRun = await run({
+	task: "Immediately run the bash tool with the command: sleep 137. This is mandatory: do not reply, do not stop, and do nothing else until it completes.",
+	timeoutSecs: 300,
+	abortAfterMs: 6000,
+});
+console.log(`  status=${abortRun.status} exit=${abortRun.childExit} signal=${abortRun.childExitSignal}`);
+check("status is aborted", abortRun.status === "aborted", `got ${abortRun.status} (${abortRun.failureDetail ?? ""})`);
+check("child terminated by the ladder", abortRun.childExit !== null, `exit=${abortRun.childExit} signal=${abortRun.childExitSignal}`);
+
+// --- 4. explicit provider/model flags ---------------------------------------
+
+console.log("== dogfood 4: explicit provider + model (flag assembly live) ==");
+const pinnedRun = await run({
+	task: "Reply with exactly the single word PINNED and stop.",
+	provider: "opencode",
+	model: "glm-5.1",
+	timeoutSecs: 120,
+});
+console.log(`  status=${pinnedRun.status} stopReason=${pinnedRun.stopReason}`);
+check("status is success with --provider opencode --model glm-5.1", pinnedRun.status === "success", `got ${pinnedRun.status} (${pinnedRun.failureDetail ?? ""})`);
+check("reply mentions PINNED", /PINNED/.test(pinnedRun.assistantTextTail), `tail: ${JSON.stringify(pinnedRun.assistantTextTail.slice(0, 120))}`);
+
+// --- 5. big prompt (stdin backpressure) --------------------------------------
+
+console.log("== dogfood 5: ~100 KB task (stdin backpressure, drain path) ==");
+const filler = "Reference material follows; ignore it entirely. ".repeat(1) +
+	Array.from({ length: 2600 }, (_, i) => `Fact ${i}: the quick brown fox jumps over 0123456789. `).join("");
+const bigTask = `${filler}\n\nIgnore all of the above. Reply with exactly the single word BIGPROMPT and stop.`;
+console.log(`  task size: ${(bigTask.length / 1024).toFixed(1)} KB`);
+const bigRun = await run({ task: bigTask, timeoutSecs: 180 });
+console.log(`  status=${bigRun.status} stopReason=${bigRun.stopReason}`);
+check("status is success on a ~100 KB task", bigRun.status === "success", `got ${bigRun.status} (${bigRun.failureDetail ?? ""})`);
+check("reply mentions BIGPROMPT", /BIGPROMPT/.test(bigRun.assistantTextTail), `tail: ${JSON.stringify(bigRun.assistantTextTail.slice(0, 120))}`);
+
+// --- 6. orphan watchdog (parent SIGKILL) -------------------------------------
+
+console.log("== dogfood 6: orphan watchdog (SIGKILL the parent mid-run) ==");
+const victim = spawn(process.execPath, [import.meta.filename, "--orphan-victim"], {
+	stdio: ["ignore", "pipe", "inherit"],
+});
+let victimInfo = "";
+const victimDeadline = Date.now() + 40_000;
+await new Promise<void>((resolve, reject) => {
+	victim.stdout!.on("data", (c: Buffer) => {
+		victimInfo += c.toString();
+		if (victimInfo.includes("\n")) resolve();
+	});
+	victim.once("error", reject);
+	setTimeout(() => reject(new Error(`victim silent: ${victimInfo.slice(0, 200)}`)), 20_000).unref?.();
+	if (Date.now() > victimDeadline) reject(new Error("unreachable"));
+});
+let childPid = 0;
 try {
-	fs.unlinkSync(artifactPath);
+	const v = JSON.parse(victimInfo.split("\n")[0]) as { sessionId: string; childPid: number | null };
+	childPid = v.childPid ?? 0;
 } catch {
-	/* already gone */
+	check("victim reported its child pid", false, victimInfo.slice(0, 200));
+}
+function alive(pid: number): boolean {
+	try { process.kill(pid, 0); return true; } catch { return false; }
+}
+if (childPid) {
+	// pi rewrites its argv (process.title) — track the child by PID
+	check("victim's delegated child alive before parent kill", alive(childPid), `child pid ${childPid} not running`);
+
+	victim.kill("SIGKILL"); // no atexit, no signal to the child group
+	await new Promise((r) => setTimeout(r, 300));
+
+	// the watchdog must TERM the child process group; the sleep task would
+	// otherwise outlive everything (its grandchild bash runs in the child's
+	// process group)
+	let orphanFree = false;
+	let last = "";
+	for (let i = 0; i < 30; i++) {
+		await new Promise((r) => setTimeout(r, 1000));
+		const childAlive = alive(childPid);
+		const sleepers = (await sh("pgrep -f 'sleep 137'") ?? "").trim();
+		const watchdog = (await sh(`pgrep -f 'watchdog.mjs.*${victim.pid}'`) ?? "").trim();
+		last = `childAlive=${childAlive} sleep=${sleepers} watchdog=${watchdog}`;
+		if (!childAlive && !sleepers && !watchdog) {
+			orphanFree = true;
+			break;
+		}
+	}
+	check("no orphans after parent SIGKILL (child, sleep task, watchdog all gone)", orphanFree, `still alive: ${last}`);
+	try {
+		victim.kill("SIGKILL"); // no-op if already dead
+	} catch { /* already dead */ }
 }
 
+// --- cleanup -----------------------------------------------------------------
+
+try {
+	fs.unlinkSync(artifactPath);
+} catch { /* already gone */ }
 console.log(`\n${passed} checks passed${failed > 0 ? `, ${failed} failed` : ""}`);
 if (failed > 0) process.exit(1);

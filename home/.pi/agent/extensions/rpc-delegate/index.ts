@@ -83,7 +83,6 @@ const STEER_TIMEOUT_MS = 30_000;
 const CLEAR_QUEUE_TIMEOUT_MS = 10_000;
 const ABORT_TIMEOUT_MS = 15_000;
 const STATS_TIMEOUT_MS = 5_000;
-const EXPORT_TIMEOUT_MS = 10_000;
 const STDIN_CLOSE_EXIT_MS = 10_000; // orderly shutdown after stdin close
 const TERM_EXIT_MS = 5_000;
 const KILL_EXIT_MS = 5_000;
@@ -116,7 +115,6 @@ interface RpcDelegateDetails {
 	agentEndWillRetry: number;
 	uiRequests: number;
 	usage: SessionStatsData | null;
-	sessionExportPath: string | null;
 	deadlineHit: boolean;
 	failureDetail: string | null;
 	protoFatal: string | null;
@@ -259,25 +257,17 @@ async function runCancelService(input: CancelInput): Promise<CancelOutput> {
 
 async function runStopService(input: StopInput): Promise<StopOutput> {
 	const t = input.transport;
-	const out = { exitCode: null as number | null, usage: null as SessionStatsData | null, exportPath: null as string | null };
+	const out = { exitCode: null as number | null, usage: null as SessionStatsData | null };
 	if (!t) return out;
 	if (t.alive()) {
 		// Best-effort session stats (cost/usage evidence) before shutdown.
+		// Note: export_html cannot export a --no-session child (in-memory
+		// session) — no session export on any outcome, by protocol limitation.
 		try {
 			const r = await t.sendCommand({ type: "get_session_stats" }, STATS_TIMEOUT_MS);
 			if (r.success && isRec(r.data)) out.usage = r.data as SessionStatsData;
 		} catch {
 			/* best-effort */
-		}
-		if (input.exportSession) {
-			// Debug aid on failure-ish outcomes: session HTML export.
-			const exportPath = path.join(os.tmpdir(), `${input.sessionId}.html`);
-			try {
-				const r = await t.sendCommand({ type: "export_html", outputPath: exportPath }, EXPORT_TIMEOUT_MS);
-				if (r.success) out.exportPath = exportPath;
-			} catch {
-				/* best-effort */
-			}
 		}
 		// Orderly shutdown: close stdin → wait → TERM pg → KILL pg.
 		t.closeStdin();
@@ -353,7 +343,6 @@ function detailsFromSnapshot(a: Actor<typeof wiredMachine>, assistantTextTail: s
 		agentEndWillRetry: c.agentEndWillRetry,
 		uiRequests: c.uiRequests,
 		usage: c.usage,
-		sessionExportPath: c.sessionExportPath,
 		deadlineHit: c.deadlineHit,
 		failureDetail: c.failureDetail,
 		protoFatal: c.protoFatal,
@@ -402,12 +391,8 @@ function buildResultText(d: RpcDelegateDetails): string {
 
 	if (d.usage) {
 		const cost = typeof d.usage.cost === "number" ? ` · $${d.usage.cost.toFixed(4)}` : "";
-		const tokens = d.usage.tokens?.totalTokens;
+		const tokens = d.usage.tokens?.totalTokens ?? d.usage.tokens?.total;
 		text += `\n\n### Usage\n\n${tokens ? `${tokens.toLocaleString()} tokens` : "tokens unavailable"}${cost}`;
-	}
-
-	if (d.sessionExportPath) {
-		text += `\n\n### Session export (debug)\n\n\`${d.sessionExportPath}\``;
 	}
 
 	if (d.stderr) {
@@ -528,7 +513,6 @@ export default function (pi: ExtensionAPI) {
 						agentEndWillRetry: 0,
 						uiRequests: 0,
 						usage: null,
-						sessionExportPath: null,
 						deadlineHit: false,
 						failureDetail: violation,
 						protoFatal: null,
@@ -757,18 +741,6 @@ export default function (pi: ExtensionAPI) {
 						),
 					);
 				}
-				if (d.sessionExportPath) {
-					container.addChild(new Spacer(1));
-					container.addChild(
-						new Text(
-							theme.fg("warning", "Session export: ") +
-								theme.fg("dim", d.sessionExportPath),
-							0,
-							0,
-						),
-					);
-				}
-
 				if (d.stderr) {
 					container.addChild(new Spacer(1));
 					container.addChild(new Text(theme.fg("muted", "─── Stderr tail ───"), 0, 0));

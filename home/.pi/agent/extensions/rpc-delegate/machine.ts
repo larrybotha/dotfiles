@@ -99,6 +99,9 @@ export interface TransportHandle {
 	 *  Rejects on timeout (CommandTimeoutError), protocol fatal, or child death. */
 	sendCommand(cmd: Record<string, unknown>, timeoutMs: number): Promise<CommandResponse>;
 	alive(): boolean;
+	/** Child pi pid (pi rewrites its argv via process.title — the --name flag
+	 *  is invisible to pgrep, so PID is the reliable process identity). */
+	childPid(): number | null;
 	closeStdin(): void;
 	/** SIGTERM the child process group + watchdog (staged ladders call this). */
 	killTerm(): void;
@@ -161,7 +164,6 @@ export interface RpcContext {
 
 	// stopService output (best-effort)
 	usage: SessionStatsData | null;
-	sessionExportPath: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -260,13 +262,10 @@ export interface CancelOutput {
 export interface StopInput {
 	transport: TransportHandle | null;
 	sessionId: string;
-	/** Export the child session to HTML for debugging (failure paths). */
-	exportSession: boolean;
 }
 export interface StopOutput {
 	exitCode: number | null;
 	usage: SessionStatsData | null;
-	exportPath: string | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -309,7 +308,6 @@ export function initialContext(): RpcContext {
 		collected: false,
 		summary: "",
 		usage: null,
-		sessionExportPath: null,
 	};
 }
 
@@ -344,13 +342,6 @@ export function evaluateSuccess(c: RpcContext): { ok: boolean; reason: string | 
 	return { ok: true, reason: null };
 }
 
-/** Export the child session for debugging on failure-ish outcomes (called at
- *  stopping-time, after collect, so the artifact policy is evaluable). */
-export function wantSessionExport(c: RpcContext): boolean {
-	if (c.outcome === "error" || c.outcome === "timeout") return true;
-	if (c.outcome === "settled") return !evaluateSuccess(c).ok;
-	return false;
-}
 
 export function paramsViolation(
 	task: string,
@@ -642,7 +633,6 @@ export const rpcMachine = setup({
 			return {
 				childExit: out.exitCode ?? context.childExit,
 				usage: out.usage ?? null,
-				sessionExportPath: out.exportPath ?? null,
 			};
 		}),
 	},
@@ -783,7 +773,6 @@ export const rpcMachine = setup({
 				input: ({ context }) => ({
 					transport: context.transport,
 					sessionId: context.sessionId,
-					exportSession: wantSessionExport(context),
 				}),
 				onDone: [
 					{ guard: "routeTimeout", target: "timeout", actions: "recordStop" },

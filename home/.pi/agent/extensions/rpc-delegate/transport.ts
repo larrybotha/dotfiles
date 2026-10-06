@@ -315,6 +315,10 @@ export class RpcTransport implements TransportHandle {
 		return this.deadCode;
 	}
 
+	childPid(): number | null {
+		return this.child?.pid ?? null;
+	}
+
 	getEvidence(): TransportEvidence {
 		return {
 			stderrTail: Buffer.concat(this.stderrChunks).toString("utf8"),
