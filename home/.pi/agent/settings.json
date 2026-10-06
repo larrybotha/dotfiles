@@ -1,17 +1,8 @@
 {
-  "lastChangelogVersion": "0.87.1",
+  "lastChangelogVersion": "1.0.4",
   "defaultThinkingLevel": "off",
   "defaultProvider": "opencode",
   "defaultModel": "glm-5.1",
   "hideThinkingBlock": false,
-  "theme": "dark",
-  "defaultTools": [
-    "read",
-    "bash",
-    "edit",
-    "write",
-    "grep",
-    "find",
-    "ls"
-  ]
+  "theme": "dark"
 }
