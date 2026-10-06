@@ -23,7 +23,7 @@
  * legal): what the machine enforces is the pipeline, not the ceremony. Editorial content rules live in the
  * slide_deck_build tool description (prompt-side); structural validation
  * (nav↔slide 1:1, slides inside main, no external deps) is machine-side via
- * the validate service. Same split as the skill had — now enforced.
+ * the validate service. Same split, machine-enforced.
  *
  * Executors ship with this extension (executors/) — a swappable
  * implementation detail like web-search's backend: point
@@ -470,7 +470,7 @@ function openExternally(
 	});
 }
 
-/** Default output path: {decks}/{yyyy-mm-dd}-{slug}.html — new decks land beside the retained ones. */
+/** Default output path: {decks}/{yyyy-mm-dd}-{slug}.html */
 function defaultOutPath(title: string): string {
 	const slug =
 		title
@@ -832,7 +832,7 @@ export default function (pi: ExtensionAPI) {
 			"navHtml and slidesHtml are hand-written HTML blocks following the template's classes. " +
 			`${CONTENT_RULES} ` +
 			"Out-of-date decks fail validation with readable errors — resubmit the fixed content with the same tool (retry loop, capped). " +
-			"outPath defaults to the extension's decks/ dir (retained decks live there).",
+			"outPath defaults to the extension's decks/ dir.",
 		parameters: Type.Object({
 			title: Type.String({ description: "Deck title (sidebar header + <title>)" }),
 			subtitle: Type.String({

@@ -9,9 +9,8 @@ itself lives in an XState machine with invoked services.
 
 ## Why
 
-The skill was a linear agent-driven pipeline with a single validate gate
-and a manual template-copy step — every step a model round-trip, nothing
-enforced. This extension puts the pipeline in the machine:
+The pipeline lives in the machine, driven as invoked services after a
+single `BEGIN_BUILD` — not as model-driven steps:
 
 - **Deterministic (machine-owned):** phase order, content prechecks
   (non-empty title/nav/slides, size caps, `.html` output), fix-loop
@@ -54,8 +53,8 @@ dropped).
 | `slide_deck_status` | Snapshot + allowed next steps                                             |
 | `slide_deck_reset`  | Clear state, start over                                                   |
 
-Output defaults to `decks/{yyyy-mm-dd}-{slug}.html` (the 30 decks retained
-from the skill live there; scratch intermediates in `decks/scratch/`).
+Output defaults to `decks/{yyyy-mm-dd}-{slug}.html` (scratch intermediates
+in `decks/scratch/`).
 
 `/slidedeck` (or `/slidedeck status`) shows state; `/slidedeck reset`
 clears; `/slidedeck footer` toggles the live footer line (off by default,
@@ -99,18 +98,20 @@ checked):
 
 4. duplicate slide ids / duplicate nav data-slide; every nav-item carries
    `data-slide`
-5. every nav-item's `onclick="goToSlide('<slug>')"` argument equals its
-   `data-slide` (dead-click prevention — the retained corpus shipped 17
-   decks whose nav clicks silently did nothing)
-6. per slide: `description` div (present, non-empty, before other content
+5. nav order vs slide order divergence — non-fatal `!` note listing the
+   moved slides (nav categories may group slides thematically while
+   content order serves narrative; the drift is surfaced, never invisible)
+6. every nav-item's `onclick="goToSlide('<slug>')"` argument equals its
+   `data-slide` (dead-click prevention — else the click targets nothing)
+7. per slide: `description` div (present, non-empty, before other content
    blocks), `sources` div with ≥ 1 link, `ext-tag` span. Title-page slides
    (`class="slide slide-title-page"`: hero-icon + subtitle + feature-grid)
    are exempt from description/tag — the subtitle is the what+why
-7. tag taxonomy: every `tag-*` class must be one the template CSS defines
+8. tag taxonomy: every `tag-*` class must be one the template CSS defines
    (curated set — safety, tool, command, ui, render, prompt, git, session,
    game, system, provider); adding a colour to the template CSS extends the
    set automatically
-8. unknown classes: non-fatal `!` note — classes without CSS render
+9. unknown classes: non-fatal `!` note — classes without CSS render
    unstyled; the drift is surfaced, never invisible (svg subtrees are
    skipped — embedded mermaid output is foreign)
 
@@ -122,22 +123,11 @@ rebuild-tweaks flow stays free).
 Prebuild-rejected content burns no validation attempt (guards reject the
 event before the pipeline runs) — only failed Docker validations count.
 
-### Corpus migration (one-time)
-
-The retained decks shipped under a validator that checked almost nothing:
-17 of 31 had dead nav clicks (`data-slide="slide-<full-id>"` →
-`getElementById('slide-slide-…')` → null). Migration stripped the stray
-`slide-` prefix from `data-slide` values and `goToSlide` args in those 17
-(backup: `~/.cache/slide-deck/decks-backup-*`). After hardening: 22/31
-pass; the 9 remaining failures are genuine content drift (unstyled badge
-tag categories, content slides missing description/ext-tag, slides without
-source links) — surfaced, not silently shipped.
-
 ## Content rules (editorial — prompt-side)
 
 Structural validation is machine-side (validate.py: nav↔slide 1:1, slides
 inside `main`, no external deps). The editorial rules stay prompt-side, in
-the `slide_deck_build` tool description — same split as the skill had:
+the `slide_deck_build` tool description:
 
 - Read `templates/sidebar-deck.html` first — every CSS class, layout, and
   JS hook is there; copy its nesting patterns exactly, invent nothing
@@ -169,10 +159,10 @@ the `slide_deck_build` tool description — same split as the skill had:
   `SLIDE_DECK_TEMPLATE`)
 - `validate.sh OUTPUT.html` — exit `0` valid, `1` invalid deck (readable
   `✗` errors on stdout), `2` infra. Always rebuilds the image (cached
-  layers ≈ 1s; a changed validate.py invalidates only its COPY layer —
-  the stale-image bug found during migration is closed)
+  layers ≈ 1s; a changed validate.py invalidates only its COPY layer — a
+  stale cached validator is never run)
 - `validate.py` + `Dockerfile` — html5lib parser (mirrors browser DOM
-  construction); checks 1–8 above; data-slide values compare against slide
+  construction); checks 1–9 above; data-slide values compare against slide
   ids through the `slide-` prefix (the template's own `goToSlide`
   convention). Needs the template mounted (`SLIDE_DECK_TEMPLATE_PATH`) for
   the class/tag whitelist — validate.sh does the mount

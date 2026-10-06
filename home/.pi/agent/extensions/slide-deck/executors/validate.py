@@ -7,14 +7,17 @@ prompt-side:
 2. Nav data-slide ↔ slide ids through the slide- prefix (bare-slug convention)
 3. Zero @import / external <link>/<script> URLs
 4. Duplicate slide ids / duplicate nav data-slide values
-5. Every nav-item: data-slide present; onclick goToSlide('…') present; its
+5. Nav order vs slide order divergence — non-fatal note (nav categories may
+group slides thematically while content order serves narrative; the drift is
+surfaced so it is never invisible, never assumed accidental)
+6. Every nav-item: data-slide present; onclick goToSlide('…') present; its
    argument equals data-slide (else the click targets nothing — silent breakage)
-6. Per slide: description div (present, non-empty, before other content
+7. Per slide: description div (present, non-empty, before other content
    blocks); sources div with >= 1 link; ext-tag span
-7. Tag taxonomy: every tag-* class is one the template's CSS defines (a
+8. Tag taxonomy: every tag-* class is one the template's CSS defines (a
    curated tag has a colour; an invented one renders unstyled); every
    span.ext-tag carries exactly one tag-*
-8. Unknown classes: non-fatal note — they render unstyled (the template CSS
+9. Unknown classes: non-fatal note — they render unstyled (the template CSS
    is the styling vocabulary), surfaced so the drift is never invisible
 
 html5lib guarantees valid nesting — no separate balanced-div check needed.
@@ -120,8 +123,46 @@ def validate(path: str) -> bool:
     if dup_targets:
         err(f"Duplicate nav data-slide values: {dup_targets}")
 
-    # 5. Nav items: data-slide + matching onclick (dead-click prevention —
-    # the retained corpus shipped 17 decks whose clicks silently did nothing)
+    # 5. Order drift — non-fatal: nav categories may group slides thematically
+    # (e.g. a reproduce slide under a Method category) while content order serves
+    # narrative; surfaced like unknown classes so drift is never invisible.
+    # Moved items = each sequence minus their LCS — positional noise (the
+    # shifted neighbours of a single moved slide) never reported.
+    nav_seq = [n["data-slide"] for n in nav_elements]
+    slide_seq = [sid.removeprefix("slide-") for sid in slide_ids]
+    if nav_seq != slide_seq:
+        # LCS (decks are small — O(n^2) is plenty)
+        lcs = [[0] * (len(slide_seq) + 1) for _ in range(len(nav_seq) + 1)]
+        for i in range(len(nav_seq) - 1, -1, -1):
+            for j in range(len(slide_seq) - 1, -1, -1):
+                lcs[i][j] = (
+                    lcs[i + 1][j + 1] + 1
+                    if nav_seq[i] == slide_seq[j]
+                    else max(lcs[i + 1][j], lcs[i][j + 1])
+                )
+        keep_nav = set()
+        i = j = 0
+        while i < len(nav_seq) and j < len(slide_seq):
+            if nav_seq[i] == slide_seq[j]:
+                keep_nav.add(nav_seq[i])
+                i += 1
+                j += 1
+            elif lcs[i + 1][j] >= lcs[i][j + 1]:
+                i += 1
+            else:
+                j += 1
+        moved = [s for s in slide_seq if s not in keep_nav]
+        detail = "; ".join(
+            f"{s}: nav #{nav_seq.index(s) + 1} vs slide #{slide_seq.index(s) + 1}"
+            for s in moved
+        )
+        note(
+            f"nav order differs from slide order — moved: {detail} "
+            "(nav categories may group slides thematically; intentional grouping or drift?)"
+        )
+
+    # 6. Nav items: data-slide + matching onclick (dead-click prevention —
+    # else the click targets nothing)
     for nav in soup.find_all(class_="nav-item"):
         label = (nav.get("data-slide") or nav.get_text(strip=True) or "<nav-item>")[:60]
         if not nav.get("data-slide"):
@@ -134,7 +175,7 @@ def validate(path: str) -> bool:
         elif m.group(1) != nav["data-slide"]:
             err(f"Nav item '{label}': onclick goToSlide arg '{m.group(1)}' != data-slide '{nav['data-slide']}' (the click targets a different or missing slide)")
 
-    # 6. Per-slide editorial-but-mechanical rules. Title-page slides (the
+    # 7. Per-slide editorial-but-mechanical rules. Title-page slides (the
     # slide-title-page archetype: hero-icon + subtitle + feature-grid) are
     # exempt from description-first and the category tag — the subtitle is
     # the what+why and an overview slide carries no category; a description
@@ -161,7 +202,7 @@ def validate(path: str) -> bool:
         if not is_title_page and slide.find("span", class_="ext-tag") is None:
             err(f"Slide {sid}: no <span class='ext-tag tag-<category>'> tag")
 
-    # 7. Tag taxonomy (curated set = what the template CSS colours).
+    # 8. Tag taxonomy (curated set = what the template CSS colours).
     # template_tags holds bare names (render, tool, …) — compare stripped.
     bad_tags = set()
     for el in soup.find_all(class_=True):
@@ -179,7 +220,7 @@ def validate(path: str) -> bool:
         if len(tag_classes) != 1:
             err(f"ext-tag span must carry exactly one tag-* class (got {tag_classes or 'none'})")
 
-    # 8. Unknown classes — surfaced, not fatal: the vocabulary is open, but
+    # 9. Unknown classes — surfaced, not fatal: the vocabulary is open, but
     # classes without CSS are invisible design drift
     unknown = set()
     for el in soup.find_all(class_=True):

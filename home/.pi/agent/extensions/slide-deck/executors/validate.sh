@@ -35,8 +35,7 @@ if [ ! -f "$TEMPLATE" ]; then
 fi
 
 # Always build — cached layers make this ~1s, and a changed validate.py
-# invalidates only its COPY layer. (Cache-if-absent never picks up validator
-# changes: the stale-image bug found during the extension migration.)
+# invalidates only its COPY layer (a stale cached validator is never run).
 if ! docker build -q -t "$IMAGE_NAME" -f "$EXEC_DIR/Dockerfile" "$EXEC_DIR" >&2; then
   echo "Error: docker build failed for $IMAGE_NAME" >&2
   exit 2
