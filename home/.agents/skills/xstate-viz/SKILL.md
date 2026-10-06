@@ -19,8 +19,11 @@ Resolution: if the machine's own directory has `xstate` + `@statelyai/inspect` i
 ## Usage
 
 ```bash
-# open in visualiser (starts server, opens browser; default port 8080)
+# open RUNNING machine in visualiser (starts server, opens browser; default port 8080)
 scripts/viz.sh path/to/machine.ts
+
+# static simulation — no real actor, Sketch's own sim engine (see below)
+scripts/sketch-sim.sh path/to/machine.ts --events NEXT,RESET
 
 # custom port / headless
 scripts/viz.sh path/to/machine.ts 8081
@@ -35,7 +38,8 @@ Behavior:
 
 - Re-running with the **same machine** while running: no restart — just reopens the browser tab at `http://localhost:<port>`.
 - Re-running with a **different machine**: stops the previous instance, starts the new one (one inspector at a time; reload the browser tab).
-- Sandbox (node deps: `xstate`, `@statelyai/inspect`, `tsx`) bootstraps once at `~/.cache/xstate-viz`.
+- The bridge page iframes a **local Stately Sketch** `/inspect` when a host can run (auto-started; events stay on localhost), else the remote `https://stately.ai/inspect` UI. Sketch host: `node ~/.pi/agent/extensions/_viz/sketch.ts status|stop` (override `XSTATE_SKETCH_KIT`; disable with `XSTATE_SKETCH_REMOTE=1`).
+- Sandbox (node deps: `xstate`, `@statelyai/inspect`, `tsx`, `puppeteer-core`) bootstraps once at `~/.cache/xstate-viz`.
 - Log: `~/.cache/xstate-viz/inspector.log`.
 
 ## Authoring machines for clean diagrams (optional but recommended)
@@ -56,6 +60,24 @@ printf '{"type":"TOGGLE"}\nRESET\n' | ./node_modules/.bin/tsx runner.mjs machine
 
 Exit with Ctrl-C (server keeps the process alive).
 
-## Static diagram alternative
+## Static simulation (no real actor)
 
-Clickable diagram without a running server: paste machine code (XState, JSON, or Mermaid) into [sketch.stately.ai](https://sketch.stately.ai) — open-source, click transitions to simulate. Not automatable from the shell.
+```bash
+# load machine into local Sketch, start sim, screenshot (agent-readable PNG)
+scripts/sketch-sim.sh path/to/machine.ts
+
+# also fire events (clicked on the active state's matching transitions)
+scripts/sketch-sim.sh path/to/machine.ts --events NEXT,NEXT,RESET
+
+# visible Chrome left open — click transitions/guards interactively
+scripts/sketch-sim.sh path/to/machine.ts --keep
+
+# custom screenshot path
+scripts/sketch-sim.sh path/to/machine.ts --shot out.png
+```
+
+No real actor runs: Sketch parses the code in-browser and its own sim engine fires transitions (guards auto-true for the clicked guard, `after` delays scheduled for real). Machine must be self-contained — only `xstate` imports resolve; any other import fails to parse (report as a constraint, suggest inlining or a JSON config).
+
+The local Sketch host is shared with `viz.sh` (auto-started; stop via the `sketch.ts` CLI above).
+
+Remote fallback: paste code (XState, JSON, YAML, or Mermaid) into [sketch.stately.ai](https://sketch.stately.ai) — open-source, click transitions to simulate.

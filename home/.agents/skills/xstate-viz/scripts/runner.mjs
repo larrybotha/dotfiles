@@ -1,11 +1,14 @@
 // Runs an XState machine under the Stately inspector.
-// Usage: tsx runner.mjs <abs-machine-path> [port] [open(1|0)]
+// Usage: tsx runner.mjs <abs-machine-path> [port] [open(1|0)] [inspectorUrl]
+// inspectorUrl: iframe target of the relay bridge page (default: remote
+// https://stately.ai/inspect). A local Sketch /inspect URL keeps machine
+// events on localhost (same postMessage protocol).
 import { createInspectorServer } from '@statelyai/inspect/server';
 import { createWebSocketInspector } from '@statelyai/inspect';
 import { createActor, createMachine } from 'xstate';
 import { pathToFileURL } from 'node:url';
 
-const [machinePath, portArg, openArg] = process.argv.slice(2);
+const [machinePath, portArg, openArg, inspectorUrl] = process.argv.slice(2);
 const port = Number(portArg) || 8080;
 const autoOpen = openArg !== '0';
 
@@ -41,7 +44,7 @@ if (machines.length + configs.length > 1) {
   console.warn(`[xstate-viz] multiple machine exports found, using the first; all exports: ${named.map(([k]) => k).join(', ')}`);
 }
 
-const server = createInspectorServer({ port, autoOpen });
+const server = createInspectorServer({ port, url: inspectorUrl, autoOpen });
 const inspector = createWebSocketInspector({ url: `ws://localhost:${port}` });
 const actor = createActor(machine, { inspect: inspector.inspect });
 actor.start();

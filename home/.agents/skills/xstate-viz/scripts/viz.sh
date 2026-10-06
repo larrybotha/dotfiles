@@ -16,7 +16,15 @@ set -euo pipefail
 SANDBOX="${XSTATE_VIZ_SANDBOX:-$HOME/.cache/xstate-viz}"
 DEFAULT_PORT=8080
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+SKETCH_KIT="${XSTATE_SKETCH_KIT:-$HOME/.pi/agent/extensions/_viz/sketch.ts}"
 META="$SANDBOX/meta"
+
+# Local Sketch /inspect UI when a host is (or can be) running — machine events
+# stay on localhost; falls back to the remote stately.ai/inspect UI otherwise.
+sketch_url() {
+  [[ -f "$SKETCH_KIT" ]] || return 1
+  node "$SKETCH_KIT" ensure 2>/dev/null || return 1
+}
 
 ensure_sandbox() {
   if [[ ! -d "$SANDBOX/node_modules/tsx" ]]; then
@@ -68,8 +76,15 @@ cmd_start() {
 
   printf '%s\n%s\n' "$machine_path" "$runner" > "$META"
 
+  local inspector_url=""
+  if inspector_url="$(sketch_url)"; then
+    echo "==> sketch host: ${inspector_url%/inspect} (events stay local)"
+  else
+    echo "==> no local Sketch host — falling back to remote stately.ai/inspect UI"
+  fi
+
   echo "==> starting inspector on port $port (machine: $machine_path)"
-  (cd "$(dirname "$runner")" && OPEN="$open" nohup "$SANDBOX/node_modules/.bin/tsx" "$runner" "$run_machine" "$port" "$open" \
+  (cd "$(dirname "$runner")" && OPEN="$open" nohup "$SANDBOX/node_modules/.bin/tsx" "$runner" "$run_machine" "$port" "$open" "$inspector_url" \
     > "$SANDBOX/inspector.log" 2>&1 & echo $! > "$SANDBOX/pid")
 
   for _ in $(seq 1 30); do
