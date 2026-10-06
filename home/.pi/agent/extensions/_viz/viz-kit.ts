@@ -24,31 +24,33 @@
  * Privacy: the relay serves a bridge page that iframes the remote
  * https://stately.ai/inspect UI and postMessages every machine event into it;
  * it binds all interfaces (the package exposes no host/bind option) with no
- * auth. Opt-in is the control — nothing runs unless asked.
+ * auth. Opt-in is the control — nothing runs unless asked. Pass
+ * enable({ inspectorUrl }) to iframe a local Sketch /inspect instead
+ * (./sketch.ts) — events never leave localhost.
  */
 import * as net from "node:net";
 import { createInspector } from "@statelyai/inspect";
 import { createInspectorServer } from "@statelyai/inspect/server";
 
 export interface VizResult {
-	ok: boolean;
-	message: string;
-	/** Actual listening port (set when ok). */
-	port?: number;
+  ok: boolean;
+  message: string;
+  /** Actual listening port (set when ok). */
+  port?: number;
 }
 
 export interface Viz {
-	/** Actual listening port once enabled; undefined before. */
-	readonly port: number | undefined;
-	enabled(): boolean;
-	/** Start inspector server + client. Idempotent; never throws. */
-	enable(opts?: { open?: boolean }): Promise<VizResult>;
-	/** Stop and report. Idempotent. */
-	disable(): VizResult;
-	/** Silent idempotent teardown (session_shutdown). */
-	stop(): void;
-	/** Spread into createActor options: {} when off, { inspect } when on. */
-	option(): InspectOption;
+  /** Actual listening port once enabled; undefined before. */
+  readonly port: number | undefined;
+  enabled(): boolean;
+  /** Start inspector server + client. Idempotent; never throws. */
+  enable(opts?: { open?: boolean; inspectorUrl?: string }): Promise<VizResult>;
+  /** Stop and report. Idempotent. */
+  disable(): VizResult;
+  /** Silent idempotent teardown (session_shutdown). */
+  stop(): void;
+  /** Spread into createActor options: {} when off, { inspect } when on. */
+  option(): InspectOption;
 }
 
 /**
@@ -57,7 +59,7 @@ export interface Viz {
  * (next param contravariant: `unknown` accepts any InspectionEvent).
  */
 export type InspectOption = {
-	inspect?: { next?: (event: unknown) => void } | ((event: unknown) => void);
+  inspect?: { next?: (event: unknown) => void } | ((event: unknown) => void);
 };
 
 /**
@@ -68,62 +70,62 @@ export type InspectOption = {
  * after stop(); events sent while closed are queued (bounded).
  */
 class CleanWebSocketAdapter {
-	private ws: WebSocket | null = null;
-	private stopped = false;
-	private queue: string[] = [];
-	private status: "open" | "closed" = "closed";
-	private readonly url: string;
+  private ws: WebSocket | null = null;
+  private stopped = false;
+  private queue: string[] = [];
+  private status: "open" | "closed" = "closed";
+  private readonly url: string;
 
-	constructor(url: string) {
-		this.url = url;
-	}
+  constructor(url: string) {
+    this.url = url;
+  }
 
-	start(): void {
-		this.stopped = false;
-		this.connect();
-	}
+  start(): void {
+    this.stopped = false;
+    this.connect();
+  }
 
-	private connect(): void {
-		if (this.stopped) return;
-		const ws = new WebSocket(this.url);
-		this.ws = ws;
-		ws.onopen = () => {
-			this.status = "open";
-			for (const msg of this.queue.splice(0)) ws.send(msg);
-		};
-		ws.onclose = () => {
-			this.status = "closed";
-		};
-		ws.onerror = () => {
-			this.status = "closed";
-		};
-		ws.onmessage = () => {};
-	}
+  private connect(): void {
+    if (this.stopped) return;
+    const ws = new WebSocket(this.url);
+    this.ws = ws;
+    ws.onopen = () => {
+      this.status = "open";
+      for (const msg of this.queue.splice(0)) ws.send(msg);
+    };
+    ws.onclose = () => {
+      this.status = "closed";
+    };
+    ws.onerror = () => {
+      this.status = "closed";
+    };
+    ws.onmessage = () => {};
+  }
 
-	stop(): void {
-		this.stopped = true;
-		try {
-			this.ws?.close(1000);
-		} catch {
-			/* already closed */
-		}
-		this.ws = null;
-		this.status = "closed";
-	}
+  stop(): void {
+    this.stopped = true;
+    try {
+      this.ws?.close(1000);
+    } catch {
+      /* already closed */
+    }
+    this.ws = null;
+    this.status = "closed";
+  }
 
-	send(event: unknown): void {
-		let msg: string;
-		try {
-			msg = JSON.stringify(event);
-		} catch {
-			return;
-		}
-		if (this.ws && this.status === "open") this.ws.send(msg);
-		else {
-			this.queue.push(msg);
-			if (this.queue.length > 200) this.queue.shift();
-		}
-	}
+  send(event: unknown): void {
+    let msg: string;
+    try {
+      msg = JSON.stringify(event);
+    } catch {
+      return;
+    }
+    if (this.ws && this.status === "open") this.ws.send(msg);
+    else {
+      this.queue.push(msg);
+      if (this.queue.length > 200) this.queue.shift();
+    }
+  }
 }
 
 /**
@@ -137,92 +139,118 @@ class CleanWebSocketAdapter {
  * not stream machine events to whatever already owns the port either.
  */
 export function portFree(port: number): Promise<boolean> {
-	return new Promise((resolve) => {
-		const probe = net.createServer();
-		probe.once("error", () => resolve(false));
-		probe.listen(port, "::", () => probe.close(() => resolve(true)));
-	});
+  return new Promise((resolve) => {
+    const probe = net.createServer();
+    probe.once("error", () => resolve(false));
+    probe.listen(port, "::", () => probe.close(() => resolve(true)));
+  });
 }
 
 export function makeViz(opts: {
-	/** Extension name, used in messages. */
-	name: string;
-	preferredPort: number;
-	/** Ports tried on the allocation walk (default 8). */
-	portTries?: number;
+  /** Extension name, used in messages. */
+  name: string;
+  preferredPort: number;
+  /** Ports tried on the allocation walk (default 8). */
+  portTries?: number;
 }): Viz {
-	const { name, preferredPort } = opts;
-	const portTries = opts.portTries ?? 8;
+  const { name, preferredPort } = opts;
+  const portTries = opts.portTries ?? 8;
 
-	let on = false;
-	let port: number | undefined;
-	let server: { stop(): void } | null = null;
-	let inspector: ReturnType<typeof createInspector> | null = null;
+  let on = false;
+  let port: number | undefined;
+  let server: { stop(): void } | null = null;
+  let inspector: ReturnType<typeof createInspector> | null = null;
 
-	function teardown(): void {
-		// Inspector.stop() calls adapter.stop?.(); call adapter directly too —
-		// idempotent (stopped flag), and a null-ed reference alone would leave
-		// a CONNECTING socket dangling.
-		inspector?.stop();
-		inspector?.adapter.stop?.();
-		inspector = null;
-		server?.stop();
-		server = null;
-		on = false;
-		port = undefined;
-	}
+  function teardown(): void {
+    // Inspector.stop() calls adapter.stop?.(); call adapter directly too —
+    // idempotent (stopped flag), and a null-ed reference alone would leave
+    // a CONNECTING socket dangling.
+    inspector?.stop();
+    inspector?.adapter.stop?.();
+    inspector = null;
+    server?.stop();
+    server = null;
+    on = false;
+    port = undefined;
+  }
 
-	return {
-		get port() {
-			return port;
-		},
+  return {
+    get port() {
+      return port;
+    },
 
-		enabled() {
-			return on;
-		},
+    enabled() {
+      return on;
+    },
 
-		async enable(enableOpts?: { open?: boolean }): Promise<VizResult> {
-			if (on) {
-				return { ok: true, message: `${name} viz already running: http://localhost:${port}`, port };
-			}
-			let free: number | undefined;
-			for (let p = preferredPort; p < preferredPort + portTries; p++) {
-				if (await portFree(p)) {
-					free = p;
-					break;
-				}
-			}
-			if (free === undefined) {
-				return {
-					ok: false,
-					message: `${name} viz cannot start: ports ${preferredPort}-${preferredPort + portTries - 1} busy (other inspectors or foreign processes)`,
-				};
-			}
-			server = createInspectorServer({ port: free, autoOpen: enableOpts?.open ?? true });
-			inspector = createInspector(new CleanWebSocketAdapter(`ws://localhost:${free}`));
-			// plain createInspector does NOT auto-start its adapter (only
-			// createWebSocketInspector/createBrowserInspector do) — without this
-			// the adapter never connects and every event queues forever.
-			inspector.start();
-			on = true;
-			port = free;
-			const walked = free !== preferredPort ? ` (preferred port ${preferredPort} busy)` : "";
-			return { ok: true, message: `${name} viz live: http://localhost:${free}${walked}`, port: free };
-		},
+    async enable(
+      enableOpts?: { open?: boolean; inspectorUrl?: string },
+    ): Promise<VizResult> {
+      if (on) {
+        return {
+          ok: true,
+          message: `${name} viz already running: http://localhost:${port}`,
+          port,
+        };
+      }
+      let free: number | undefined;
+      for (let p = preferredPort; p < preferredPort + portTries; p++) {
+        if (await portFree(p)) {
+          free = p;
+          break;
+        }
+      }
+      if (free === undefined) {
+        return {
+          ok: false,
+          message: `${name} viz cannot start: ports ${preferredPort}-${preferredPort + portTries - 1} busy (other inspectors or foreign processes)`,
+        };
+      }
+      // inspectorUrl: iframe target of the relay's bridge page (stock
+      // default: remote https://stately.ai/inspect). A local Sketch /inspect
+      // URL speaks the same postMessage protocol — machine events stay on
+      // localhost (see ./sketch.ts).
+      server = createInspectorServer({
+        port: free,
+        url: enableOpts?.inspectorUrl,
+        autoOpen: enableOpts?.open ?? true,
+      });
+      inspector = createInspector(
+        new CleanWebSocketAdapter(`ws://localhost:${free}`),
+      );
+      // plain createInspector does NOT auto-start its adapter (only
+      // createWebSocketInspector/createBrowserInspector do) — without this
+      // the adapter never connects and every event queues forever.
+      inspector.start();
+      on = true;
+      port = free;
+      const walked =
+        free !== preferredPort ? ` (preferred port ${preferredPort} busy)` : "";
+      const ui = enableOpts?.inspectorUrl
+        ? ` — events local via ${new URL(enableOpts.inspectorUrl).origin}`
+        : "";
+      return {
+        ok: true,
+        message: `${name} viz live: http://localhost:${free}${walked}/inspect${ui}`,
+        port: free,
+      };
+    },
 
-		disable(): VizResult {
-			if (!on) return { ok: false, message: `${name} viz not running` };
-			teardown();
-			return { ok: true, message: `${name} viz stopped` };
-		},
+    disable(): VizResult {
+      if (!on) return { ok: false, message: `${name} viz not running` };
+      teardown();
+      return { ok: true, message: `${name} viz stopped` };
+    },
 
-		stop(): void {
-			if (!on) return;
-			teardown();
-		},
+    stop(): void {
+      if (!on) return;
+      teardown();
+    },
 
-		option() {
-			return on ? { inspect: inspector!.inspect as InspectOption["inspect"] } : {};
-		},
-	};
+    option() {
+      return on
+        ? { inspect: inspector!.inspect as InspectOption["inspect"] }
+        : {};
+    },
+  };
 }
