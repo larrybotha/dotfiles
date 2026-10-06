@@ -414,6 +414,7 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
 
   const buckets = (over: Partial<DetectBuckets> = {}): DetectBuckets => ({
     attachable: [],
+    booting: [],
     runningNoCdp: [],
     installed: [chrome, arc],
     default: null,
@@ -439,6 +440,26 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
     ok(r.action.kind === "prompt-attach", "2 attachable -> prompt", r);
   }
 
+  // 1 booting (port declared, endpoint not answering) -> wait-attach, even
+  // against a usable default — never launch a copy over a booting singleton
+  {
+    const r = resolveAuto(buckets({
+      booting: [{ name: "Arc", pid: 5, port: 9222 }],
+      default: { name: "Arc", bin: "/x/Arc", globalSingleton: true },
+    }));
+    ok(r.action.kind === "wait-attach" && r.action.port === 9222, "booting -> wait-attach on its declared port", r);
+    ok(r.note.includes("booting"), "booting note present", r.note);
+  }
+
+  // attachable beats booting
+  {
+    const r = resolveAuto(buckets({
+      attachable: [{ name: "Chrome", port: 9333, browser: "Chrome/126.0", pid: 2 }],
+      booting: [{ name: "Arc", pid: 5, port: 9222 }],
+    }));
+    ok(r.action.kind === "attach" && r.action.port === 9333, "attachable beats booting", r);
+  }
+
   // 0 + default usable -> launch default, no ask
   {
     const r = resolveAuto(buckets({ default: { name: "Chrome", bin: "/x/Chrome", globalSingleton: false } }));
@@ -446,7 +467,7 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
     ok(r.note.includes("default browser (Chrome)"), "default note names browser", r.note);
   }
 
-  // 0 + default blocked (Arc singleton running) -> demote; single candidate -> launch it
+  // 0 + default blocked (Arc singleton running) + candidate -> gate, not demote
   {
     const r = resolveAuto(
       buckets({
@@ -454,12 +475,12 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
         default: { name: "Arc", bin: "/x/Arc", globalSingleton: true },
       }),
     );
-    ok(r.action.kind === "launch" && r.action.bin === "/x/Chrome", "blocked default demoted -> launch other candidate", r);
-    ok(r.note.includes("demoted"), "demote note present", r.note);
+    ok(r.action.kind === "prompt-blocked", "blocked default + candidate -> gate (prompt-blocked)", r);
+    ok(r.note.includes("blocked"), "gate note present", r.note);
     ok(r.warnings.some((w) => w.includes("singleton lock")), "singleton warning present", r.warnings);
   }
 
-  // 0 + default blocked + multiple candidates -> prompt-launch
+  // 0 + default blocked + multiple candidates -> gate (prompt-blocked), not prompt-launch
   {
     const r = resolveAuto(
       buckets({
@@ -468,8 +489,8 @@ function probe(a: A, up: boolean, mode: BrowserMode = "fresh"): void {
         default: { name: "Arc", bin: "/x/Arc", globalSingleton: true },
       }),
     );
-    ok(r.action.kind === "prompt-launch", "blocked default + 2 candidates -> prompt", r);
-    ok(r.note.includes("demoted"), "demote note present (prompt path)", r.note);
+    ok(r.action.kind === "prompt-blocked", "blocked default + 2 candidates -> gate (prompt-blocked)", r);
+    ok(r.note.includes("blocked"), "gate note present (multiple candidates)", r.note);
   }
 
   // 0 + no default + 1 candidate -> launch it, no ask

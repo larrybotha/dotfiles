@@ -25,7 +25,9 @@ browser actions; tools stay thin.
 - `resolveAuto` (pure, in machine.ts) owns the smart-start decision table
   for `browser_start` mode `auto`: 1 CDP-attachable → attach, no ask; n →
   prompt; 0 + default usable → launch default; 0 + default blocked (global
-  singleton like Arc running without CDP) → demote + warning; 0 + 1
+  singleton like Arc running without CDP) → gate (`prompt-blocked`):
+  close+restart it with a debug port (then attach) or launch an alternative —
+  never a silent demote; 0 + 1
   candidate → launch it; 0 + n candidates → prompt (default preselected);
   0 usable → readable error. Chromium-class browsers running without CDP do
   not block an isolated launch (separate user-data-dir singleton) — warning
@@ -38,14 +40,19 @@ All local to `executors/`:
 - `probe.mjs` / `stop.mjs` / `detect.mjs` — extension probes, JSON out,
   failure-as-data. `stop.mjs` kills only browsers this extension launched
   (fresh/profile/reset_profile); attach/foreign instances are never killed.
+- `restart.mjs` — auto-start gate action (also agent-runnable): graceful
+  osascript quit, singleton-lock exit poll, `open -a <app> --args
+  --remote-debugging-port=<port>` relaunch, CDP wait. Only closes the
+  browser after the user opts in via the gate.
   `detect.mjs` buckets running browsers: `attachable` (CDP port answers),
   `runningNoCdp` (singleton/warning evidence), `installed` (CDP-capable
   binaries), `default` (macOS Launch Services https handler; Safari/Firefox
   excluded — no CDP).
 - Action scripts: `start.js`, `nav.js`, `eval.js`, `screenshot.js`,
-  `pick.js`, `switch-tab.js`, `emulate.js` + libs (`cdp.js`, `devices.js`,
-  `active-tab.js`, `emulation-state.js`). Run as child processes,
-  failure-as-data, readable stderr reasons passed through to the model.
+  `pick.js`, `annotate.js`, `switch-tab.js`, `emulate.js` + libs (`cdp.js`,
+  `devices.js`, `active-tab.js`, `emulation-state.js`). Run as child
+  processes, failure-as-data, readable stderr reasons passed through to the
+  model.
 - Un-tooled (raw use via bash; future tool backlog): `dismiss-cookies.js`,
   `watch.js`, `net-summary.js`, `logs-tail.js`, `set-cookie.mjs`,
   `set-file.mjs`, `arc-tabs.js`, `arc-spaces.js`.
@@ -56,15 +63,36 @@ All local to `executors/`:
 
 `browser_start` (auto default | fresh | profile | reset_profile | attach) ·
 `browser_navigate` · `browser_eval` · `browser_screenshot` · `browser_pick` ·
-`browser_tabs` · `browser_switch_tab` · `browser_emulate` · `browser_status` ·
-`browser_stop`
+`browser_annotate` · `browser_tabs` · `browser_switch_tab` · `browser_emulate` ·
+`browser_status` · `browser_stop`
+
+- `browser_annotate`: visual annotation mode — click elements, per-element
+  comments, screenshots, edit capture. Driven by `executors/annotate.js`:
+  fresh CDP isolated world per run (`Page.createIsolatedWorld` — worlds are
+  keyed by (frame, name), so a reused name would no-op the injection guard
+  against a stale world), injects `annotate/ui.js` (pure-DOM picker/note-card
+  UI, function-call interface `window.__piAnnotate`, no extension APIs),
+  resolves on the `__piAnnotate.start()` promise (`awaitPromise` — the pick.js
+  pattern). Screenshot requests flow UI → `piAnnotateEvent` binding (per-world
+  `Runtime.addBinding`) → `Page.captureScreenshot` →
+  `__piAnnotateScreenshotResult` back into the world. A live session from
+  another run/process is superseded first (main-world `pi-annotate:cancel`
+  DOM event + `#pi-cancel` click fallback — DOM events cross isolated
+  worlds). Screenshots are written to tmpdir by the executor; the result JSON
+  carries file paths only, never base64. Formatting lives in
+  `annotate/format.ts` (tool-side). Restricted URLs reject with a readable
+  reason; mid-session navigation ends the session with one.
 
 - `auto` (browser_start default): detect running browsers (detect.mjs),
   resolve via the pure table (machine.ts), and only ask (TUI select) when the
-  choice is forced — n attachable, or n launchable with no usable default.
+  choice is forced — n attachable, n launchable with no usable default, or
+  the default blocked by a running singleton without CDP (the gate:
+  close+restart it with a debug port, or launch an alternative).
   Prompts are executor-side UX; the machine only ever sees the resolved
-  attach/fresh mode. Non-TUI picks the first candidate and says so; Esc
-  rejects with a readable note. `bin` param bypasses detection.
+  attach/fresh mode. Non-TUI picks the first candidate and says so — except
+  the gate, which rejects with both paths (closing the user's browser needs
+  their opt-in); Esc rejects with a readable note. `bin` param bypasses
+  detection.
 - Foreign attach policy: on an attached (`attach`/`foreign`) browser,
   `browser_navigate` never overwrites an existing tab — it always opens a
   new one, then verifies it landed in a visible window (Arc Spaces: a new
@@ -79,9 +107,10 @@ All local to `executors/`:
   the user's focused personal tab. The machine's `activeTab` cache is
   display/status state only.
 
-Command: `/browser status | stop | footer [on|off] | viz [off]` — subcommand
-autocomplete in TUI mode. Viz via `_viz/viz-kit.ts`, preferred port 8081
-(tmux/web-search viz default to 8080; makeViz walks to the next free port).
+Command: `/browser status | stop | footer [on|off] | viz [off] | annotate
+[url]` — subcommand autocomplete in TUI mode. Viz via `_viz/viz-kit.ts`,
+preferred port 8081 (tmux/web-search viz default to 8080; makeViz walks to
+the next free port).
 
 ## Config (env)
 

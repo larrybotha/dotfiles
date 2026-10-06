@@ -41,6 +41,8 @@ import {
 import { Type } from "typebox";
 import type { Actor } from "xstate";
 import { createActor, fromPromise, waitFor } from "xstate";
+import { type AnnotationFiles, formatResult } from "./annotate/format.ts";
+import type { AnnotationResult } from "./annotate/types.ts";
 import { makeViz } from "../_viz/viz-kit.ts";
 import { readActiveTab } from "./executors/active-tab.js";
 import {
@@ -86,11 +88,18 @@ const T_NAV = 50_000;
 const T_EVAL = 55_000;
 const T_SCREENSHOT = 40_000;
 const T_PICK = 320_000; // interactive: 5m script budget + pad
+const T_ANNOTATE = 320_000; // interactive: executor caps itself at 310s
 const T_TABS = 30_000;
 const T_SWITCH = 30_000;
 const T_EMULATE = 25_000;
 const T_PROBE = 10_000;
 const T_DETECT = 15_000; // auto start: ps + plutil + per-port CDP probes
+// gate restart: graceful quit (executor caps at 20s) + open -a + CDP wait (40s)
+const T_RESTART = 90_000;
+// wait-attach: cold-start browsers can take a while (window/tab restore)
+// before their declared debug port answers
+const T_BOOT_WAIT = 120_000;
+const T_BOOT_POLL = 2_000;
 const T_STOP = 15_000;
 // whole-launch settle (start.js + follow-up probe, backstop against hangs)
 const T_LAUNCH_SETTLE = T_START + T_PROBE + 5_000;
@@ -189,6 +198,7 @@ async function detectOnce(): Promise<DetectBuckets | { error: string }> {
   if ("error" in r) return r;
   if (
     !Array.isArray(r.attachable) ||
+    !Array.isArray(r.booting) ||
     !Array.isArray(r.runningNoCdp) ||
     !Array.isArray(r.installed) ||
     (r.default !== null && typeof r.default !== "object")
@@ -525,6 +535,15 @@ async function autoSelect(
   return undefined; // non-TUI — caller picks the first option
 }
 
+/** restart.mjs (executor) — graceful quit + relaunch with
+ *  --remote-debugging-port + CDP wait; failure-as-data ({ok:false}). */
+interface RestartOut {
+  ok: boolean;
+  port: number;
+  browser: string | null;
+  error?: string;
+}
+
 interface LaunchPlan {
   mode: LaunchMode;
   env: Record<string, string>;
@@ -546,6 +565,27 @@ async function resolveAutoAction(
       env: { BROWSER_DEBUG_PORT: String(res.action.port) },
       note: `auto: ${res.note}`,
     };
+  }
+  if (res.action.kind === "wait-attach") {
+    // booting browser: port declared in the command line, endpoint not
+    // answering yet — poll it, then attach. Never launch a copy over it
+    // (a global-singleton handoff would wedge the launch)
+    const port = res.action.port;
+    const startedAt = Date.now();
+    for (;;) {
+      const p = await probeOnce(port);
+      if (p && p.up) {
+        return {
+          mode: "attach",
+          env: { BROWSER_DEBUG_PORT: String(port) },
+          note: `auto: ${res.note} — endpoint answered after ${Math.round((Date.now() - startedAt) / 1000)}s`,
+        };
+      }
+      if (Date.now() - startedAt > T_BOOT_WAIT) {
+        return `auto: ${res.note}\nno CDP answer on :${port} within ${Math.round(T_BOOT_WAIT / 1000)}s — the port is declared in the process command line but never answered; relaunch the browser with a free port, or browser_start with an explicit mode`;
+      }
+      await new Promise((r) => setTimeout(r, T_BOOT_POLL));
+    }
   }
   if (res.action.kind === "launch") {
     return {
@@ -578,6 +618,72 @@ async function resolveAutoAction(
       mode: "attach",
       env: { BROWSER_DEBUG_PORT: String(a.port) },
       note: `auto: attached to ${a.name} (:${a.port})`,
+    };
+  }
+
+  // prompt-blocked: default (e.g. Arc) blocked by a running global singleton
+  // without CDP — close+restart it with a debug port (then attach), or launch
+  // an alternative; never a silent demote. Closing the user's browser needs
+  // their opt-in — no non-TUI fallback pick.
+  if (res.action.kind === "prompt-blocked") {
+    const target = d.default;
+    if (!target) return `auto: prompt-blocked without a blocked default (unexpected) — ${res.note}`;
+    const blockedNames = new Set(
+      d.runningNoCdp
+        .filter((r) =>
+          d.installed.some((i) => i.name === r.name && i.globalSingleton),
+        )
+        .map((r) => r.name),
+    );
+    const candidates = d.installed.filter((i) => !blockedNames.has(i.name));
+    const restart = `close + restart ${target.name} with --remote-debugging-port (then attach)`;
+    const options = [
+      restart,
+      ...candidates.map((c) => `launch ${c.name} (isolated profile)`),
+    ];
+    const pick = await autoSelect(
+      extCtx,
+      `browser auto-start — default (${target.name}) is running without a debug port — close + restart it with one, or launch another?`,
+      options,
+    );
+    if (pick === restart) {
+      const r = await runExecutor<RestartOut>(
+        "restart.mjs",
+        [target.bin, String(DEBUG_PORT)],
+        T_RESTART,
+      );
+      if ("error" in r || !r.ok) {
+        const detail = "error" in r ? r.error : "no CDP answer after relaunch";
+        return `auto: ${res.note}\nclose + restart of ${target.name} failed: ${detail}\nmanual path: quit ${target.name}, then \`${target.bin} --remote-debugging-port=${DEBUG_PORT}\`, then browser_start auto again`;
+      }
+      return {
+        mode: "attach",
+        env: { BROWSER_DEBUG_PORT: String(r.port) },
+        note: `auto: closed + restarted ${target.name} with a debug port (:${r.port})`,
+      };
+    }
+    if (pick === null || pick === undefined) {
+      // skipped prompt (Esc) or non-TUI (agent context — no select UI):
+      // reject with both paths; the caller asks the user, nothing closes
+      const alt = candidates[0];
+      return (
+        `auto: ${res.note}\n` +
+        `gate — ${target.name} (your default) is running without a debug port; pick a path:\n` +
+        `1. close + restart ${target.name} with one: node ${EXECUTORS_DIR}/restart.mjs "${target.bin}" ${DEBUG_PORT}` +
+        ` (graceful quit, relaunch with --remote-debugging-port, waits for CDP) — then browser_start auto again (attaches)\n` +
+        (alt
+          ? `2. launch ${alt.name} instead: browser_start mode fresh (isolated profile, not your session)`
+          : `2. no alternative installed — set BROWSER_BIN and retry`)
+      );
+    }
+    const chosen = candidates.find(
+      (c) => pick === `launch ${c.name} (isolated profile)`,
+    );
+    if (!chosen) return `auto: unrecognized prompt choice "${pick}"`;
+    return {
+      mode: "fresh",
+      env: { BROWSER_BIN: chosen.bin },
+      note: `auto: gate — launched ${chosen.name} (${target.name} left running without CDP)`,
     };
   }
 
@@ -826,6 +932,10 @@ const SUBCOMMANDS: { value: string; description: string }[] = [
     value: "viz",
     description: "attach the Stately inspector (live visualisation)",
   },
+  {
+    value: "annotate",
+    description: "visual annotation mode — click elements, add comments",
+  },
 ];
 
 function createBrowserAutocomplete(
@@ -874,6 +984,85 @@ function createBrowserAutocomplete(
 }
 
 // ---------------------------------------------------------------------------
+// annotate flow (shared by browser_annotate tool + /browser annotate):
+// prechecks → optional nav.js delegation → annotate.js executor → markdown
+// ---------------------------------------------------------------------------
+
+function resultText(r: ToolResult): string {
+  return r.content
+    .map((c) => (c.type === "text" ? c.text : ""))
+    .join("\n");
+}
+
+/** Annotate session: nav first (same policy as browser_navigate), then the
+ *  annotate executor. Returns formatted markdown + nav notes, or a readable
+ *  error string. */
+async function runAnnotate(
+  url: string | undefined,
+  timeout: number,
+  extCtx: unknown,
+): Promise<{ text: string; notes: string[] } | { error: string }> {
+  const pre =
+    requireRunning("browser_annotate") ??
+    requireActiveTab("browser_annotate");
+  if (pre) return { error: resultText(pre) };
+
+  const notes: string[] = [];
+  if (url) {
+    // foreign attach policy: never overwrite a tab in the user's browser —
+    // the url always opens a new one, exactly like browser_navigate
+    const foreign =
+      ctx().browser?.mode === "attach" || ctx().browser?.mode === "foreign";
+    if (foreign) {
+      notes.push(
+        "auto: attached browser — opened a new tab (never overwrites existing tabs)",
+      );
+    }
+    const r = await runSkill(
+      "nav.js",
+      [url, ...(foreign ? ["--new"] : [])],
+      T_NAV,
+    );
+    if (r.code !== 0) return { error: r.stderr || r.stdout };
+    send({ type: "NAV", url, newTab: foreign });
+  }
+
+  const uiAny = extCtx as
+    | { hasUI?: boolean; ui?: { notify?: (m: string, l: "info" | "error") => void } }
+    | undefined;
+  if (uiAny?.hasUI) {
+    uiAny.ui?.notify?.(
+      url
+        ? `Annotation mode started: ${url}`
+        : "Annotation mode started on the recorded tab",
+      "info",
+    );
+  }
+
+  const args = ["--timeout", String(Math.min(Math.floor(timeout) || 300, 310))];
+  const r = await runSkill("annotate.js", args, T_ANNOTATE);
+  if (r.code !== 0) return { error: r.stderr || r.stdout };
+
+  let parsed: {
+    result?: AnnotationResult;
+    files?: AnnotationFiles;
+  } | null = null;
+  try {
+    parsed = JSON.parse(r.stdout);
+  } catch {
+    parsed = null;
+  }
+  if (!parsed || typeof parsed.result !== "object" || parsed.result === null) {
+    return { error: "annotate executor produced no result JSON" };
+  }
+
+  return {
+    text: formatResult(parsed.result, parsed.files ?? {}),
+    notes,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // extension
 // ---------------------------------------------------------------------------
 
@@ -886,7 +1075,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
     description:
       "Launch or attach a browser with CDP and wait for the debug endpoint. Modes: auto (default — evaluates running " +
       "browsers: attach the single CDP browser, prompt to choose between several, launch your default browser when none " +
-      "runs — demoting a running global-singleton browser like Arc without CDP; an attached browser is never auto-navigated " +
+      "runs — a global-singleton default running without CDP (e.g. Arc) gates: close + restart it with a debug port, or " +
+      "launch an alternative, never a silent demote; an attached browser is never auto-navigated " +
       "in existing tabs), fresh (isolated reusable profile), profile (copy your Chrome profile into an isolated cache), " +
       "reset_profile (clear the cached profile first), attach (connect to an already-running browser with remote " +
       "debugging — never killed by this extension). " +
@@ -1186,6 +1376,78 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
       return new Text(
         theme.fg("toolTitle", theme.bold("browser_pick ")) +
           theme.fg("muted", truncatePreview(args.message)),
+        0,
+        0,
+      );
+    },
+
+    renderResult(result, _options, theme) {
+      return renderContext(result.details, theme);
+    },
+  });
+
+  pi.registerTool({
+    name: "browser_annotate",
+    label: "browser annotate",
+    description:
+      "Open visual annotation mode in the browser so the user can click/select elements and add comments. " +
+      "Only use when the user explicitly asks to annotate, visually point something out, or show you UI issues. " +
+      "Returns structured annotations with CSS selectors, box model, accessibility, attributes, per-element " +
+      "comments, and screenshots. url navigates first (new tab on an attached browser); without it, annotates " +
+      "the recorded active tab.",
+    parameters: Type.Object({
+      url: Type.Optional(
+        Type.String({
+          description:
+            "navigate before annotating (new tab on attached/foreign browsers)",
+        }),
+      ),
+      browserHost: Type.Optional(
+        Type.String({
+          description:
+            "SSH alias of the remote Browser Host — not implemented yet; the local browser is used",
+        }),
+      ),
+      timeout: Type.Optional(
+        Type.Number({
+          description: "max seconds to wait for annotations (default 300)",
+        }),
+      ),
+    }),
+    executionMode: "sequential",
+
+    async execute(
+      _toolCallId,
+      params,
+      signal,
+      _onUpdate,
+      extCtx,
+    ): Promise<ToolResult> {
+      if (params.browserHost) {
+        return rej(
+          "browser_annotate",
+          "remote Browser Host (browserHost) is not implemented yet — annotate the local browser",
+        );
+      }
+      if (signal?.aborted) {
+        return rej("browser_annotate", "aborted before annotation");
+      }
+
+      const r = await runAnnotate(
+        params.url,
+        params.timeout ?? 300,
+        extCtx,
+      );
+      if ("error" in r) return rej("browser_annotate", r.error);
+      const text =
+        r.notes.length > 0 ? `${r.notes.join("\n")}\n${r.text}` : r.text;
+      return ok("browser_annotate", text);
+    },
+
+    renderCall(args, theme) {
+      return new Text(
+        theme.fg("toolTitle", theme.bold("browser_annotate ")) +
+          (args.url ? theme.fg("accent", truncatePreview(args.url, 60)) : ""),
         0,
         0,
       );
@@ -1511,8 +1773,29 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
         return;
       }
 
+      if (sub === "annotate") {
+        const url = parts
+          .slice(1)
+          .find((p) => /^[a-z][a-z0-9+.-]*:\/\//i.test(p));
+        const r = await runAnnotate(url, 300, extCtx);
+        if ("error" in r) {
+          if (extCtx.hasUI) extCtx.ui.notify(r.error, "error");
+          return;
+        }
+        if (extCtx.hasUI) {
+          await extCtx.ui.select(
+            "browser annotate",
+            (r.notes.length > 0
+              ? `${r.notes.join("\n")}\n${r.text}`
+              : r.text
+            ).split("\n"),
+          );
+        }
+        return;
+      }
+
       extCtx.ui.notify(
-        "usage: /browser [status | stop | footer [on|off] | viz [off]]",
+        "usage: /browser [status | stop | footer [on|off] | viz [off] | annotate [url]]",
         "warning",
       );
     },

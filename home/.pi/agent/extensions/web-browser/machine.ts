@@ -210,8 +210,12 @@ export function notRunningReason(value: string): string {
 // shared by the browser_start tool and tests (single source of truth):
 //   1 CDP-attachable  -> attach, no ask
 //   n CDP-attachable  -> prompt-attach
+//   0 + 1 booting     -> wait-attach (poll the declared port, attach on answer)
 //   0 + default usable -> launch default, no ask
-//   0 + default blocked (global singleton running without CDP — e.g. Arc) -> demote
+//   0 + default blocked (global singleton running without CDP — e.g. Arc)
+//                      -> prompt-blocked: close+restart it with a debug port
+//                         (then attach), or launch an alternative — never a
+//                         silent demote of the user's default browser
 //   0 + 1 candidate    -> launch it, no ask
 //   0 + n candidates   -> prompt-launch (default preselected if usable)
 //   0 + 0 usable       -> error
@@ -231,6 +235,14 @@ export interface RunningNoCdpEntry {
   pid: number;
 }
 
+/** Port declared in the command line, endpoint not answering yet (cold
+ *  start) — wait for it, never launch a copy over a booting singleton. */
+export interface BootingEntry {
+  name: string | null;
+  pid: number;
+  port: number;
+}
+
 export interface InstalledEntry {
   name: string;
   bin: string;
@@ -241,6 +253,7 @@ export interface DefaultEntry extends InstalledEntry {}
 
 export interface DetectBuckets {
   attachable: AttachableEntry[];
+  booting: BootingEntry[];
   runningNoCdp: RunningNoCdpEntry[];
   installed: InstalledEntry[];
   default: DefaultEntry | null;
@@ -248,9 +261,11 @@ export interface DetectBuckets {
 
 export type AutoAction =
   | { kind: "attach"; port: number }
+  | { kind: "wait-attach"; port: number }
   | { kind: "prompt-attach" }
   | { kind: "launch"; bin: string }
   | { kind: "prompt-launch" }
+  | { kind: "prompt-blocked" }
   | { kind: "error" };
 
 export interface AutoResolution {
@@ -306,6 +321,18 @@ export function resolveAuto(b: DetectBuckets): AutoResolution {
     };
   }
 
+  // no attachable browser yet, but one booting with a declared port — poll
+  // it, then attach; never launch a copy over a booting (global-singleton)
+  // browser
+  if (b.booting.length > 0) {
+    const e = b.booting[0]!;
+    return {
+      action: { kind: "wait-attach", port: e.port },
+      note: `a browser is booting with a debug port (${e.name ?? "unknown"} on :${e.port}) — wait for it, then attach`,
+      warnings,
+    };
+  }
+
   // no attachable browser — launch path
   if (b.default && !blocked(b.default)) {
     return {
@@ -330,16 +357,26 @@ export function resolveAuto(b: DetectBuckets): AutoResolution {
       warnings,
     };
   }
+  // gate: default blocked (global singleton running without CDP — e.g.
+  // Arc) — offer close+restart with a debug port (then attach) vs an
+  // alternative launch; never silently demote the user's default browser
+  if (b.default && blocked(b.default) && candidates.length > 0) {
+    return {
+      action: { kind: "prompt-blocked" },
+      note: `no browser with CDP — default (${b.default.name}) blocked by a running singleton without CDP — restart it with a debug port or launch an alternative`,
+      warnings,
+    };
+  }
   if (candidates.length === 1) {
     return {
       action: { kind: "launch", bin: candidates[0]!.bin },
-      note: `no browser with CDP${b.default && blocked(b.default) ? ` — default (${b.default.name}) blocked, demoted` : ""} — launching the only usable browser (${candidates[0]!.name}), no ask`,
+      note: `no browser with CDP — launching the only usable browser (${candidates[0]!.name}), no ask`,
       warnings,
     };
   }
   return {
     action: { kind: "prompt-launch" },
-    note: `no browser with CDP${b.default && blocked(b.default) ? ` — default (${b.default.name}) blocked, demoted` : ""} — ${candidates.length} usable browsers`,
+    note: `no browser with CDP — ${candidates.length} usable browsers`,
     warnings,
   };
 }

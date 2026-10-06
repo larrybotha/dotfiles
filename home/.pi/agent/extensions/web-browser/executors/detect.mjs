@@ -3,6 +3,9 @@
 // Buckets for browser_start mode "auto":
 //   attachable    — processes with --remote-debugging-port whose port answers
 //                   /json/version: {name, port, browser, pid}
+//   booting       — processes with --remote-debugging-port whose port does NOT
+//                   answer yet (cold start): {name, pid, port}. Never launch
+//                   over one — wait for the port, then attach
 //   runningNoCdp  — known browser main processes without a debug port
 //                   (Arc: global singleton lock blocks any Arc launch;
 //                   Chromium-class: isolated launch is a separate instance,
@@ -131,9 +134,15 @@ for (const p of procs) {
 	if (!portMap.has(p.port)) portMap.set(p.port, p);
 }
 const attachable = [];
+const booting = [];
 for (const [port, p] of portMap) {
 	const product = await cdpAnswers(port);
-	if (product === null) continue;
+	if (product === null) {
+		// port declared in the command line but not answering yet — cold
+		// start; attach once it comes up, never launch a copy over it
+		booting.push({ name: p.name, pid: p.pid, port });
+		continue;
+	}
 	attachable.push({
 		name: p.name ?? productName(product),
 		port,
@@ -148,6 +157,7 @@ const runningNoCdp = procs
 
 const out = {
 	attachable,
+	booting,
 	runningNoCdp,
 	installed: installedBrowsers(),
 	default: defaultBrowser(),
