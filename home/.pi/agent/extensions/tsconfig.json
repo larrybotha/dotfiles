@@ -14,9 +14,11 @@
 		"mermaid/*.ts",
 		"pi-typesafe/*.ts",
 		"web-browser/*.ts",
+		"web-browser/annotate/*.ts",
 		"web-search/*.ts",
 		"tmux/*.ts",
 		"tmux-delegate/*.ts",
+		"rpc-delegate/*.ts",
 		"slide-deck/*.ts"
 	]
 }
