@@ -751,7 +751,7 @@ export default function (pi: ExtensionAPI) {
 					const cost = typeof d.usage.cost === "number" ? ` · $${d.usage.cost.toFixed(4)}` : "";
 					container.addChild(
 						new Text(
-							theme.fg("dim", `usage: ${(d.usage.tokens?.totalTokens ?? 0).toLocaleString()} tokens${cost}`),
+							theme.fg("dim", `usage: ${(d.usage.tokens?.totalTokens ?? d.usage.tokens?.total ?? 0).toLocaleString()} tokens${cost}`),
 							0,
 							0,
 						),

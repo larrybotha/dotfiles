@@ -66,7 +66,7 @@ export type DelegateStatus = "running" | "success" | "error" | "timeout" | "abor
 
 /** Loose get_session_stats data — pi-version dependent, kept as evidence. */
 export interface SessionStatsData {
-	tokens?: { totalTokens?: number; input?: number; output?: number } & Record<string, unknown>;
+	tokens?: ({ totalTokens?: number; input?: number; output?: number; cacheRead?: number; cacheWrite?: number; total?: number } & Record<string, unknown>);
 	cost?: number;
 	contextUsage?: { tokens?: number | null; contextWindow?: number; percent?: number | null };
 	[k: string]: unknown;
