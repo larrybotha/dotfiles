@@ -39,6 +39,9 @@ import { createActor, fromPromise, waitFor, type Actor } from "xstate";
 import { collectArtifacts } from "./collector.ts";
 import {
 	evaluateSuccess,
+	formatDuration,
+	runDurationMs,
+	totalDurationMs,
 	type ArtifactEntry,
 	type CancelInput,
 	type CancelOutput,
@@ -123,6 +126,11 @@ interface RpcDelegateDetails {
 	agentEndWillRetry: number;
 	uiRequests: number;
 	usage: SessionStatsData | null;
+	/** Agent-run duration (prompt accepted → outcome decided) — pairs with
+	 *  cost; null before run start / until the outcome is decided. */
+	runDurationMs: number | null;
+	/** Whole-delegation duration (BEGIN → terminal; ladders included). */
+	totalDurationMs: number | null;
 	deadlineHit: boolean;
 	/** Stall detection fired (silent child) — distinct from the hard-cap deadline. */
 	stallHit: boolean;
@@ -357,6 +365,8 @@ function detailsFromSnapshot(a: Actor<typeof wiredMachine>, assistantTextTail: s
 		agentEndWillRetry: c.agentEndWillRetry,
 		uiRequests: c.uiRequests,
 		usage: c.usage,
+		runDurationMs: runDurationMs(c),
+		totalDurationMs: totalDurationMs(c),
 		deadlineHit: c.deadlineHit,
 		stallHit: c.stallHit,
 		failureDetail: c.failureDetail,
@@ -407,10 +417,16 @@ function buildResultText(d: RpcDelegateDetails): string {
 		text += `\n\n### Child activity\n\n${toolBits.join(" · ")}`;
 	}
 
+	const durBits: string[] = [];
+	if (d.runDurationMs !== null) durBits.push(`run ${formatDuration(d.runDurationMs)}`);
+	if (d.totalDurationMs !== null) durBits.push(`total ${formatDuration(d.totalDurationMs)}`);
 	if (d.usage) {
 		const cost = typeof d.usage.cost === "number" ? ` · $${d.usage.cost.toFixed(4)}` : "";
 		const tokens = d.usage.tokens?.totalTokens ?? d.usage.tokens?.total;
-		text += `\n\n### Usage\n\n${tokens ? `${tokens.toLocaleString()} tokens` : "tokens unavailable"}${cost}`;
+		const dur = durBits.length > 0 ? ` · ${durBits.join(" · ")}` : "";
+		text += `\n\n### Usage\n\n${tokens ? `${tokens.toLocaleString()} tokens` : "tokens unavailable"}${cost}${dur}`;
+	} else if (durBits.length > 0) {
+		text += `\n\n### Usage\n\n${durBits.join(" · ")}`;
 	}
 
 	if (d.stderr) {
@@ -535,6 +551,8 @@ export default function (pi: ExtensionAPI) {
 						agentEndWillRetry: 0,
 						uiRequests: 0,
 						usage: null,
+						runDurationMs: null,
+						totalDurationMs: null,
 						deadlineHit: false,
 						stallHit: false,
 						failureDetail: violation,
@@ -792,6 +810,12 @@ export default function (pi: ExtensionAPI) {
 						),
 					);
 				}
+				const durBits: string[] = [];
+				if (d.runDurationMs !== null) durBits.push(`run: ${formatDuration(d.runDurationMs)}`);
+				if (d.totalDurationMs !== null) durBits.push(`total: ${formatDuration(d.totalDurationMs)}`);
+				if (durBits.length > 0) {
+					container.addChild(new Text(theme.fg("dim", `duration: ${durBits.join(" · ")}`), 0, 0));
+				}
 				if (d.stderr) {
 					container.addChild(new Spacer(1));
 					container.addChild(new Text(theme.fg("muted", "─── Stderr tail ───"), 0, 0));
@@ -805,6 +829,9 @@ export default function (pi: ExtensionAPI) {
 			let text = `${icon} ${theme.fg("toolTitle", theme.bold("rpc_delegate_task"))} — ${d.status}`;
 			const collected = d.artifacts.filter((x) => !x.missing && !x.readError).length;
 			if (collected > 0) text += ` · ${collected} artifact(s)`;
+			if (d.runDurationMs !== null) {
+				text += theme.fg("dim", ` · ${formatDuration(d.runDurationMs)}`);
+			}
 			const missingCount = d.artifacts.filter((x) => x.missing).length;
 			if (missingCount > 0) text += theme.fg("warning", ` · ${missingCount} missing`);
 			if (d.failureDetail) text += `\n${theme.fg("dim", d.failureDetail)}`;

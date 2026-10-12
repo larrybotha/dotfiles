@@ -9,17 +9,22 @@
  * settled race, provider error after accepted prompt, auto-retry then settle,
  * CHILD_DEAD in every state, deadline ladder, KILL in every legal state,
  * stall detection (STALL_DETECTED → ladder → timeout), artifact-policy
- * routing, evidence rings, terminal stability.
+ * routing, evidence rings, terminal stability, duration evidence
+ * (begin/run-start/run-end/terminal stamps, ordering, pre-run nullity,
+ * formatters).
  */
 import assert from "node:assert/strict";
 import { createActor, type Actor, fromPromise, waitFor } from "xstate";
 import {
 	buildSummary,
 	evaluateSuccess,
+	formatDuration,
 	initialContext,
 	paramsViolation,
 	rpcMachine,
+	runDurationMs,
 	statusOf,
+	totalDurationMs,
 	stopReasonFails,
 	summaryForSnapshot,
 	type ArtifactEntry,
@@ -311,6 +316,39 @@ await ok("BEGIN stores params in context (launch stays out of the snapshot)", ()
 	assert.equal(c.artifactPolicy, "stopReason");
 	assert.deepEqual(Object.keys(initialContext()).includes("launch"), false);
 	a.stop(); // abandoned actors would hold the loop with their deadline timers
+});
+
+await ok("duration evidence: happy path stamps begin/run-start/run-end/ended in order (run ≤ total)", async () => {
+	const a = await drive();
+	const c = a.getSnapshot().context;
+	assert.notEqual(c.beginAt, null);
+	assert.notEqual(c.runStartedAt, null);
+	assert.notEqual(c.runEndedAt, null);
+	assert.notEqual(c.endedAt, null);
+	assert.ok(c.beginAt! <= c.runStartedAt!, "begin ≤ run start");
+	assert.ok(c.runStartedAt! <= c.runEndedAt!, "run start ≤ run end");
+	assert.ok(c.runEndedAt! <= c.endedAt!, "run end ≤ terminal");
+	assert.ok(runDurationMs(c)! <= totalDurationMs(c)!, "run ≤ total");
+});
+
+await ok("duration evidence: pre-run abort leaves runDuration null, total stamped", async () => {
+	const a = makeActor();
+	begin(a);
+	a.send({ type: "KILL" }); // spawning → cancelling (aborted before any run)
+	await waitFor(a, (s) => isFinal(s), { timeout: 2000 });
+	const c = a.getSnapshot().context;
+	assert.equal(c.outcome, "aborted");
+	assert.equal(c.runStartedAt, null);
+	assert.equal(runDurationMs(c), null);
+	assert.notEqual(totalDurationMs(c), null);
+});
+
+await ok("duration helpers: formatDuration boundaries", () => {
+	assert.equal(formatDuration(0), "1s");
+	assert.equal(formatDuration(42_400), "42s");
+	assert.equal(formatDuration(59_999), "59s");
+	assert.equal(formatDuration(61_000), "1m 01s");
+	assert.equal(formatDuration(3_725_000), "1h 02m 05s");
 });
 
 await ok("second BEGIN rejected — one delegation per actor", () => {

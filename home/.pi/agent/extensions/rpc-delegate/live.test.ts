@@ -7,7 +7,8 @@
  *
  * Runs:
  * 1. happy path — reply PONG + write an artifact; success, disposition
- *    started, stopReason stop, artifact content exact, session stats.
+ *    started, stopReason stop, artifact content exact, session stats,
+ *    duration evidence (run + total, machine-stamped).
  * 2. deadline — sleep past a short timeout; timeout, ladder terminates the
  *    child, session exported (failure-ish outcome) to an HTML file.
  * 3. abort — KILL mid-run (the tool's ctx.signal path); aborted, ladder
@@ -34,7 +35,7 @@ import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { createActor, waitFor } from "xstate";
 import { wiredMachine } from "./index.ts";
-import { statusOf, type RpcEvent } from "./machine.ts";
+import { runDurationMs, statusOf, totalDurationMs, type RpcEvent } from "./machine.ts";
 
 const isFinal = (v: unknown) =>
 	v === "success" || v === "error" || v === "timeout" || v === "aborted";
@@ -51,6 +52,8 @@ interface RunResult {
 	summary: string;
 	assistantTextTail: string;
 	usage: unknown;
+	runDurationMs: number | null;
+	totalDurationMs: number | null;
 	childExitSignal: string | null;
 }
 
@@ -118,6 +121,8 @@ async function run(input: {
 		summary: c.summary,
 		assistantTextTail: ev?.assistantTextTail ?? "",
 		usage: c.usage,
+		runDurationMs: runDurationMs(c),
+		totalDurationMs: totalDurationMs(c),
 		childExitSignal: c.childExitSignal,
 	};
 }
@@ -204,6 +209,7 @@ check("artifact collected", !!artifact && !artifact.missing && !artifact.readErr
 check("artifact content PONG", artifact?.content.trim() === "PONG", `got ${JSON.stringify(artifact?.content)}`);
 check("assistant text tail present", okRun.assistantTextTail.length > 0, `tail: ${JSON.stringify(okRun.assistantTextTail.slice(0, 80))}`);
 check("usage recorded (get_session_stats)", okRun.usage !== null, "no usage");
+check("duration recorded (run + total, stamped by the machine)", okRun.runDurationMs !== null && okRun.totalDurationMs !== null, `run=${okRun.runDurationMs} total=${okRun.totalDurationMs}`);
 
 // --- 2. hard-cap deadline path -----------------------------------------------
 

@@ -173,6 +173,18 @@ export interface RpcContext {
 
 	// stopService output (best-effort)
 	usage: SessionStatsData | null;
+
+	// Timing evidence (machine clock, stamped by actions): beginAt (BEGIN
+	// accepted), runStartedAt (prompt accepted — run arms), runEndedAt (first
+	// outcome mark: settle / deadline / stall / abort / fatal / child death;
+	// may predate run start on pre-run failures — runDuration guards), endedAt
+	// (terminal entry — collect + stop ladders included). runDuration pairs
+	// with cost (usage accrues while the agent runs); totalDuration is the
+	// whole delegation, ladders included.
+	beginAt: number | null;
+	runStartedAt: number | null;
+	runEndedAt: number | null;
+	endedAt: number | null;
 }
 
 // ---------------------------------------------------------------------------
@@ -327,6 +339,10 @@ export function initialContext(): RpcContext {
 		collected: false,
 		summary: "",
 		usage: null,
+		beginAt: null,
+		runStartedAt: null,
+		runEndedAt: null,
+		endedAt: null,
 	};
 }
 
@@ -442,6 +458,29 @@ export function buildSummary(artifactPaths: string[], artifacts: ArtifactEntry[]
 	return summary;
 }
 
+/** Agent-run duration (prompt accepted → outcome decided) — pairs with cost:
+ *  usage accrues while the agent runs. Null before run start or until the
+ *  outcome is decided — honest evidence, never a guessed duration. */
+export function runDurationMs(c: RpcContext): number | null {
+	return c.runStartedAt !== null && c.runEndedAt !== null ? c.runEndedAt - c.runStartedAt : null;
+}
+
+/** Whole-delegation duration (BEGIN → terminal entry): spawn, handshake,
+ *  collect, and stop ladders included. */
+export function totalDurationMs(c: RpcContext): number | null {
+	return c.beginAt !== null && c.endedAt !== null ? c.endedAt - c.beginAt : null;
+}
+
+/** Compact duration text: 42s / 2m 04s / 1h 03m 05s (floor, min 1s). */
+export function formatDuration(ms: number): string {
+	const s = Math.max(1, Math.floor(ms / 1000));
+	if (s < 60) return `${s}s`;
+	const m = Math.floor(s / 60);
+	if (m < 60) return `${m}m ${String(s % 60).padStart(2, "0")}s`;
+	const h = Math.floor(m / 60);
+	return `${h}h ${String(m % 60).padStart(2, "0")}m ${String(s % 60).padStart(2, "0")}s`;
+}
+
 /** Machine state value → tool status (non-terminal states collapse to "running"). */
 export function statusOf(value: string): DelegateStatus {
 	if (value === "success" || value === "error" || value === "timeout" || value === "aborted") {
@@ -547,6 +586,7 @@ export const rpcMachine = setup({
 				timeoutSecs: event.timeoutSecs,
 				workingDir: event.workingDir,
 				artifactPaths: event.artifactPaths,
+				beginAt: Date.now(),
 			};
 		}),
 		recordSpawn: assign(({ event }) => {
@@ -570,21 +610,24 @@ export const rpcMachine = setup({
 		markPromptAccepted: assign(({ event }) => {
 			if (!("output" in event)) return {};
 			const out = (event as { output: PromptOutput }).output;
-			return { promptDisposition: out.disposition, runStartedSeen: true };
+			return { promptDisposition: out.disposition, runStartedSeen: true, runStartedAt: Date.now() };
 		}),
 		markHandled: assign(() => ({
 			promptDisposition: "handled",
 			outcome: "error" as const,
+			runEndedAt: Date.now(),
 			failureDetail:
 				"prompt was consumed by an input handler or extension command (disposition 'handled') — no agent run for this task",
 		})),
 		markPromptError: assign(({ event }) => ({
 			outcome: "error" as const,
+			runEndedAt: Date.now(),
 			failureDetail: `Prompt rejected or timed out: ${errMsg(event)}`,
 		})),
 		markDeadline: assign(({ context }) => ({
 			outcome: "timeout" as const,
 			deadlineHit: true,
+			runEndedAt: Date.now(),
 			failureDetail: `run hard cap exceeded (${context.timeoutSecs}s)`,
 		})),
 		markStalled: assign(({ event }) =>
@@ -592,12 +635,13 @@ export const rpcMachine = setup({
 				? {
 						outcome: "timeout" as const,
 						stallHit: true,
+						runEndedAt: Date.now(),
 						failureDetail: `child stalled — no protocol activity for ${Math.round(event.stallMs / 1000)}s (no child tool running); cancelled by stall detection`,
 					}
 				: {},
 		),
 		markAborted: assign(({ context }) =>
-			context.outcome === null ? { outcome: "aborted" as const } : {},
+			context.outcome === null ? { outcome: "aborted" as const, runEndedAt: Date.now() } : {},
 		),
 		markFatal: assign(({ context, event }) => {
 			if (event.type !== "PROTOCOL_FATAL") return {};
@@ -605,13 +649,14 @@ export const rpcMachine = setup({
 				? {
 						outcome: "error" as const,
 						protoFatal: event.reason,
+						runEndedAt: Date.now(),
 						failureDetail: `RPC protocol violation: ${event.reason}`,
 					}
 				: { protoFatal: event.reason };
 		}),
 		markSettled: assign(({ context }) => {
 			if (context.outcome !== null) return { agentSettledSeen: true };
-			return { agentSettledSeen: true, outcome: "settled" as const };
+			return { agentSettledSeen: true, outcome: "settled" as const, runEndedAt: Date.now() };
 		}),
 		markChildDead: assign(({ context, event }) => {
 			if (event.type !== "CHILD_DEAD") return {};
@@ -623,6 +668,7 @@ export const rpcMachine = setup({
 			return {
 				...base,
 				outcome: "error" as const,
+				runEndedAt: Date.now(),
 				failureDetail: `RPC child process died (exit ${event.code ?? "?"}${event.signal ? `, signal ${event.signal}` : ""}) — run lost`,
 			};
 		}),
@@ -684,6 +730,9 @@ export const rpcMachine = setup({
 				usage: out.usage ?? null,
 			};
 		}),
+		// Terminal entry stamp — whole-delegation duration (BEGIN → terminal)
+		// includes the collect + stop ladders; guarded (finals entered once).
+		markEnded: assign(({ context }) => (context.endedAt === null ? { endedAt: Date.now() } : {}))
 	},
 }).createMachine({
 	id: "rpc-delegate",
@@ -853,10 +902,11 @@ export const rpcMachine = setup({
 				CHILD_DEAD: { actions: "recordChildExit" },
 			},
 		},
-		// Terminal states are final: late events are dropped.
-		success: {},
-		error: {},
-		timeout: {},
-		aborted: {},
+		// Terminal states are final: late events are dropped (entry stamps
+		// endedAt — totalDuration evidence).
+		success: { entry: ["markEnded"] },
+		error: { entry: ["markEnded"] },
+		timeout: { entry: ["markEnded"] },
+		aborted: { entry: ["markEnded"] },
 	},
 });

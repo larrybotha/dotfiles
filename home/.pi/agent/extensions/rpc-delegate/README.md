@@ -65,6 +65,15 @@ idle → spawning → handshaking → prompting → running → collecting → s
   `export_html` cannot export a `--no-session` child ("Cannot export
   in-memory session to HTML") — protocol limitation, verified live.
 
+- **Duration evidence beside cost.** `get_session_stats` carries no
+  duration, so the machine keeps its own clock: `beginAt` (BEGIN accepted),
+  `runStartedAt` (prompt accepted — run arms), `runEndedAt` (first outcome
+  mark), `endedAt` (terminal entry). Every result renders run duration
+  (prompt accepted → outcome decided — pairs with usage/cost; usage accrues
+  while the agent runs) plus total delegation duration (BEGIN → terminal,
+  collect + stop ladders included); a pre-run failure leaves run duration
+  null (honest evidence — never a guessed duration).
+
 ## Honest success
 
 A finished child is not a successful child. `evaluateSuccess` inspects the
@@ -92,9 +101,9 @@ still succeeds if at least one declared artifact was collected.
 ## Tests
 
 ```
-node test.ts            # 44 machine tests (stub services, no child)
+node test.ts            # 47 machine tests (stub services, no child)
 node transport.test.ts  # 22 transport tests against fixtures/fake-child.mjs
-node live.test.ts       # live: 22 checks — real pi child + real model
+node live.test.ts       # live: 23 checks — real pi child + real model
                        # (few cents, ~4 min): success, hard-cap deadline,
                        # abort, provider/model flags, 136 KB prompt,
                        # SIGKILL'd parent (orphan watchdog reaps child +
