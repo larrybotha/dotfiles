@@ -19,6 +19,7 @@
 		"tmux/*.ts",
 		"tmux-delegate/*.ts",
 		"rpc-delegate/*.ts",
-		"slide-deck/*.ts"
+		"slide-deck/*.ts",
+		"journal/*.ts"
 	]
 }
