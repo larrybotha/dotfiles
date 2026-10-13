@@ -20,15 +20,6 @@ else
   echo "Rust already installed"
 fi
 
-if ! type -p nix &>/dev/null; then
-  echo "installing nix"
-
-  # see https://nixcademy.com/posts/nix-on-macos/
-  curl --proto '=https' --tlsv1.2 -sSf \
-    -L https://install.determinate.systems/nix \
-    | sh -s -- install
-fi
-
 # install Node Version Manager and node
 if type -p nvm &>/dev/null; then
   echo "nvm already installed"

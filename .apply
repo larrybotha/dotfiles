@@ -139,7 +139,6 @@ function symlink_configs() {
     ".config/kmonad|$HOME/.config/kmonad"
     ".config/lazygit|$HOME/.config/lazygit"
     ".config/neorg|$HOME/.config/neorg"
-    ".config/nix|$HOME/.config/nix"
     ".config/nnn|$HOME/.config/nnn"
     ".config/nvim|$HOME/.config/nvim"
     ".config/opencode|$HOME/.config/opencode"
