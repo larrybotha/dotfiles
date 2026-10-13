@@ -110,7 +110,6 @@ function symlink_configs() {
 
     # $HOME dirs
     ".agents|$HOME/.agents"
-    ".claude|$HOME/.claude"
     ".cursor|$HOME/.cursor"
     ".gemini|$HOME/.gemini"
     ".gnupg|$HOME/.gnupg"
@@ -159,7 +158,6 @@ function symlink_configs() {
 
     # Application Support
     "Library/Application Support/xbar|$HOME/Library/Application Support/xbar"
-    "Library/Application Support/Claude|$HOME/Library/Application Support/Claude"
   )
 
   for config in "${configs[@]}"; do
