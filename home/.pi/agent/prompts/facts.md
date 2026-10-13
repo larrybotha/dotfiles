@@ -3,7 +3,7 @@ description: State facts only — no history, no records of changes
 argument-hint: "<task>"
 ---
 
-Task: ${@}
+Task: $@
 
 Rules:
 
