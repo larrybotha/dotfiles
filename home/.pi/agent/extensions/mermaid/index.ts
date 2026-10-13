@@ -239,6 +239,13 @@ let statusEnabled = process.env.MERMAID_FOOTER === "1";
 // '::' port pre-check, clean-stop WS adapter, port auto-allocation.
 // ---------------------------------------------------------------------------
 
+/**
+ * Session reset telemetry — lives outside the machine so RESET cannot
+ * clear it. Process-lifetime only: not branch-restored, session restart
+ * starts a clean count. Enforced nowhere; surfaced in statusLine/statusText.
+ */
+const sessionStats = { resets: 0 };
+
 const viz = makeViz({ name: "mermaid", preferredPort: INSPECT_PORT });
 
 /** Attach mid-session: re-create the actor from its persisted snapshot with inspect wired. */
@@ -251,7 +258,7 @@ async function attachInspector(): Promise<VizResult> {
 /** Compact live status for the TUI footer. */
 function statusText(c: ReturnType<typeof initialContext>): string {
   const src = c.validated ? basename(c.validated.path) : "no source";
-  return `mermaid ${stateValue()} · ${src} · diagram failures ${c.validateAttempts}/${c.limits.maxValidateAttempts} · renders ${c.renders.length} · embeds ${c.embeds.length}`;
+  return `mermaid ${stateValue()} · ${src} · diagram failures ${c.validateAttempts}/${c.limits.maxValidateAttempts} · renders ${c.renders.length} · embeds ${c.embeds.length}${sessionStats.resets > 0 ? ` · resets ${sessionStats.resets}` : ""}`;
 }
 
 function refreshStatus() {
@@ -803,7 +810,10 @@ function previewOf(body: string): string | null {
 }
 
 function statusLine(ctx: ReturnType<typeof initialContext>): string {
-  return `Diagram failures (validate+render): ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}. Renders: ${ctx.renders.length}. Embeds: ${ctx.embeds.length}. Machine state: ${stateValue()}.`;
+  return (
+    `Diagram failures (validate+render): ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}. Renders: ${ctx.renders.length}. Embeds: ${ctx.embeds.length}. Machine state: ${stateValue()}.` +
+    (sessionStats.resets > 0 ? ` Resets this session: ${sessionStats.resets}.` : "")
+  );
 }
 
 /**
@@ -1533,10 +1543,11 @@ export default function (pi: ExtensionAPI) {
         const ctx = getActor().getSnapshot().context;
         const prior = `validated: ${ctx.validated ? basename(ctx.validated.path) : "none"}, diagram failures ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}, renders ${ctx.renders.length}, embeds ${ctx.embeds.length}, machine state ${stateValue()}`;
         getActor().send({ type: "RESET" });
+        sessionStats.resets++; // survives RESET
         log("INFO", `reset (was: ${prior})`);
         return {
           content: text(
-            `Diagram state cleared (was: ${prior}).\n${statusLine(getActor().getSnapshot().context)}`,
+            `Diagram state cleared (was: ${prior}). Resets this session: ${sessionStats.resets}.\n${statusLine(getActor().getSnapshot().context)}`,
           ),
           details: detailsFor("reset"),
         };
@@ -1625,6 +1636,7 @@ export default function (pi: ExtensionAPI) {
 
       if (sub === "reset") {
         getActor().send({ type: "RESET" });
+        sessionStats.resets++;
 
         ctx.ui.notify("Mermaid state reset", "info");
 

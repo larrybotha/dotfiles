@@ -54,7 +54,7 @@ normalizes it). The distinction is enforced end to end:
 | `mermaid_embed`    | Insert fenced mermaid block into Markdown (validated source only); idempotent; optional `after` anchor                                                                                                                                                                                  |
 | `mermaid_reset`    | Clear state, start over                                                                                                                                                                                                                                                                 |
 
-`/mermaid` (or `/mermaid status`) shows state; `/mermaid reset` clears it;
+`/mermaid` (or `/mermaid status`) shows state; `/mermaid reset` clears it (reset count tracked outside the machine, surfaced in status/footer);
 `/mermaid output [mode]` sets what the user sees on validation (picker with
 no argument); `/mermaid footer` toggles the live footer line (off by
 default); `/mermaid viz` live-visualises the running machine.
