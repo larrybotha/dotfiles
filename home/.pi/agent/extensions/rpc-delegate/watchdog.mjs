@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 /**
- * External orphan watchdog for the rpc-delegate extension (tmux-delegate
- * runner pattern). Direct child_process.spawn does not kill the child when
+ * External orphan watchdog for the rpc-delegate extension. Direct
+ * child_process.spawn does not kill the child when
  * the parent pi is SIGKILLed — this detached process holds the contract:
  *
  *   node watchdog.mjs <parentPid> <childPid> <deadlineEpochMs> [pollMs]

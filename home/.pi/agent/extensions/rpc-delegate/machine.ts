@@ -6,7 +6,7 @@
  * collect → stop (orderly shutdown ladder) → final outcome.
  *
  * The machine owns legality; services own IO (typed stubs here, wired in
- * index.ts, controllable stubs in test.ts — tmux-delegate pattern). The
+ * index.ts, controllable stubs in test.ts). The
  * machine receives a small typed event set, NOT raw RPC records: the
  * transport (transport.ts) converts raw JSONL into AGENT_x / TOOL_x / MESSAGE_END
  * events and keeps big evidence (text tails, stderr) in capped rings outside
@@ -38,7 +38,7 @@
  *   stopping (stats/export best-effort → orderly shutdown → TERM pg → KILL)
  *           ──CHILD_EXIT──> success | error | timeout | aborted
  *   spawn-fail: error directly — no collect (nothing ran), wired spawn
- *   service self-cleans (tmux-delegate parity).
+ *   service self-cleans.
  *
  * Outcome routing at stopping: timeout/aborted map directly; error maps
  * error; settled evaluates success semantics — run started + settled +
@@ -837,8 +837,7 @@ export const rpcMachine = setup({
 		},
 		// Cancellation ladder (clear_queue → abort → stdin close → TERM pg →
 		// KILL), tolerant of dead/missing transport. Outcome was marked on entry.
-		// Abort/deadline outcomes still collect (explicit policy — documented
-		// difference from tmux-delegate's user-abort).
+		// Abort/deadline outcomes still collect (explicit policy).
 		cancelling: {
 			invoke: {
 				src: "cancelService",

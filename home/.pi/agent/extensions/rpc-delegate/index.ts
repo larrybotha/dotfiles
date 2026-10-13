@@ -5,13 +5,9 @@
  * supervised through the raw JSONL RPC protocol: mid-flight evidence (tool
  * activity, final assistant text), honest outcomes from the event stream
  * (agent_settled ≠ success — the final assistant stopReason decides), and
- * artifact-contract results. Closes the gap between delegate_task
- * (watchdog + isolation, no streaming, tmux dependency) and the subagent
- * example (streaming subprocess, no external watchdog, no artifact
- * contract, no cancellation ladder).
+ * artifact-contract results.
  *
- * Architecture (tmux-delegate pattern, machine owns legality / services own
- * IO / tool is thin):
+ * Architecture (machine owns legality / services own IO / tool is thin):
  *
  * - machine.ts — the lifecycle: spawn → handshake → prompt → run → collect →
  *   stop → outcome. Receives a small typed event set from the transport.
@@ -19,15 +15,15 @@
  *   record → event conversion, extension-UI auto-cancel, backpressure,
  *   PROTOCOL_FATAL on well-defined violations only. External watchdog
  *   (watchdog.mjs) guards against parent-SIGKILL orphans.
- * - collector.ts — artifact read (tmux-delegate honest accounting).
+ * - collector.ts — artifact read (honest accounting).
  * - index.ts (this file) — registers rpc_delegate_task, wires the real
  *   services around the machine, builds results from the snapshot.
  *
  * One child per call — `--no-session` (in-memory, never resumable), so
  * `agent_settled` attribution is unambiguous. No monitor/attach: debugging
  * is the bounded evidence in the result + optional session HTML export.
- * Unlike tmux-delegate, deadline/abort outcomes DO collect artifacts
- * (explicit policy — partial work is evidence).
+ * Deadline/abort outcomes DO collect artifacts (explicit policy — partial
+ * work is evidence).
  */
 import * as fs from "node:fs";
 import * as os from "node:os";
@@ -157,7 +153,7 @@ interface RpcDelegateDetails {
 // Helpers
 // ---------------------------------------------------------------------------
 
-/** Resolve the pi binary the same way tmux-delegate does (must run inside
+/** Resolve the pi binary (must run inside
  *  the pi process — process.argv points at pi here). */
 function resolvePiBinary(): { command: string; args: string[] } {
 	const currentScript = process.argv[1];
@@ -204,7 +200,7 @@ function childArgs(input: {
 
 // ---------------------------------------------------------------------------
 // Wired services — real IO around the machine (machine.ts ships typed
-// stubs; test.ts wires controlled stubs — tmux-delegate pattern).
+// stubs; test.ts wires controlled stubs).
 // ---------------------------------------------------------------------------
 
 async function runSpawnService(input: SpawnInput, signal: AbortSignal): Promise<SpawnOutput> {

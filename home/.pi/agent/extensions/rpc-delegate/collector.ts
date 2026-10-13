@@ -1,7 +1,7 @@
 /**
- * Artifact collector — same honest-accounting contract as tmux-delegate's
- * collect.mjs (64-artifact cap enforced by paramsViolation; per-file byte
- * cap; readError flags; relative-to-cwd resolution; truncation marked):
+ * Artifact collector — honest-accounting contract (64-artifact cap
+ * enforced by paramsViolation; per-file byte cap; readError flags;
+ * relative-to-cwd resolution; truncation marked):
  *
  * - a missing path is `missing` (declared, never produced);
  * - an unreadable path (EISDIR/EACCES/…) is `readError` — counted like

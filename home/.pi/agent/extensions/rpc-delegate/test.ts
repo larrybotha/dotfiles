@@ -2,7 +2,7 @@
  * Machine tests — run without an LLM, child process, or watchdog:
  *   node test.ts
  *
- * Controllable stubs (tmux-delegate slide-deck pattern): services record
+ * Controllable stubs: services record
  * their inputs (evidence parity), observe their AbortSignal, and decide
  * outcomes. The full matrix from the plan is covered deterministically:
  * spawn/handshake/prompt failures, handled/started/queued dispositions, fast
@@ -894,7 +894,7 @@ await ok("KILL during running → cancelled: ladder → collect (policy differen
 	a.send({ type: "KILL" });
 	await waitFor(a, (s) => isFinal(s), { timeout: 2000 });
 	assert.equal(a.getSnapshot().value, "aborted");
-	// abort/deadline DO collect — documented difference from tmux-delegate
+	// abort/deadline DO collect
 	assert.equal(stub.collectInputs.length, 1);
 	assert.equal(stub.stopInputs.length, 1);
 });
@@ -972,7 +972,7 @@ await ok("KILL during collecting (post-settle) → success; late abort dropped, 
 	a.send({ type: "KILL" }); // late abort during collect — run already settled
 	gate.resolve({ artifacts: [A_OK] });
 	await waitFor(a, (s) => isFinal(s), { timeout: 2000 });
-	// policy (tmux-delegate parity): a post-settle abort does not retro-flip
+	// policy: a post-settle abort does not retro-flip
 	// a completed run; the artifacts are kept and the run reports success
 	assert.equal(a.getSnapshot().value, "success");
 	assert.equal(a.getSnapshot().context.artifacts.length, 1);

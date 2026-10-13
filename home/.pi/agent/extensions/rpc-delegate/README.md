@@ -1,8 +1,7 @@
 # rpc-delegate
 
 Delegate a task to a supervised, ephemeral child pi over the raw JSONL RPC
-protocol — an in-process alternative to [tmux-delegate](../tmux-delegate) for
-hosts that can spawn `pi` directly.
+protocol — for hosts that can spawn `pi` directly.
 
 ```
 rpc_delegate_task: {
@@ -22,7 +21,7 @@ rpc_delegate_task: {
 
 ## Architecture
 
-Same separation as tmux-delegate, one layer deeper:
+Separation of concerns:
 
 | file | owns |
 | --- | --- |
@@ -56,8 +55,8 @@ idle → spawning → handshaking → prompting → running → collecting → s
   heartbeat file (`{t, open}` JSON) lets the watchdog enforce the same
   policy if the extension process itself wedges; the watchdog unlinks it
   on every exit path.
-- Deadline and abort still collect declared artifacts — tmux-delegate skips
-  collection there; this protocol can read the transcript of a killed child.
+- Deadline and abort still collect declared artifacts — this protocol can read
+  the transcript of a killed child.
 - **Cancellation ladder** (deadline / abort): `clear_queue` → `abort` →
   stdin-close → wait 10 s → SIGTERM → wait 5 s → SIGKILL.
 - **Stop ladder** (every final): `get_session_stats` (usage/cost evidence) →
@@ -118,11 +117,9 @@ stall-open, mute — a child that never speaks) — every protocol
 failure mode (including a silent hung
 child and a silently-running child tool) is testable without a model.
 
-## Differences from tmux-delegate
+## Streaming
 
-- Child is a piped `pi --mode rpc --no-session` process, not a tmux pane.
-- Deadline/abort paths still collect artifacts (tmux-delegate skips there).
-- Stream events (message/tool) are observed live, not scraped from a pane.
+- Stream events (message/tool) are observed live from the RPC pipe.
 - `STEER` is machine/transport-supported (delivered mid-turn with
   `streamingBehavior: "steer"`) but not tool-exposed: the tool's `onUpdate`
   progress channel is one-way. Capability-ready if a two-way channel appears.
