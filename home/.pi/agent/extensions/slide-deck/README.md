@@ -57,7 +57,8 @@ Output defaults to `decks/{yyyy-mm-dd}-{slug}.html` (scratch intermediates
 in `decks/scratch/`).
 
 `/slidedeck` (or `/slidedeck status`) shows state; `/slidedeck reset`
-clears; `/slidedeck footer` toggles the live footer line (off by default,
+clears (reset count tracked outside the machine, surfaced in
+status/footer); `/slidedeck footer` toggles the live footer line (off by default,
 or `SLIDE_DECK_FOOTER=1`); `/slidedeck viz` live-visualises the running
 machine (port 8083: tmux 8080, web-browser 8081, mermaid 8082).
 Rejected actions return a normal result explaining why and what is allowed

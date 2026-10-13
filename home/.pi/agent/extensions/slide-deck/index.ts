@@ -181,10 +181,17 @@ let uiCtx: {
 /** Footer status is opt-in: toggle with '/slidedeck footer' (or SLIDE_DECK_FOOTER=1). */
 let statusEnabled = process.env.SLIDE_DECK_FOOTER === "1";
 
+/**
+ * Session reset telemetry — lives outside the machine so RESET cannot
+ * clear it. Process-lifetime only: not branch-restored, session restart
+ * starts a clean count. Enforced nowhere; surfaced in statusLine/statusText.
+ */
+const sessionStats = { resets: 0 };
+
 /** Compact live status for the TUI footer. */
 function statusText(c: SlideDeckContext): string {
 	const deck = c.deck ? c.deck.title : "no deck";
-	return `slide-deck ${stateLabel(c)} · ${deck} · failed validations ${c.validateAttempts}/${c.limits.maxValidateAttempts} · builds ${c.builds.length}`;
+	return `slide-deck ${stateLabel(c)} · ${deck} · failed validations ${c.validateAttempts}/${c.limits.maxValidateAttempts} · builds ${c.builds.length}${sessionStats.resets > 0 ? ` · resets ${sessionStats.resets}` : ""}`;
 }
 
 function refreshStatus() {
@@ -491,6 +498,7 @@ function statusLine(ctx: SlideDeckContext): string {
 	const parts = [
 		`Machine state: ${stateLabel(ctx)}.`,
 	];
+	if (sessionStats.resets > 0) parts.push(`Resets this session: ${sessionStats.resets}.`);
 	if (ctx.topic) parts.push(`Topic: ${ctx.topic}.`);
 	if (ctx.sources.length > 0) parts.push(`Sources: ${ctx.sources.length}.`);
 	if (ctx.plannedSlides.length > 0)
@@ -1017,10 +1025,11 @@ export default function (pi: ExtensionAPI) {
 				const ctx = getActor().getSnapshot().context;
 				const prior = `topic ${ctx.topic ?? "none"}, deck ${ctx.deck ? `"${ctx.deck.title}"` : "none"}, failed validations ${ctx.validateAttempts}/${ctx.limits.maxValidateAttempts}, builds ${ctx.builds.length}, machine state ${stateLabel(ctx)}`;
 				getActor().send({ type: "RESET" });
+				sessionStats.resets++; // survives RESET
 				log("INFO", `reset (was: ${prior})`);
 				return {
 					content: text(
-						`Deck state cleared (was: ${prior}).\n${statusLine(getActor().getSnapshot().context)}`,
+						`Deck state cleared (was: ${prior}). Resets this session: ${sessionStats.resets}.\n${statusLine(getActor().getSnapshot().context)}`,
 					),
 					details: detailsFor("reset"),
 				};
@@ -1050,6 +1059,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			if (sub === "reset") {
 				getActor().send({ type: "RESET" });
+				sessionStats.resets++;
 				ctx.ui.notify("Deck state cleared", "info");
 				return;
 			}
