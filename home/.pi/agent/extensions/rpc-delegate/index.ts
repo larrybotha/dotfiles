@@ -32,7 +32,11 @@
 import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
-import { getMarkdownTheme, type ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import {
+	getMarkdownTheme,
+	type ExtensionAPI,
+	type ThemeColor,
+} from "@earendil-works/pi-coding-agent";
 import { Container, Markdown, Text, Spacer } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { createActor, fromPromise, waitFor, type Actor } from "xstate";
@@ -45,6 +49,7 @@ import {
 	type ArtifactEntry,
 	type CancelInput,
 	type CancelOutput,
+	type DelegateStatus,
 	type CollectInput,
 	type CollectOutput,
 	type HandshakeInput,
@@ -80,6 +85,15 @@ const DEFAULT_TIMEOUT = 1800;
 const STALL_GAP_MS = 180_000;
 const STATUS_UPDATE_MS = 5000;
 
+/** Status → (theme color, glyph) — one entry per DelegateStatus; renderResult keys into it. */
+const STATUS_ICONS: Record<DelegateStatus, readonly [ThemeColor, string]> = {
+	success: ["success", "✓"],
+	running: ["dim", "⟳"],
+	timeout: ["warning", "⏱"],
+	aborted: ["warning", "⊘"],
+	error: ["error", "✗"],
+};
+
 const EXEC_DIR =
 	process.env.RPC_DELEGATE_DIR ??
 	path.join(os.homedir(), ".pi/agent/extensions/rpc-delegate");
@@ -105,7 +119,7 @@ const WATCHDOG_GRACE_MS = 120_000;
 // ---------------------------------------------------------------------------
 
 interface RpcDelegateDetails {
-	status: "success" | "error" | "timeout" | "running" | "aborted";
+	status: DelegateStatus;
 	sessionId: string;
 	childSessionId: string | null;
 	childModelId: string | null;
@@ -710,14 +724,8 @@ export default function (pi: ExtensionAPI) {
 				return new Text(t?.type === "text" ? t.text : "(no output)", 0, 0);
 			}
 
-			const icon =
-				d.status === "success"
-					? theme.fg("success", "✓")
-					: d.status === "timeout"
-						? theme.fg("warning", "⏱")
-						: d.status === "aborted"
-							? theme.fg("warning", "⊘")
-							: theme.fg("error", "✗");
+			const [iconColor, iconGlyph] = STATUS_ICONS[d.status];
+			const icon = theme.fg(iconColor, iconGlyph);
 
 			if (expanded) {
 				const container = new Container();
