@@ -16,7 +16,8 @@
  *                             validated; strict closed shape)
  *   journal_link            — post-hoc m:n links between entries
  *   journal_status          — snapshot + allowed next steps
- *   journal_reset           — clear the workflow state
+ *   journal_reset           — clear the workflow state; discarding answers
+ *                             in progress / a mid-save asks the user first
  *
  * Storage contract: a completed entry is a single markdown text field —
  * template steps shape gathering, composeContent() folds them at persist
@@ -192,6 +193,13 @@ function withToolLock<T>(fn: () => Promise<T>): Promise<T> {
 	return next;
 }
 
+/**
+ * Session reset telemetry — lives outside the machine so RESET cannot clear
+ * it. Process-lifetime only: not branch-restored, session restart starts a
+ * clean count. Enforced nowhere; surfaced in statusLine.
+ */
+const sessionStats = { resets: 0 };
+
 /** Machine-touching tool names — reconstruct scans for their snapshots. */
 const SNAPSHOT_TOOLS = new Set(["journal_status", "journal_reset"]);
 
@@ -227,6 +235,8 @@ function msg(e: unknown): string {
 
 function statusLine(c: JournalContext): string {
 	const parts = [`Machine state: ${stateLabel(c)}.`];
+	// session reset telemetry — survives RESET
+	if (sessionStats.resets > 0) parts.push(`Resets this session: ${sessionStats.resets}.`);
 	if (c.template) {
 		const answered = Object.keys(c.answers).length;
 		parts.push(
@@ -350,6 +360,20 @@ async function persistAndReport(ctx: JournalUiCtx): Promise<void> {
 			"warning",
 		);
 	}
+}
+
+/**
+ * Destructive-discard warning for a model-triggered journal_reset: answered
+ * steps are memory-only and a silent drop is unrecoverable. Null when
+ * nothing user-authored is at risk (idle / authoring phase null / done).
+ */
+function resetDiscardWarning(c: JournalContext): string | null {
+	const v = stateValue();
+	if (v === "persisting")
+		return "an entry the user approved is mid-save — resetting drops the save";
+	if (v === "authoring" && c.phase !== null)
+		return `an entry is in progress (${progressText(c)}) — answered steps are memory-only and unrecoverable`;
+	return null;
 }
 
 /** Progress text for the mid-flow discard confirm. */
@@ -1002,19 +1026,51 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "journal_reset",
 		label: "Journal reset",
-		description: "Clear the journal workflow state machine and start over.",
+		description:
+			"Clear the journal workflow state machine and start over. " +
+			"Discarding an entry in progress (answered steps, pending save) requires user confirmation; " +
+			"with no UI available, the reset is blocked.",
 		parameters: Type.Object({}),
 
-		async execute() {
+		async execute(_toolCallId, _params, _signal, _onUpdate, execCtx) {
+			// Confirm gate runs before withToolLock: a dialog must not block
+			// other journal tools. RESET is legal from any state, so a state
+			// change during the dialog only alters what gets cleared.
+			const gate = resetDiscardWarning(getActor().getSnapshot().context);
+			if (gate) {
+				const ui = execCtx as unknown as JournalUiCtx | undefined;
+				if (!ui || !ui.hasUI) {
+					return {
+						content: text(
+							`Journal reset blocked — ${gate}. Answers are memory-only and unrecoverable; ` +
+								"no UI is available to confirm the discard. Ask the user to run /journal reset (or /journal add to continue the entry).",
+						),
+					details: detailsFor("reset", { rejected: "no UI to confirm discard" }),
+				};
+				}
+				const discard = await ui.ui.confirm(
+					"Journal: model requested reset — discard the entry in progress?",
+					gate,
+				);
+				if (!discard) {
+						return {
+							content: text(
+								`Journal reset declined — the entry in progress was kept.\n${statusLine(getActor().getSnapshot().context)}\n${allowedNext()}`,
+						),
+						details: detailsFor("reset", { rejected: "user declined" }),
+					};
+				}
+			}
 			return withToolLock(async () => {
 				const c = getActor().getSnapshot().context;
 				const prior = `template ${c.template ? `"${c.template.name}"` : "none"}, ${Object.keys(c.answers).length} steps answered, tags ${c.tags.length}, last entry ${c.lastEntry ? `#${c.lastEntry.id}` : "none"}, failed persists ${c.persistAttempts}/${c.limits.maxPersistAttempts}, machine state ${stateLabel(c)}`;
 				getActor().send({ type: "RESET" });
+				sessionStats.resets++; // survives RESET
 				return {
 					content: text(
 						`Journal state cleared (was: ${prior}).\n${statusLine(getActor().getSnapshot().context)}`,
 					),
-					details: detailsFor("reset", {
+				details: detailsFor("reset", {
 						snapshot: slimSnapshot(getActor().getPersistedSnapshot()),
 					}),
 				};
@@ -1024,7 +1080,9 @@ export default function (pi: ExtensionAPI) {
 		renderCall() {
 			return new Text("journal_reset", 0, 0);
 		},
-		renderResult() {
+		renderResult(result) {
+			const details = result.details as JournalDetails | undefined;
+			if (details?.rejected) return new Text(`✗ ${details.rejected}`, 0, 0);
 			return new Text("✓ reset", 0, 0);
 		},
 	});
@@ -1043,7 +1101,9 @@ export default function (pi: ExtensionAPI) {
 				return;
 			}
 			if (sub === "reset") {
+				// user-typed command — explicit intent, no confirm gate; still counted
 				getActor().send({ type: "RESET" });
+				sessionStats.resets++;
 				uictx.ui.notify("Journal state cleared", "info");
 				return;
 			}

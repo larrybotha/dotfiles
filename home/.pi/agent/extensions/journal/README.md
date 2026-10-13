@@ -16,7 +16,7 @@ Machine-driven journalling workflow over a directory-local sqlite db.
 | `journal_read` | Query the db: entries (tag/search filters, previews), one entry's full markdown, tag counts, template schemas |
 | `journal_template_create` | Write a template schema to the db (strict validation) |
 | `journal_link` | Post-hoc many-to-many links between entries |
-| `journal_status` / `journal_reset` | Workflow snapshot / abort |
+| `journal_status` / `journal_reset` | Workflow snapshot / abort — discarding answers in progress or a mid-save requires user confirmation; with no UI, blocked. Reset count surfaced in status |
 
 ## Storage contract
 
