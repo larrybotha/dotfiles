@@ -10,9 +10,14 @@
  *   BEGIN_SEARCH -> (IO) -> SEARCH_DONE  { results | error }
  *   BEGIN_FETCH  -> (IO) -> FETCH_DONE   { contents, failed }
  *   SATISFIED (guard: >=1 successful search) -> done
- *   RESET -> idle (context cleared)
+ *   ARCHIVE (from done) -> researching (new budget window: spend/fetch
+ *               counters and dedupe cleared; results/queries kept — known
+ *               links stay fetchable)
+ *   RESET -> idle (context fully cleared)
  *
- * BEGIN reserves budget: BEGIN_SEARCH/BEGIN_FETCH bump reserved counters
+ * Budgets are per research run; the run's knowledge (results, queries)
+ * carries across runs via ARCHIVE. BEGIN reserves budget: BEGIN_SEARCH /
+ * BEGIN_FETCH bump reserved counters
  * (guards count them, so N concurrent calls cannot all pass the precheck
  * against the same budget window — no TOCTOU over-run). Reservations are
  * never persisted: slim snapshots strip them; a late DONE landing on a
@@ -82,6 +87,7 @@ export type ResearchEvent =
 			failed: { link: string; error: string }[];
 	  }
 	| { type: "SATISFIED" }
+	| { type: "ARCHIVE" }
 	| { type: "RESET" };
 
 export const DEFAULT_LIMITS: Limits = {
@@ -127,7 +133,7 @@ export function fetchViolation(ctx: ResearchContext, links: string[]): string | 
 	if (links.length === 0) return "no links provided";
 	if (new Set(links).size !== links.length) return "duplicate links in request";
 	if (ctx.fetchAttempts >= ctx.limits.maxFetchAttempts) {
-		return `too many failed fetch attempts (${ctx.fetchAttempts}/${ctx.limits.maxFetchAttempts}) — use web_report with what you have, or web_reset`;
+		return `too many failed fetch attempts (${ctx.fetchAttempts}/${ctx.limits.maxFetchAttempts}) — use web_report with what you have, or web_archive/web_reset for a new run`;
 	}
 	if (ctx.fetchCount + ctx.reservedFetches + links.length > ctx.limits.maxFetches) {
 		return `fetch budget exceeded (${ctx.fetchCount}/${ctx.limits.maxFetches} fetched, ${links.length} requested${
@@ -142,7 +148,7 @@ export function fetchViolation(ctx: ResearchContext, links: string[]): string | 
 	const alreadyFetched = new Set(ctx.fetched.map((f) => f.link));
 	const dup = links.filter((l) => alreadyFetched.has(l));
 	if (dup.length > 0) {
-		return `already fetched (use web_report to finish, or web_reset to start over): ${dup.join(", ")}`;
+		return `already fetched (use web_report to finish, or web_archive to continue in a new run, or web_reset to start over): ${dup.join(", ")}`;
 	}
 	return null;
 }
@@ -204,6 +210,19 @@ export const researchMachine = setup({
 				errors: [...context.errors, ...event.failed.map((f) => `fetch ${f.link}: ${f.error}`)],
 			};
 		}),
+		// New budget window: spend/fetch counters cleared, fetched list
+		// cleared (dedupe is run-scoped — links refetchable), results and
+		// queries kept. Reservations clamp to 0 (done can land mid-IO).
+		archiveRun: assign(({ context }) => ({
+			searchCount: 0,
+			searchAttempts: 0,
+			fetchCount: 0,
+			fetchAttempts: 0,
+			reservedSearches: 0,
+			reservedFetches: 0,
+			fetched: [],
+			errors: [],
+		})),
 		resetContext: assign(({ context }) => initialContext(context.limits)),
 	},
 }).createMachine({
@@ -228,6 +247,7 @@ export const researchMachine = setup({
 		},
 		done: {
 			on: {
+				ARCHIVE: { target: "researching", actions: "archiveRun" },
 				RESET: { target: "idle", actions: "resetContext" },
 			},
 		},

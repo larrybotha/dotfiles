@@ -10,7 +10,9 @@
  *   web_fetch   — extract markdown for links returned by web_search
  *                 (only known, unfetched links; budget: WEB_RESEARCH_MAX_FETCHES)
  *   web_report  — end research (requires >=1 successful search)
- *   web_reset   — clear research state and start over
+ *   web_archive — new budget window, known links kept (legal continuation
+ *                 after web_report)
+ *   web_reset   — clear research state entirely and start over
  *
  * Deterministic aspects (budgets, dedupe, known-link rules, state order,
  * retry caps) live in the machine — enforced in code, not requested in a
@@ -82,7 +84,15 @@ function log(level: "INFO" | "WARN" | "ERROR", msg: string) {
 	}
 }
 
-const TOOL_NAMES = new Set(["web_search", "web_fetch", "web_report", "web_reset"]);
+const TOOL_NAMES = new Set(["web_search", "web_fetch", "web_report", "web_archive", "web_reset"]);
+
+/**
+ * Session spend telemetry — counts real IO launched, lives outside the
+ * machine so RESET/ARCHIVE cannot clear it. Process-lifetime only: not
+ * branch-restored, session restart starts a clean count. Enforced nowhere;
+ * surfaced in every tool result and /websearch status.
+ */
+const sessionStats = { searches: 0, fetches: 0, resets: 0, archives: 0 };
 
 // ---------------------------------------------------------------------------
 // Types
@@ -91,7 +101,7 @@ const TOOL_NAMES = new Set(["web_search", "web_fetch", "web_report", "web_reset"
 type PersistedSnapshot = { context?: ReturnType<typeof initialContext>; value?: unknown; status?: unknown };
 
 type WebDetails = {
-	action: "search" | "fetch" | "report" | "reset";
+	action: "search" | "fetch" | "report" | "archive" | "reset";
 	state: string;
 	rejected?: string;
 	error?: string;
@@ -287,7 +297,8 @@ function budgetLine(ctx: ReturnType<typeof initialContext>): string {
 	return (
 		`Budget: searches ${ctx.searchCount}/${ctx.limits.maxSearches}, failed search attempts ${ctx.searchAttempts}/${ctx.limits.maxSearchAttempts}, ` +
 		`fetches ${ctx.fetchCount}/${ctx.limits.maxFetches}, failed fetch attempts ${ctx.fetchAttempts}/${ctx.limits.maxFetchAttempts}${inFlight}. ` +
-		`Machine state: ${stateValue()}.`
+		`Machine state: ${stateValue()}. ` +
+		`Session totals: ${sessionStats.searches} search call(s), ${sessionStats.fetches} fetch(es), ${sessionStats.archives} archive(s), ${sessionStats.resets} reset(s).`
 	);
 }
 
@@ -330,7 +341,8 @@ const text = (t: string) => [{ type: "text" as const, text: t }];
 
 const SUBCOMMANDS: { value: string; description: string }[] = [
 	{ value: "status", description: "show research state and budgets" },
-	{ value: "reset", description: "clear research state" },
+	{ value: "archive", description: "new budget window, known links kept" },
+	{ value: "reset", description: "clear research state entirely" },
 	{ value: "footer", description: "toggle live footer status line" },
 	{ value: "viz", description: "attach the Stately inspector (live visualisation)" },
 ];
@@ -401,7 +413,7 @@ export default function (pi: ExtensionAPI) {
 		description:
 			"Run a Brave web search as part of a research workflow. Results are tracked by a state machine: " +
 			`budgets are enforced (${LIMITS.maxSearches} searches, ${LIMITS.maxFetches} page fetches per research run). ` +
-			"After web_report ends the run, further searches and fetches are rejected until web_reset. " +
+			"After web_report ends the run, continue with web_archive (fresh budget window, known links kept) or start over with web_reset. " +
 			"After searching, use web_fetch on interesting links, then web_report when done. " +
 			"Options: num (1-20, default 5), country (2-letter code), freshness (pd|pw|pm|py or YYYY-MM-DDtoYYYY-MM-DD).",
 		parameters: Type.Object({
@@ -428,7 +440,7 @@ export default function (pi: ExtensionAPI) {
 			// state/violation for readability
 			const violation = !snap.can({ type: "BEGIN_SEARCH", query: params.query, params: searchParams })
 				? snap.matches("done")
-					? "research run already reported — use web_reset to start a new research run"
+					? "research run already reported — use web_archive to continue in a fresh budget window (known links kept), or web_reset to start over"
 					: searchViolation(snap.context) ?? "search not legal now"
 				: null;
 			if (violation) {
@@ -436,7 +448,7 @@ export default function (pi: ExtensionAPI) {
 				return {
 					content: text(
 						`Search rejected: ${violation}\n${budgetLine(snap.context)}\n` +
-							"Allowed next steps: web_report (if you have results) or web_reset.",
+							"Allowed next steps: web_report (if you have results), web_reset, or web_archive after a report.",
 					),
 					details: detailsFor("search", { rejected: violation }),
 				};
@@ -452,6 +464,7 @@ export default function (pi: ExtensionAPI) {
 			if (searchParams.freshness) args.push("--freshness", searchParams.freshness);
 
 			getActor().send({ type: "BEGIN_SEARCH", query: params.query, params: searchParams });
+			sessionStats.searches++; // real API call launched
 
 			try {
 				const out = await run(SEARCH_SCRIPT, args);
@@ -523,7 +536,7 @@ export default function (pi: ExtensionAPI) {
 		description:
 			"Extract readable page content as markdown for links returned by web_search. " +
 			"Only known, not-yet-fetched links are allowed; duplicates and unknown URLs are rejected. " +
-			"After web_report ends the run, fetches are rejected until web_reset. " +
+			"After web_report ends the run, continue with web_archive (known links kept, fetched history cleared — links become fetchable again) or start over with web_reset. " +
 			"Budget enforced by the state machine.",
 		parameters: Type.Object({
 			links: Type.Array(Type.String(), { description: "Links previously returned by web_search" }),
@@ -537,7 +550,7 @@ export default function (pi: ExtensionAPI) {
 			// state + guards + reservations); reason derived for readability
 			const violation = !snap.can({ type: "BEGIN_FETCH", links })
 				? snap.matches("done")
-					? "research run already reported — use web_reset to start a new research run"
+					? "research run already reported — use web_archive to continue in a fresh budget window (known links kept), or web_reset to start over"
 					: fetchViolation(snap.context, links) ?? "fetch not legal now"
 				: null;
 			if (violation) {
@@ -552,6 +565,7 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			getActor().send({ type: "BEGIN_FETCH", links });
+			sessionStats.fetches += links.length; // real fetches launched
 
 			log("INFO", `fetch request: ${links.length} link(s)`);
 
@@ -602,7 +616,7 @@ export default function (pi: ExtensionAPI) {
 		label: "Web report",
 		description:
 			"End the research workflow and report what was gathered (requires at least one successful web_search). " +
-			"After reporting, further searches are rejected until web_reset. " +
+			"After reporting, continue with web_archive (fresh budget window, known links kept) or start over with web_reset. " +
 			"Synthesize your answer from the search results and fetched content already in the conversation.",
 		parameters: Type.Object({}),
 
@@ -641,7 +655,10 @@ export default function (pi: ExtensionAPI) {
 				lines.push("", "Errors encountered:");
 				for (const e of ctx.errors) lines.push(`- ${e}`);
 			}
-			lines.push("", `Machine state: ${stateValue()}. Further searches require web_reset.`);
+			lines.push(
+				"",
+				`Machine state: ${stateValue()}. Continue with web_archive (fresh budget window, known links kept — fetched history clears, links become fetchable again) or start over with web_reset.`,
+			);
 			return { content: text(lines.join("\n")), details: detailsFor("report") };
 		},
 
@@ -657,9 +674,61 @@ export default function (pi: ExtensionAPI) {
 	});
 
 	pi.registerTool({
+		name: "web_archive",
+		label: "Web research archive",
+		description:
+			"Archive the reported research run and start a fresh budget window. Legal only after web_report. " +
+			"Known links (search results) and query history survive; " +
+			"fetched-page history is cleared, so archived links become fetchable again. " +
+			"Prefer this over web_reset for continuing research after a report; web_reset is the true start-over.",
+		parameters: Type.Object({}),
+
+		async execute() {
+			const snap = getActor().getSnapshot();
+			// honest archive: ARCHIVE is machine-illegal outside done
+			if (!snap.can({ type: "ARCHIVE" })) {
+				return {
+					content: text(
+						snap.matches("done")
+							? `Archive rejected — not legal now (machine state ${stateValue()}).`
+							: `Nothing to archive — no reported research run yet.\n${budgetLine(snap.context)}`,
+					),
+					details: detailsFor("archive", {
+						rejected: snap.matches("done") ? "not legal now" : "no reported run",
+					}),
+				};
+			}
+			const ctx = snap.context;
+			const prior = `${ctx.searchCount} searches, ${ctx.fetchCount} fetches, ${ctx.results.length} known link(s), machine state ${stateValue()}`;
+			getActor().send({ type: "ARCHIVE" });
+			sessionStats.archives++;
+			return {
+					content: text(
+						`Research run archived (was: ${prior}). New budget window open; known links kept ` +
+							`(${getActor().getSnapshot().context.results.length}); fetched history cleared — links are fetchable again.\n` +
+							budgetLine(getActor().getSnapshot().context),
+					),
+					details: detailsFor("archive"),
+				};
+		},
+
+		renderCall() {
+			return new Text("web_archive", 0, 0);
+		},
+
+		renderResult(result) {
+			const details = result.details as WebDetails | undefined;
+			if (details?.rejected) return new Text(`✗ ${details.rejected}`, 0, 0);
+			return new Text("✓ archived — new budget window", 0, 0);
+		},
+	});
+
+	pi.registerTool({
 		name: "web_reset",
 		label: "Web research reset",
-		description: "Clear the web research state machine and start a fresh research run.",
+		description:
+			"Clear the web research state machine entirely (results, known links, history) and start a fresh run. " +
+			"For continuing research after a report, prefer web_archive (fresh budget window, known links kept).",
 		parameters: Type.Object({}),
 
 		async execute() {
@@ -677,6 +746,7 @@ export default function (pi: ExtensionAPI) {
 			const ctx = snap.context;
 			const prior = `Queries: ${ctx.searchCount} searches, ${ctx.fetchCount} fetches, ${ctx.results.length} results, machine state ${stateValue()}`;
 			getActor().send({ type: "RESET" });
+			sessionStats.resets++;
 			return {
 				content: text(`Research state cleared (was: ${prior}).\n${budgetLine(getActor().getSnapshot().context)}`),
 				details: detailsFor("reset"),
@@ -694,7 +764,7 @@ export default function (pi: ExtensionAPI) {
 
 	pi.registerCommand("websearch", {
 		description:
-			"Web search state machine: '/websearch status' shows state, '/websearch reset' clears it, '/websearch footer' toggles the live footer line (off by default), '/websearch viz' live-visualises the machine",
+			"Web search state machine: '/websearch status' shows state, '/websearch archive' rotates the budget window (known links kept), '/websearch reset' clears state entirely, '/websearch footer' toggles the live footer line (off by default), '/websearch viz' live-visualises the machine",
 		handler: async (args, ctx) => {
 			const sub = args.trim().split(/\s+/)[0]?.toLowerCase() ?? "";
 			if (sub === "footer") {
@@ -703,13 +773,35 @@ export default function (pi: ExtensionAPI) {
 				ctx.ui.notify(`Footer status ${statusEnabled ? "on" : "off"}`, "info");
 				return;
 			}
+			if (sub === "archive") {
+				if (!getActor().getSnapshot().can({ type: "ARCHIVE" })) {
+					ctx.ui.notify(
+						getActor().getSnapshot().matches("done")
+							? "Archive not legal now"
+							: "Nothing to archive — no reported research run yet (web_report first)",
+						"info",
+					);
+					return;
+				}
+				getActor().send({ type: "ARCHIVE" });
+				sessionStats.archives++;
+				ctx.ui.notify(
+						"Research run archived — new budget window, known links kept",
+						"info",
+				);
+				return;
+			}
 			if (sub === "reset") {
 				if (!getActor().getSnapshot().can({ type: "RESET" })) {
 					ctx.ui.notify("Nothing to clear — research state is already idle", "info");
 					return;
 				}
 				getActor().send({ type: "RESET" });
-				ctx.ui.notify("Web research state reset", "info");
+				sessionStats.resets++;
+				ctx.ui.notify(
+						"Web research state cleared — known links and history dropped too (use '/websearch archive' to continue instead)",
+						"info",
+				);
 				return;
 			}
 			if (sub === "viz") {
@@ -720,7 +812,7 @@ export default function (pi: ExtensionAPI) {
 			}
 			if (sub !== "" && sub !== "status") {
 				ctx.ui.notify(
-					`Unknown subcommand '${sub}'. Use '/websearch status', '/websearch reset', '/websearch footer', or '/websearch viz'.`,
+					`Unknown subcommand '${sub}'. Use '/websearch status', '/websearch archive', '/websearch reset', '/websearch footer', or '/websearch viz'.`,
 					"error",
 				);
 				return;
@@ -732,6 +824,7 @@ export default function (pi: ExtensionAPI) {
 				budgetLine(c),
 				`Queries: ${c.queries.length ? c.queries.map((q) => `"${q.query}"`).join(", ") : "(none)"}`,
 				`Results: ${c.results.length} | Fetched: ${c.fetchCount} | Errors: ${c.errors.length}`,
+				`Session totals: ${sessionStats.searches} search call(s), ${sessionStats.fetches} fetch(es), ${sessionStats.archives} archive(s), ${sessionStats.resets} reset(s)`,
 			];
 			ctx.ui.notify(lines.join("\n"), "info");
 		},

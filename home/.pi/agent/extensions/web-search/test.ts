@@ -110,6 +110,86 @@ ok("failed attempts capped separately from successes", () => {
 	assert.match(searchViolation(a.getSnapshot().context) ?? "", /failed search attempts/);
 });
 
+// --- archive: done-trap continuation (budget window rotation) -------------------
+ok("ARCHIVE illegal outside done", () => {
+	const a = makeActor();
+	assert.equal(a.getSnapshot().can({ type: "ARCHIVE" }), false);
+	doSearch(a, ["https://a.com"]);
+	assert.equal(a.getSnapshot().can({ type: "ARCHIVE" }), false);
+	a.send({ type: "SATISFIED" });
+	assert.equal(a.getSnapshot().can({ type: "ARCHIVE" }), true);
+});
+
+ok("done -> ARCHIVE -> researching: budget window rotates, knowledge kept", () => {
+	const a = makeActor();
+	doSearch(a, ["https://a.com", "https://b.com"]);
+	a.send({ type: "BEGIN_FETCH", links: ["https://a.com"] });
+	a.send({ type: "FETCH_DONE", contents: [{ link: "https://a.com", markdown: "md" }], failed: [] });
+	a.send({ type: "SATISFIED" });
+	assert.equal(a.getSnapshot().value, "done");
+	assert.equal(a.getSnapshot().can(searchEvt("x")), false); // done trap
+
+	a.send({ type: "ARCHIVE" });
+
+	assert.equal(a.getSnapshot().value, "researching");
+	const c = a.getSnapshot().context;
+	assert.equal(c.searchCount, 0); // budget window rotated
+	assert.equal(c.searchAttempts, 0);
+	assert.equal(c.fetchCount, 0);
+	assert.equal(c.fetchAttempts, 0);
+	assert.equal(c.fetched.length, 0); // dedupe cleared
+	assert.equal(c.errors.length, 0);
+	assert.equal(c.results.length, 2); // known links kept
+	assert.equal(c.queries.length, 1); // query history kept
+	assert.equal(a.getSnapshot().can(searchEvt("x")), true); // continuation legal
+	assert.equal(a.getSnapshot().can({ type: "BEGIN_FETCH", links: ["https://a.com"] }), true); // archived link refetchable
+	assert.equal(a.getSnapshot().can({ type: "BEGIN_FETCH", links: ["https://zzz.com"] }), false); // unknown still rejected
+});
+
+ok("ARCHIVE refills an exhausted search budget without losing known links", () => {
+	const a = makeActor();
+	doSearch(a, ["https://a.com"]); // maxSearches = 2
+	doSearch(a, ["https://b.com"]);
+	assert.equal(a.getSnapshot().can(searchEvt("x")), false);
+	a.send({ type: "SATISFIED" });
+
+	a.send({ type: "ARCHIVE" });
+
+	assert.equal(a.getSnapshot().can(searchEvt("x")), true);
+	assert.equal(a.getSnapshot().context.results.length, 2);
+});
+
+ok("ARCHIVE then RESET: full start-over still available", () => {
+	const a = makeActor();
+	doSearch(a, ["https://a.com"]);
+	a.send({ type: "SATISFIED" });
+	a.send({ type: "ARCHIVE" });
+	doSearch(a, ["https://b.com"]);
+
+	a.send({ type: "RESET" });
+
+	const c = a.getSnapshot().context;
+	assert.equal(a.getSnapshot().value, "idle");
+	assert.equal(c.results.length, 0);
+	assert.equal(c.queries.length, 0);
+});
+
+ok("ARCHIVE keeps fetched markdown out of dedupe only (fetched list survives in results)", () => {
+	const a = makeActor();
+	doSearch(a, ["https://a.com"]);
+	a.send({ type: "BEGIN_FETCH", links: ["https://a.com"] });
+	a.send({ type: "FETCH_DONE", contents: [{ link: "https://a.com", markdown: "md" }], failed: [] });
+	a.send({ type: "SATISFIED" });
+
+	a.send({ type: "ARCHIVE" });
+
+	// refetch in the new run: legal, and dedupe applies within the new run
+	a.send({ type: "BEGIN_FETCH", links: ["https://a.com"] });
+	a.send({ type: "FETCH_DONE", contents: [{ link: "https://a.com", markdown: "md2" }], failed: [] });
+	assert.equal(a.getSnapshot().context.fetched.length, 1);
+	assert.equal(a.getSnapshot().can({ type: "BEGIN_FETCH", links: ["https://a.com"] }), false);
+});
+
 // --- completion and reset ------------------------------------------------------
 ok("SATISFIED -> done: further searches rejected; RESET -> idle with cleared context", () => {
 	const a = makeActor();

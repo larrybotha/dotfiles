@@ -26,12 +26,15 @@ results are sufficient — but can only act via legal machine events.
 
 | Tool | Effect |
 |---|---|
-| `web_search` | Brave search; results tracked (budget: 5 searches) |
-| `web_fetch` | Extract markdown for known, unfetched links (budget: 10) |
+| `web_search` | Brave search; results tracked (budget: 5 searches per run) |
+| `web_fetch` | Extract markdown for known, unfetched links (budget: 10 per run) |
 | `web_report` | End research (requires ≥1 successful search) |
-| `web_reset` | Clear state, start over |
+| `web_archive` | New budget window, known links kept (post-report continuation) |
+| `web_reset` | Clear state entirely (results, known links, history), start over |
 
-`/websearch` (or `/websearch status`) shows state; `/websearch reset` clears it;
+`/websearch` (or `/websearch status`) shows state; `/websearch archive`
+rotates the budget window (known links kept); `/websearch reset` clears
+state entirely;
 `/websearch footer` toggles the live footer line (off by default);
 `/websearch viz` live-visualises the running machine (see below);
 unknown subcommands error. Diagnostics log: `~/.cache/web-search/web-search.log`.
@@ -66,13 +69,23 @@ Swap the backend by replacing `executors/` scripts; keep the contract.
 
 ## Machine
 
-`idle → researching → done`, with `RESET → idle` from researching/done.
+`idle → researching → done`, with `RESET → idle` from researching/done and
+`ARCHIVE → researching` from done (the post-report continuation path).
 BEGIN_SEARCH/BEGIN_FETCH reserve budget (in-flight, never persisted — late
 DONEs on a restored actor clamp at 0); DONEs release it. Failed fetches count
 toward `fetchAttempts` (capped) — a dead link cannot be re-fetched forever.
 State-order legality is checked via `snap.can()` in every tool precheck
 (not context-only validators): after `web_report`, searches and fetches are
-rejected until `web_reset` — the machine is the single gate.
+rejected until `web_archive` (fresh budget window, known links and query
+history kept, fetched history cleared so archived links become fetchable
+again) or `web_reset` (full clear) — the machine is the single gate.
+
+Budget counters are per research run; results and queries carry across
+runs via `ARCHIVE` — after a report, a known link can be re-fetched without
+a new search. Session totals (search calls, fetches, archives, resets) are
+extension-level counters: they survive RESET/ARCHIVE, are process-lifetime
+only (not branch-restored, session restart clears), and are surfaced in
+every tool result and `/websearch status`.
 Full control flow lives in `machine.ts`; paste the `createMachine({...})`
 config into [Stately Studio](https://stately.ai) to visualize, or watch the
 running machine live: `/websearch viz`.
