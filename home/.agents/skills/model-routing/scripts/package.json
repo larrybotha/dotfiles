@@ -1,0 +1,12 @@
+{
+	"name": "model-routing-classes",
+	"version": "1.0.0",
+	"private": true,
+	"type": "module",
+	"exports": {
+		".": {
+			"types": "./classes.d.mts",
+			"default": "./classes.mjs"
+		}
+	}
+}

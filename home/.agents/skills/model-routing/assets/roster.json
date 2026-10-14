@@ -1,0 +1,92 @@
+{
+  "matrix": [
+    {
+      "archetype": "Deep research / synthesis",
+      "picks": ["gpt-5.5-pro", "claude-opus-5-5", "gemini-3.1-pro"],
+      "alt": ["kimi-k3"]
+    },
+    {
+      "archetype": "Greenfield code / big feature",
+      "picks": ["gpt-5.3-codex", "claude-opus-5-5"],
+      "alt": []
+    },
+    {
+      "archetype": "Mechanical edits / bulk transform",
+      "picks": ["claude-sonnet-5-5", "gpt-5.3-codex"],
+      "alt": ["gpt-5.4-nano"]
+    },
+    {
+      "archetype": "Code review / judgment / rubric",
+      "picks": ["claude-opus-5-5", "gpt-6-sol", "claude-sonnet-5-5"],
+      "alt": ["glm-5.3"]
+    },
+    {
+      "archetype": "Quick triage / classify / extract",
+      "picks": ["claude-haiku-5-5", "gpt-6-luna", "gpt-5.4-nano"],
+      "alt": ["glm-5.3-flash"]
+    },
+    {
+      "archetype": "Long-doc summarize / digest",
+      "picks": ["gemini-3.1-pro", "gpt-5.5-pro"],
+      "alt": ["kimi-k3"]
+    },
+    {
+      "archetype": "Draft prose / docs",
+      "picks": ["claude-sonnet-5-5", "claude-fable-5-1", "gpt-6.1-sol"],
+      "alt": ["minimax-m3"]
+    },
+    {
+      "archetype": "Vision (image input)",
+      "picks": ["claude-fable-5-1", "gpt-5.5-pro", "gemini-3.1-pro"],
+      "alt": ["deepseek-v4.1-flash"]
+    }
+  ],
+  "never_delegate": [
+    {
+      "id": "gpt-5.6-sol"
+    },
+    {
+      "id": "gpt-5.4"
+    },
+    {
+      "id": "gpt-5.4-pro"
+    },
+    {
+      "id": "gpt-5.1-codex-max"
+    },
+    {
+      "id": "claude-opus-5"
+    },
+    {
+      "id": "deepseek-v4-flash"
+    },
+    {
+      "id": "claude-opus-4-6"
+    },
+    {
+      "id": "claude-opus-4-7"
+    },
+    {
+      "id": "claude-sonnet-4-6"
+    },
+    {
+      "id": "gemini-3.7-flash"
+    },
+    {
+      "id": "kimi-k2.7-code"
+    },
+    {
+      "id": "exo-free"
+    },
+    {
+      "id": "grok-build-0.1"
+    },
+    {
+      "id": "ling-3.0-flash-fin-free"
+    },
+    {
+      "id": "jev-1.13-free",
+      "note": "never tool loops"
+    }
+  ]
+}

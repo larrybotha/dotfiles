@@ -2,3 +2,7 @@ sessions/
 npm/
 trust.json
 pi-typesafe/
+extensions/rpc-delegate/telemetry.jsonl
+crashes.json
+models-store.json
+state/

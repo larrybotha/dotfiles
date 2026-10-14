@@ -1,0 +1,25 @@
+{
+	"defaultProvider": "opencode",
+	"catalog": "~/.pi/agent/models-store.json",
+	"modelsConfig": "~/.pi/agent/models.json",
+	"telemetry": "~/.pi/agent/extensions/rpc-delegate/telemetry.jsonl",
+	"rpcCommand": [
+		"pi",
+		"--mode", "rpc",
+		"--no-session",
+		"--no-extensions",
+		"--name", "model-routing-derive",
+		"--provider", "{provider}",
+		"--model", "{id}"
+	],
+	"probeCommand": [
+		"pi",
+		"--no-session",
+		"--provider",
+		"{provider}",
+		"--model",
+		"{id}",
+		"--print",
+		"ok"
+	]
+}

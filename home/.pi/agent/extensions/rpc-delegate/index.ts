@@ -26,6 +26,7 @@
  * work is evidence).
  */
 import * as fs from "node:fs";
+import { fileURLToPath } from "node:url";
 import * as os from "node:os";
 import * as path from "node:path";
 import {
@@ -36,6 +37,7 @@ import {
 import { Container, Markdown, Text, Spacer } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { createActor, fromPromise, waitFor, type Actor } from "xstate";
+import { DELEGATION_PATTERNS } from "model-routing-classes";
 import { collectArtifacts } from "./collector.ts";
 import {
 	evaluateSuccess,
@@ -119,6 +121,8 @@ interface RpcDelegateDetails {
 	sessionId: string;
 	childSessionId: string | null;
 	childModelId: string | null;
+	/** Child provider as pinned by the caller (v2 telemetry). */
+	provider: string | null;
 	childPid: number | null;
 	childExit: number | null;
 	promptDisposition: string | null;
@@ -145,6 +149,10 @@ interface RpcDelegateDetails {
 	/** Stall detection fired (silent child) — distinct from the hard-cap deadline. */
 	stallHit: boolean;
 	failureDetail: string | null;
+	/** v2 fact-typing (never used for routing): thinking-map-400 /
+	 *  access-403 / endpoint-410 / free-tier-403 / param-400 /
+	 *  unavailable-400 / other. Null when no failure. */
+	failureClass: string | null;
 	protoFatal: string | null;
 	rejected?: string;
 }
@@ -170,6 +178,24 @@ function resolvePiBinary(): { command: string; args: string[] } {
 
 function isRec(v: unknown): v is Record<string, unknown> {
 	return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** v2 (C-lite) fact-typing: classify a terminal failure from every
+ *  textual surface we hold. Never used for routing. Patterns are
+ *  single-sourced in model-routing-classes (skills/model-routing/
+ *  scripts/classes.mjs) — keep this a thin iterator. */
+function classifyFailure(d: {
+	status: DelegateStatus;
+	failureDetail: string | null;
+	stderr: string;
+	lastAssistantError: string | null;
+}): string | null {
+	if (!/^(error|timeout|aborted)$/.test(d.status)) return null;
+	const hay = `${d.failureDetail ?? ""}\n${d.stderr}\n${d.lastAssistantError ?? ""}`;
+	for (const { cls, pattern } of DELEGATION_PATTERNS) {
+		if (pattern.test(hay)) return cls;
+	}
+	return "other";
 }
 
 function childArgs(input: {
@@ -354,11 +380,12 @@ function detailsFromSnapshot(a: Actor<typeof wiredMachine>, assistantTextTail: s
 	const c: RpcContext = snap.context;
 	const stateName = String(snap.value);
 	const summary = summaryForSnapshot(stateName, c, assistantTextTail);
-	return {
+	const d: RpcDelegateDetails = {
 		status: statusOf(String(snap.value)),
 		sessionId: c.sessionId,
 		childSessionId: c.childSessionId,
 		childModelId: c.childModelId,
+		provider: c.provider,
 		childPid: c.childPid,
 		childExit: c.childExit,
 		promptDisposition: c.promptDisposition,
@@ -381,7 +408,10 @@ function detailsFromSnapshot(a: Actor<typeof wiredMachine>, assistantTextTail: s
 		stallHit: c.stallHit,
 		failureDetail: c.failureDetail,
 		protoFatal: c.protoFatal,
+		failureClass: null, // set below from the full failure surfaces
 	};
+	d.failureClass = classifyFailure(d);
+	return d;
 }
 
 function buildResultText(d: RpcDelegateDetails): string {
@@ -395,6 +425,9 @@ function buildResultText(d: RpcDelegateDetails): string {
 	}
 	if (d.stopReason) {
 		text += `\nFinal assistant stopReason: ${d.stopReason}`;
+	}
+	if (d.failureClass) {
+		text += `\nFailure class: ${d.failureClass}`;
 	}
 	if (d.stallHit) {
 		text += `\nStall: the child produced no protocol activity for the stall window (${Math.round(STALL_GAP_MS / 1000)}s) while no child tool was open — treated as a hang and cancelled; the timeout hard cap was not the trigger.`;
@@ -444,6 +477,51 @@ function buildResultText(d: RpcDelegateDetails): string {
 	}
 
 	return text;
+}
+
+const TELEMETRY_PATH = fileURLToPath(new URL("./telemetry.jsonl", import.meta.url));
+
+/** v2 (C-lite): one JSONL row per rpc_delegate_task terminal return —
+ *  settled, param-rejected, or still-in-flight. Fact capture only — never
+ *  read for routing; no task text logged; best-effort. */
+function appendTelemetryRow(
+	d: RpcDelegateDetails,
+	meta: { archetype: string | null; artifactPolicy: string; kind?: "rejected" | "inFlight" },
+): void {
+	const early = meta.kind != null; // rejected / in-flight: no run facts to log
+	try {
+		const row = {
+			ts: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
+			source: "rpc-delegate",
+			archetype: meta.archetype,
+			provider: d.provider,
+			model: d.childModelId,
+			stopReason: d.stopReason,
+			stallHit: d.stallHit,
+			failureClass: early ? null : d.failureClass,
+			tokensIn: early ? null : (d.usage?.tokens?.input ?? null),
+			tokensOut: early ? null : (d.usage?.tokens?.output ?? null),
+			costUsd: early || typeof d.usage?.cost !== "number" ? null : d.usage.cost,
+			runSecs: early || d.runDurationMs == null ? null : Math.round(d.runDurationMs / 1000),
+			artifactOk: early
+				? null
+				: d.artifacts.length > 0
+					? d.artifacts.every((a) => !a.missing && !a.readError)
+					: null,
+			artifactPolicy: meta.artifactPolicy,
+			note:
+				meta.kind === "rejected"
+					? `rejected: ${(d.failureDetail ?? "").slice(0, 120).replace(/\n/g, " ")}`
+					: meta.kind === "inFlight"
+						? `tool return in flight (status ${d.status}) — no terminal row`
+						: d.failureDetail
+							? d.failureDetail.slice(0, 140).replace(/\n/g, " ")
+							: "",
+		};
+		fs.appendFileSync(TELEMETRY_PATH, `${JSON.stringify(row)}\n`, "utf8");
+	} catch {
+		/* telemetry is best-effort — never fail a delegation for it */
+	}
 }
 
 function resultFromSnapshot(a: Actor<typeof wiredMachine>, rejected?: string) {
@@ -503,6 +581,12 @@ export default function (pi: ExtensionAPI) {
 			agentPrompt: Type.Optional(
 				Type.String({ description: "Additional system prompt text appended for the child pi" }),
 			),
+			archetype: Type.Optional(
+				Type.String({
+					description:
+					"Task archetype label for model-routing telemetry (e.g. 'Greenfield code / big feature') — recorded verbatim in the telemetry row; omit when not routing-aware",
+				}),
+			),
 			artifactPolicy: Type.Optional(
 				Type.Union([Type.Literal("stopReason"), Type.Literal("artifacts")], {
 					description:
@@ -521,6 +605,7 @@ export default function (pi: ExtensionAPI) {
 				model,
 				tools,
 				agentPrompt,
+				archetype,
 				artifactPolicy = "stopReason",
 			} = params;
 
@@ -538,37 +623,41 @@ export default function (pi: ExtensionAPI) {
 				artifactPolicy,
 			);
 			if (violation) {
+				const d: RpcDelegateDetails = {
+					status: "error",
+					sessionId: "",
+					childSessionId: null,
+					childModelId: null,
+					provider: null,
+					childPid: null,
+					childExit: null,
+					promptDisposition: null,
+					stopReason: null,
+					lastAssistantError: null,
+					task,
+					agentPrompt: agentPrompt ?? null,
+					artifacts: [],
+					summary: violation,
+					assistantTextTail: "",
+					stderr: "",
+					toolCalls: 0,
+					lastToolNames: [],
+					agentEndWillRetry: 0,
+					uiRequests: 0,
+					usage: null,
+					runDurationMs: null,
+					totalDurationMs: null,
+					deadlineHit: false,
+					stallHit: false,
+					failureDetail: violation,
+					protoFatal: null,
+					failureClass: null,
+					rejected: violation,
+				};
+				appendTelemetryRow(d, { archetype: archetype ?? null, artifactPolicy, kind: "rejected" });
 				return {
 					content: [{ type: "text", text: `Rejected: ${violation}` }],
-					details: {
-						status: "error",
-						sessionId: "",
-						childSessionId: null,
-						childModelId: null,
-						childPid: null,
-						childExit: null,
-						promptDisposition: null,
-						stopReason: null,
-						lastAssistantError: null,
-						task,
-						agentPrompt: agentPrompt ?? null,
-						artifacts: [],
-						summary: violation,
-						assistantTextTail: "",
-						stderr: "",
-						toolCalls: 0,
-						lastToolNames: [],
-						agentEndWillRetry: 0,
-						uiRequests: 0,
-						usage: null,
-						runDurationMs: null,
-						totalDurationMs: null,
-						deadlineHit: false,
-						stallHit: false,
-						failureDetail: violation,
-						protoFatal: null,
-						rejected: violation,
-					},
+					details: d,
 					isError: true,
 				};
 			}
@@ -667,6 +756,12 @@ export default function (pi: ExtensionAPI) {
 			if (!settled) {
 				// honest state — the machine keeps driving in the background
 				const transport = a.getSnapshot().context.transport;
+				const d = detailsFromSnapshot(
+					a,
+					transport?.getEvidence().assistantTextTail ?? "",
+					transport?.getEvidence().stderrTail ?? "",
+				);
+				appendTelemetryRow(d, { archetype: archetype ?? null, artifactPolicy, kind: "inFlight" });
 				return {
 					content: [
 						{
@@ -674,7 +769,7 @@ export default function (pi: ExtensionAPI) {
 							text: `Delegation still in flight (${statusOf(String(a.getSnapshot().value))}) after ${Math.round((Date.now() - startTime) / 1000)}s — the machine continues in the background; the watchdog reaps the child at ${timeout + 120}s`,
 						},
 					],
-					details: detailsFromSnapshot(a, transport?.getEvidence().assistantTextTail ?? "", transport?.getEvidence().stderrTail ?? ""),
+					details: d,
 					isError: true,
 				};
 			}
@@ -693,7 +788,9 @@ export default function (pi: ExtensionAPI) {
 				/* best-effort */
 			}
 
-			return resultFromSnapshot(a);
+			const result = resultFromSnapshot(a);
+			appendTelemetryRow(result.details, { archetype: archetype ?? null, artifactPolicy });
+			return result;
 		},
 
 		// --- Collapsed call rendering ---
@@ -788,6 +885,8 @@ export default function (pi: ExtensionAPI) {
 				if (d.deadlineHit) bits.push("hard-cap");
 				if (d.childExit !== null) bits.push(`child exit: ${d.childExit}`);
 				if (d.childModelId) bits.push(`model: ${d.childModelId}`);
+				if (d.provider) bits.push(`provider: ${d.provider}`);
+				if (d.failureClass) bits.push(`failure: ${d.failureClass}`);
 				if (bits.length > 0) {
 					container.addChild(new Spacer(1));
 					container.addChild(
