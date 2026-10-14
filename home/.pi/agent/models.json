@@ -1,0 +1,70 @@
+{
+  "providers": {
+    "ollama": {
+      "baseUrl": "http://localhost:11434/v1",
+      "api": "openai-completions",
+      "apiKey": "ollama",
+      "compat": {
+        "supportsDeveloperRole": false,
+        "supportsReasoningEffort": false
+      },
+      "models": [
+        {
+          "id": "ornith-32k",
+          "name": "Ornith 1.0 9B (32K ctx)",
+          "reasoning": true,
+          "input": [
+            "text"
+          ],
+          "contextWindow": 32768,
+          "maxTokens": 8192,
+          "cost": {
+            "input": 0,
+            "output": 0,
+            "cacheRead": 0,
+            "cacheWrite": 0
+          }
+        }
+      ]
+    },
+    "opencode": {
+      "modelOverrides": {
+        "claude-haiku-5-5": {
+          "thinkingLevelMap": {
+            "off": null
+          }
+        },
+        "claude-opus-4-6": {
+          "thinkingLevelMap": {
+            "off": null
+          }
+        },
+        "claude-opus-4-7": {
+          "thinkingLevelMap": {
+            "off": null
+          }
+        },
+        "claude-opus-5": {
+          "thinkingLevelMap": {
+            "off": null
+          }
+        },
+        "claude-opus-5-5": {
+          "thinkingLevelMap": {
+            "off": null
+          }
+        },
+        "claude-sonnet-4-6": {
+          "thinkingLevelMap": {
+            "off": null
+          }
+        },
+        "claude-sonnet-5-5": {
+          "thinkingLevelMap": {
+            "off": null
+          }
+        }
+      }
+    }
+  }
+}
