@@ -14,10 +14,47 @@ rpc_delegate_task: {
   provider?: string    // child's model provider (optional)
   model?: string       // child's model id (optional)
   tools?: string[]     // child tool allowlist (optional)
+  extensions?: string[] // extension file paths loaded into the child via
+                       // pi --extension (optional). Explicit paths load even
+                       // under the child's --no-extensions default, so
+                       // auto-loading (including this extension) stays off.
+                       // NOT a recursion block — a child with `bash` can
+                       // spawn a plain `pi` that rediscovers everything
+                       // (see Child extensions).
+                       // CAUTION: a `tools` allowlist disables extension
+                       // tools unless their names are included too
+                       // (e.g. "web_search", "web_fetch")
   agentPrompt?: string // appended to the child's system prompt
   artifactPolicy?: "artifacts" | "stopReason"  // default "stopReason"
 }
 ```
+
+### Child extensions
+
+Children spawn with `--no-extensions`, which turns off extension
+*discovery* (auto-loading) — this extension included — and project-local
+surprises. It does **not** block recursion at the capability level: a child
+with `bash` can spawn a plain `pi` that rediscovers every user extension
+(live-verified: a one-shot `pi --print` in bash reported `web_search`,
+browser CDP tools, and `rpc_delegate_task` itself, unsupervised). What the
+param buys is the *supervised* route: extension tool calls run inside the
+delegated child's loop, under the watchdog, stall timer, timeout, and
+telemetry. The bash sub-spawn route adds a second model process no one
+watches — and in a live A/B, research children improvising via bash errored
+2/2 (no artifacts) while the explicit `-e …/web-search/index.ts` route
+worked first try.
+
+The `extensions` param opts in to loading specific
+extension files: each path is passed as `pi --extension <path>` — pi honors
+explicit paths even under `--no-extensions`, so discovery stays off while the
+listed extensions load (live-verified: a child with
+`-e …/web-search/index.ts` reports `web_search`, `web_fetch`, `web_report`,
+`web_archive`, `web_reset`). Two footguns: (1) a `tools` allowlist disables
+extension tools unless their names are in the list — pass
+`tools: ["read", "bash", "write", "web_search", "web_fetch"]` or use
+`+name` entries; (2) loading the rpc-delegate extension's own path
+re-enables delegation in the child — deliberate caller choice, not blocked
+(and no worse than the bash route, which was never blocked).
 
 ## Architecture
 

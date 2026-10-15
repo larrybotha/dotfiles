@@ -203,10 +203,17 @@ function childArgs(input: {
 	provider: string | null;
 	model: string | null;
 	tools: string[] | null;
+	extensions: string[] | null;
 	agentPrompt: string | null;
 }): string[] {
-	// Security stance: --no-extensions prevents rpc-delegate recursion and
-	// project-local extension surprises; --no-session is the one-shot
+	// Security stance: --no-extensions disables extension DISCOVERY — rpc-
+	// delegate does not auto-load in children, and project-local extension
+	// surprises stay off. It is not a recursion capability block: a child with
+	// bash can spawn a plain pi that rediscovers everything (unsupervised —
+	// invisible to the watchdog/telemetry). An explicit `extensions` param
+	// opts in to loading SPECIFIC extension files — pi loads explicit
+	// --extension paths even under --no-extensions, so discovery stays off
+	// while the listed files load; --no-session is the one-shot
 	// lifecycle; --name tags the child for debugging. Provider/model are
 	// pinned explicitly when given (never silently inherited env).
 	const args = ["--mode", "rpc", "--no-session", "--no-extensions", "--name", input.sessionId];
@@ -217,6 +224,14 @@ function childArgs(input: {
 	}
 	if (input.tools) {
 		args.push("--tools", input.tools.join(","));
+	}
+	// Explicit extension loads — must come as-is; pi keeps --no-extensions
+	// semantics for discovery while honoring explicit paths. NOTE: a --tools
+	// allowlist above disables extension tools unless their names are listed.
+	if (input.extensions) {
+		for (const ext of input.extensions) {
+			args.push("--extension", ext);
+		}
 	}
 	if (input.agentPrompt) {
 		args.push("--append-system-prompt", input.agentPrompt);
@@ -578,6 +593,12 @@ export default function (pi: ExtensionAPI) {
 					description: "Explicit tool allowlist for the child (default: child's default tools)",
 				}),
 			),
+			extensions: Type.Optional(
+				Type.Array(Type.String(), {
+					description:
+					"Extension file paths to load into the child (pi --extension). Explicit paths load even under the child's --no-extensions default, so auto-loading (including this extension) stays off — this is NOT a recursion block: a child with bash can spawn plain pi and rediscover everything. CAUTION: a `tools` allowlist disables extension tools unless their names are included (e.g. web_search, web_fetch)",
+				}),
+			),
 			agentPrompt: Type.Optional(
 				Type.String({ description: "Additional system prompt text appended for the child pi" }),
 			),
@@ -604,6 +625,7 @@ export default function (pi: ExtensionAPI) {
 				provider,
 				model,
 				tools,
+				extensions,
 				agentPrompt,
 				archetype,
 				artifactPolicy = "stopReason",
@@ -621,6 +643,7 @@ export default function (pi: ExtensionAPI) {
 				model ?? null,
 				tools ?? null,
 				artifactPolicy,
+				extensions ?? null,
 			);
 			if (violation) {
 				const d: RpcDelegateDetails = {
@@ -688,6 +711,7 @@ export default function (pi: ExtensionAPI) {
 				provider: provider ?? null,
 				model: model ?? null,
 				tools: tools ?? null,
+				extensions: extensions ?? null,
 				artifactPolicy,
 				timeoutSecs: timeout,
 				workingDir,

@@ -132,6 +132,10 @@ export interface RpcContext {
 	model: string | null;
 	/** Child tool allowlist (null = child default tools). */
 	tools: string[] | null;
+	/** Extension file paths loaded into the child via pi's --extension
+	 * flag (explicit paths load even under the child's --no-extensions
+	 * default). Null = none. */
+	extensions: string[] | null;
 	artifactPolicy: "stopReason" | "artifacts";
 	timeoutSecs: number;
 	workingDir: string;
@@ -218,6 +222,7 @@ export type RpcEvent =
 			provider: string | null;
 			model: string | null;
 			tools: string[] | null;
+			extensions: string[] | null;
 			artifactPolicy: "stopReason" | "artifacts";
 			timeoutSecs: number;
 			workingDir: string;
@@ -249,6 +254,7 @@ export interface SpawnInput {
 	provider: string | null;
 	model: string | null;
 	tools: string[] | null;
+	extensions: string[] | null;
 	workingDir: string;
 	timeoutSecs: number;
 	launch: SpawnLaunch;
@@ -310,6 +316,7 @@ export function initialContext(): RpcContext {
 		provider: null,
 		model: null,
 		tools: null,
+		extensions: null,
 		artifactPolicy: "stopReason",
 		timeoutSecs: 300,
 		workingDir: "",
@@ -407,6 +414,7 @@ export function paramsViolation(
 	model: string | null,
 	tools: string[] | null,
 	artifactPolicy: string,
+	extensions?: string[] | null,
 ): string | null {
 	if (!task.trim()) {
 		return "task is empty — describe what the delegated pi should do and the artifact files it should write";
@@ -441,6 +449,23 @@ export function paramsViolation(
 		if (tools.length === 0) return "tools must be a non-empty allowlist or omitted";
 		if (tools.length > 32) return `too many tools (${tools.length} > 32)`;
 		if (tools.some((t) => !t.trim())) return "tool names must be non-empty strings";
+	}
+	if (extensions) {
+		if (extensions.length === 0) {
+			return "extensions must be a non-empty list of paths or omitted";
+		}
+		if (extensions.length > 8) return `too many extension paths (${extensions.length} > 8)`;
+		if (extensions.some((e) => !e.trim())) return "extension paths must be non-empty strings";
+		const extSeen = new Set<string>();
+		const extDupes: string[] = [];
+		for (const e of extensions) {
+			const key = e.trim();
+			if (extSeen.has(key)) extDupes.push(key);
+			extSeen.add(key);
+		}
+		if (extDupes.length > 0) {
+			return `duplicate extension paths (each is loaded once): ${extDupes.join(", ")}`;
+		}
 	}
 	if (artifactPolicy !== "stopReason" && artifactPolicy !== "artifacts") {
 		return `artifactPolicy must be "stopReason" or "artifacts" (got ${artifactPolicy})`;
@@ -548,6 +573,7 @@ export const rpcMachine = setup({
 				event.model,
 				event.tools,
 				event.artifactPolicy,
+				event.extensions ?? null,
 			) === null &&
 			context.sessionId === "",
 		// promptService onDone routing (started/queued vs handled — no run)
@@ -582,6 +608,7 @@ export const rpcMachine = setup({
 				provider: event.provider,
 				model: event.model,
 				tools: event.tools,
+				extensions: event.extensions ?? null,
 				artifactPolicy: event.artifactPolicy,
 				timeoutSecs: event.timeoutSecs,
 				workingDir: event.workingDir,
@@ -754,6 +781,7 @@ export const rpcMachine = setup({
 						provider: event.provider,
 						model: event.model,
 						tools: event.tools,
+						extensions: event.extensions ?? null,
 						workingDir: event.workingDir,
 						timeoutSecs: event.timeoutSecs,
 						launch: event.launch,

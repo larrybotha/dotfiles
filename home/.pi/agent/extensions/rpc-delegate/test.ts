@@ -227,6 +227,7 @@ function begin(a: A, overrides: Record<string, unknown> = {}) {
 		provider: null,
 		model: null,
 		tools: null,
+		extensions: null,
 		artifactPolicy: "stopReason",
 		timeoutSecs: 300,
 		workingDir: "/tmp/work",
@@ -294,6 +295,7 @@ await ok("idle: illegal BEGIN rejected (validator shared with the tool precheck)
 		provider: null,
 		model: null,
 		tools: null,
+		extensions: null,
 		artifactPolicy: "stopReason",
 		timeoutSecs: 300,
 		workingDir: "w",
@@ -375,7 +377,7 @@ await ok("agentPrompt travels at the event top level — context evidence + spaw
 
 // --- pure helpers -------------------------------------------------------------
 
-await ok("paramsViolation: task/timeout/artifacts/provider-model/tools/policy", () => {
+await ok("paramsViolation: task/timeout/artifacts/provider-model/tools/extensions/policy", () => {
 	assert.match(paramsViolation("", 300, [], null, null, null, "stopReason")!, /task is empty/);
 	assert.equal(paramsViolation("do work", 300, [], null, null, null, "stopReason"), null);
 	assert.match(paramsViolation("t", 0, [], null, null, null, "stopReason")!, /positive number of seconds/);
@@ -389,6 +391,14 @@ await ok("paramsViolation: task/timeout/artifacts/provider-model/tools/policy", 
 	assert.match(paramsViolation("t", 10, [], null, null, ["", "x"], "stopReason")!, /non-empty strings/);
 	assert.match(paramsViolation("t", 10, [], null, null, new Array(33).fill("t"), "stopReason")!, /too many tools/);
 	assert.match(paramsViolation("t", 10, [], null, null, null, "bogus")!, /artifactPolicy/);
+	assert.match(paramsViolation("t", 10, [], null, null, null, "stopReason", [])!, /non-empty list of paths/);
+	assert.match(paramsViolation("t", 10, [], null, null, null, "stopReason", [""])!, /non-empty strings/);
+	assert.match(
+		paramsViolation("t", 10, [], null, null, null, "stopReason", new Array(9).fill("/e.ts"))!,
+		/too many extension/,
+	);
+	assert.match(paramsViolation("t", 10, [], null, null, null, "stopReason", ["/a.ts", "/a.ts"])!, /duplicate extension/);
+	assert.equal(paramsViolation("t", 10, ["a"], "anthropic", "claude-x", ["read", "bash"], "artifacts", ["/e.ts"]), null);
 	assert.equal(paramsViolation("t", 10, ["a"], "anthropic", "claude-x", ["read", "bash"], "artifacts"), null);
 });
 
