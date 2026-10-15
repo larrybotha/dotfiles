@@ -24,6 +24,11 @@ rpc_delegate_task: {
                        // CAUTION: a `tools` allowlist disables extension
                        // tools unless their names are included too
                        // (e.g. "web_search", "web_fetch")
+  maxDepth?: number     // delegation tree depth ceiling (default 1 — the
+                       // child cannot delegate further; 2 = the child may
+                       // spawn sub-agents). Monotone budget: clamped to
+                       // the ancestor-granted ceiling, passed down via
+                       // env — a delegated child can never raise it
   agentPrompt?: string // appended to the child's system prompt
   artifactPolicy?: "artifacts" | "stopReason"  // default "stopReason"
 }
@@ -55,6 +60,21 @@ extension tools unless their names are in the list — pass
 `+name` entries; (2) loading the rpc-delegate extension's own path
 re-enables delegation in the child — deliberate caller choice, not blocked
 (and no worse than the bash route, which was never blocked).
+
+### Depth budget
+
+Delegation trees are bounded by depth, not path identity. Each spawn sets
+`RPC_DELEGATE_DEPTH = depth + 1` and `RPC_DELEGATE_MAX_DEPTH =
+min(requested, inherited)` in the child env — the marker rides process
+lineage, so it survives `-e` paths, copies, symlinks, wrappers, and bash
+sub-spawns (a plain `pi` launched from a delegated child inherits the
+ceiling too). A call is rejected when `depth >= maxDepth`: a delegated
+child at depth 1 under the default ceiling 1 cannot delegate —
+enforced on every load route); raise `maxDepth` in the
+top-level call to grant one more level. Loading this extension's own path
+via `extensions` re-enables the tool in the child — the warn-not-block
+realpath check flags that entry in the result, and the depth budget still
+bounds whatever the child spawns.
 
 ## Architecture
 
@@ -137,14 +157,16 @@ still succeeds if at least one declared artifact was collected.
 ## Tests
 
 ```
-node test.ts            # 47 machine tests (stub services, no child)
+node test.ts            # 50 machine tests (stub services, no child)
 node transport.test.ts  # 22 transport tests against fixtures/fake-child.mjs
-node live.test.ts       # live: 23 checks — real pi child + real model
-                       # (few cents, ~4 min): success, hard-cap deadline,
+node live.test.ts       # live: 27 checks — real pi child + real model
+                       # (few cents, ~5 min): success, hard-cap deadline,
                        # abort, provider/model flags, 136 KB prompt,
                        # SIGKILL'd parent (orphan watchdog reaps child +
                        # sleep + watchdog), stall supervision (open-tool
-                       # suppression + heartbeat file)
+                       # suppression + heartbeat file), extensions loading
+                       # (web-search under --no-extensions), depth gate
+                       # (child's own delegation rejected in-tool)
 ```
 
 `fixtures/fake-child.mjs` is a scripted fake RPC child (`FAKE_MODE`:

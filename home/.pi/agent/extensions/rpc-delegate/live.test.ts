@@ -22,6 +22,12 @@
  * 7. stall supervision — a 4s stall gap survives a 15s silently-running
  *    child tool (open-tool suppression) and the watchdog heartbeat file
  *    ({t, open}) is written live.
+ * 8. extensions param — a child spawned --no-extensions with
+ *    -e …/web-search/index.ts reports the web-search tools (supervised
+ *    tool loading under discovery-off).
+ * 9. depth gate — a child at depth 1 (ceiling 1) gains rpc_delegate_task
+ *    via -e …/rpc-delegate/index.ts, and its own delegation call is
+ *    rejected in-tool (monotone budget: a child can never raise it).
  *
  * The extension tool itself (rpc_delegate_task) runs the same wired machine
  * in-process — this script exercises the same wiring without a pi host.
@@ -64,6 +70,10 @@ async function run(input: {
 	abortAfterMs?: number;
 	provider?: string;
 	model?: string;
+	/** Extension paths for the child (-e under --no-extensions). */
+	extensions?: string[];
+	/** Depth ceiling granted to this call's child tree (default 1). */
+	maxDepth?: number;
 	/** Stall gap override (default 180s) — small gaps prove suppression live. */
 	stallMs?: number;
 	/** Watchdog heartbeat file path (live check 7 asserts it). */
@@ -82,7 +92,9 @@ async function run(input: {
 		provider: input.provider ?? null,
 		model: input.model ?? null,
 		tools: null,
-		extensions: null,
+		extensions: input.extensions ?? null,
+		depth: 0,
+		maxDepth: input.maxDepth ?? 1,
 		artifactPolicy: "stopReason",
 		timeoutSecs: input.timeoutSecs ?? 300,
 		workingDir: process.cwd(),
@@ -168,6 +180,8 @@ if (process.argv.includes("--orphan-victim")) {
 		model: null,
 		tools: null,
 		extensions: null,
+		depth: 0,
+		maxDepth: 1,
 		artifactPolicy: "stopReason",
 		timeoutSecs: 300,
 		workingDir: process.cwd(),
@@ -355,6 +369,42 @@ try {
 } catch {
 	/* already gone */
 }
+
+console.log("== live check 8: extensions param (child loads web-search via -e under --no-extensions) ==");
+const extRun = await run({
+	task: "Print the exact names of the tools available to you this session, one per line, and nothing else.",
+	extensions: [path.join(import.meta.dirname, "..", "web-search", "index.ts")],
+	timeoutSecs: 180,
+});
+console.log(`  status=${extRun.status} exit=${extRun.childExit}`);
+check(
+	"extension child succeeds",
+	extRun.status === "success",
+	`got ${extRun.status} (${extRun.failureDetail ?? ""})`,
+);
+check(
+	"child reports web_search (explicit -e loads under --no-extensions)",
+	extRun.assistantTextTail.includes("web_search"),
+	`tail: ${JSON.stringify(extRun.assistantTextTail.slice(0, 300))}`,
+);
+
+console.log("== live check 9: depth gate (child at depth 1, ceiling 1 — its rpc_delegate_task call is rejected in-tool) ==");
+const depthRun = await run({
+	task: "Call your rpc_delegate_task tool exactly once with task text: write the word DELEGATED to /tmp/depth-gate-child.txt. After the tool returns, print the exact result text you received from that call, then stop.",
+	extensions: [path.join(import.meta.dirname, "index.ts")],
+	timeoutSecs: 240,
+});
+console.log(`  status=${depthRun.status} exit=${depthRun.childExit}`);
+check(
+	"depth-gated child settles (its delegation attempt is rejected in-tool, never hung)",
+	depthRun.status === "success",
+	`got ${depthRun.status} (${depthRun.failureDetail ?? ""})`,
+);
+check(
+	"child reports the depth-exhaustion rejection (monotone budget — ceiling never raisable)",
+	/depth exhausted|Rejected: delegation depth/.test(depthRun.assistantTextTail),
+	`tail: ${JSON.stringify(depthRun.assistantTextTail.slice(0, 300))}`,
+);
 
 // --- cleanup -----------------------------------------------------------------
 

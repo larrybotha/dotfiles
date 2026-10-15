@@ -136,6 +136,13 @@ export interface RpcContext {
 	 * flag (explicit paths load even under the child's --no-extensions
 	 * default). Null = none. */
 	extensions: string[] | null;
+	/** This process's delegation depth (0 = top-level pi; a child spawned
+	 *  by rpc_delegate_task inherits RPC_DELEGATE_DEPTH = parent depth + 1). */
+	depth: number;
+	/** Ceiling granted to this call's child tree: per-call maxDepth param
+	 *  (default 1 — the child cannot delegate further), clamped to the
+	 *  ancestor-granted RPC_DELEGATE_MAX_DEPTH (a child can never raise it). */
+	maxDepth: number;
 	artifactPolicy: "stopReason" | "artifacts";
 	timeoutSecs: number;
 	workingDir: string;
@@ -223,6 +230,8 @@ export type RpcEvent =
 			model: string | null;
 			tools: string[] | null;
 			extensions: string[] | null;
+			depth: number;
+			maxDepth: number;
 			artifactPolicy: "stopReason" | "artifacts";
 			timeoutSecs: number;
 			workingDir: string;
@@ -255,6 +264,8 @@ export interface SpawnInput {
 	model: string | null;
 	tools: string[] | null;
 	extensions: string[] | null;
+	depth: number;
+	maxDepth: number;
 	workingDir: string;
 	timeoutSecs: number;
 	launch: SpawnLaunch;
@@ -317,6 +328,8 @@ export function initialContext(): RpcContext {
 		model: null,
 		tools: null,
 		extensions: null,
+		depth: 0,
+		maxDepth: 1,
 		artifactPolicy: "stopReason",
 		timeoutSecs: 300,
 		workingDir: "",
@@ -406,6 +419,28 @@ export function summaryForSnapshot(
 	);
 }
 
+/** Depth gate — the recursion bound. depth = how many delegation hops
+ *  produced THIS process (0 = top-level pi, inherited via
+ *  RPC_DELEGATE_DEPTH); maxDepth = the ceiling granted to this call's
+ *  child tree (per-call maxDepth param, default 1, clamped to the
+ *  ancestor-granted RPC_DELEGATE_MAX_DEPTH — never raisable by a child).
+ *  Allowed iff depth < maxDepth; the budget passes down as
+ *  min(request, inherited) — monotone. The gate rides process env, so it
+ *  holds through every load route: -e paths, copies, symlinks, wrappers,
+ *  and bash sub-spawns — lineage, not path identity. */
+export function depthViolation(depth: number, maxDepth: number): string | null {
+	if (!Number.isInteger(depth) || depth < 0) {
+		return `depth must be a non-negative integer (got ${depth})`;
+	}
+	if (!Number.isInteger(maxDepth) || maxDepth < 1) {
+		return `maxDepth must be an integer >= 1 (got ${maxDepth})`;
+	}
+	if (depth >= maxDepth) {
+		return `delegation depth exhausted: this process is a delegated child at depth ${depth} and the ceiling is ${maxDepth} (ancestor-granted, cannot be raised) — raise maxDepth in the top-level rpc_delegate_task call or delegate from a top-level pi`;
+	}
+	return null;
+}
+
 export function paramsViolation(
 	task: string,
 	timeoutSecs: number,
@@ -415,6 +450,7 @@ export function paramsViolation(
 	tools: string[] | null,
 	artifactPolicy: string,
 	extensions?: string[] | null,
+	maxDepth?: number | null,
 ): string | null {
 	if (!task.trim()) {
 		return "task is empty — describe what the delegated pi should do and the artifact files it should write";
@@ -466,6 +502,9 @@ export function paramsViolation(
 		if (extDupes.length > 0) {
 			return `duplicate extension paths (each is loaded once): ${extDupes.join(", ")}`;
 		}
+	}
+	if (maxDepth != null && (!Number.isInteger(maxDepth) || maxDepth < 1 || maxDepth > 4)) {
+		return `maxDepth must be an integer in [1, 4] (got ${maxDepth})`;
 	}
 	if (artifactPolicy !== "stopReason" && artifactPolicy !== "artifacts") {
 		return `artifactPolicy must be "stopReason" or "artifacts" (got ${artifactPolicy})`;
@@ -574,7 +613,9 @@ export const rpcMachine = setup({
 				event.tools,
 				event.artifactPolicy,
 				event.extensions ?? null,
+				event.maxDepth,
 			) === null &&
+			depthViolation(event.depth, event.maxDepth) === null &&
 			context.sessionId === "",
 		// promptService onDone routing (started/queued vs handled — no run)
 		promptStarted: ({ event }) => {
@@ -609,6 +650,8 @@ export const rpcMachine = setup({
 				model: event.model,
 				tools: event.tools,
 				extensions: event.extensions ?? null,
+				depth: event.depth,
+				maxDepth: event.maxDepth,
 				artifactPolicy: event.artifactPolicy,
 				timeoutSecs: event.timeoutSecs,
 				workingDir: event.workingDir,
@@ -782,6 +825,8 @@ export const rpcMachine = setup({
 						model: event.model,
 						tools: event.tools,
 						extensions: event.extensions ?? null,
+						depth: event.depth,
+						maxDepth: event.maxDepth,
 						workingDir: event.workingDir,
 						timeoutSecs: event.timeoutSecs,
 						launch: event.launch,

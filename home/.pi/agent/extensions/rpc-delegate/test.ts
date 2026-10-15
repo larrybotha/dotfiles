@@ -23,6 +23,7 @@ import {
 	paramsViolation,
 	rpcMachine,
 	runDurationMs,
+	depthViolation,
 	statusOf,
 	totalDurationMs,
 	stopReasonFails,
@@ -228,6 +229,8 @@ function begin(a: A, overrides: Record<string, unknown> = {}) {
 		model: null,
 		tools: null,
 		extensions: null,
+		depth: 0,
+		maxDepth: 1,
 		artifactPolicy: "stopReason",
 		timeoutSecs: 300,
 		workingDir: "/tmp/work",
@@ -296,6 +299,8 @@ await ok("idle: illegal BEGIN rejected (validator shared with the tool precheck)
 		model: null,
 		tools: null,
 		extensions: null,
+		depth: 0,
+		maxDepth: 1,
 		artifactPolicy: "stopReason",
 		timeoutSecs: 300,
 		workingDir: "w",
@@ -316,6 +321,8 @@ await ok("BEGIN stores params in context (launch stays out of the snapshot)", ()
 	assert.deepEqual(c.artifactPaths, ["out.txt"]);
 	assert.equal(c.workingDir, "/tmp/work");
 	assert.equal(c.artifactPolicy, "stopReason");
+	assert.equal(c.depth, 0);
+	assert.equal(c.maxDepth, 1);
 	assert.deepEqual(Object.keys(initialContext()).includes("launch"), false);
 	a.stop(); // abandoned actors would hold the loop with their deadline timers
 });
@@ -377,7 +384,7 @@ await ok("agentPrompt travels at the event top level — context evidence + spaw
 
 // --- pure helpers -------------------------------------------------------------
 
-await ok("paramsViolation: task/timeout/artifacts/provider-model/tools/extensions/policy", () => {
+await ok("paramsViolation: task/timeout/artifacts/provider-model/tools/extensions/maxDepth/policy", () => {
 	assert.match(paramsViolation("", 300, [], null, null, null, "stopReason")!, /task is empty/);
 	assert.equal(paramsViolation("do work", 300, [], null, null, null, "stopReason"), null);
 	assert.match(paramsViolation("t", 0, [], null, null, null, "stopReason")!, /positive number of seconds/);
@@ -398,8 +405,40 @@ await ok("paramsViolation: task/timeout/artifacts/provider-model/tools/extension
 		/too many extension/,
 	);
 	assert.match(paramsViolation("t", 10, [], null, null, null, "stopReason", ["/a.ts", "/a.ts"])!, /duplicate extension/);
-	assert.equal(paramsViolation("t", 10, ["a"], "anthropic", "claude-x", ["read", "bash"], "artifacts", ["/e.ts"]), null);
+	assert.match(paramsViolation("t", 10, [], null, null, null, "stopReason", null, 5)!, /maxDepth must be an integer in \[1, 4\]/);
+	assert.match(paramsViolation("t", 10, [], null, null, null, "stopReason", null, 0)!, /maxDepth must be an integer in \[1, 4\]/);
+	assert.equal(paramsViolation("t", 10, ["a"], "anthropic", "claude-x", ["read", "bash"], "artifacts", ["/e.ts"], 2), null);
 	assert.equal(paramsViolation("t", 10, ["a"], "anthropic", "claude-x", ["read", "bash"], "artifacts"), null);
+});
+
+await ok("depthViolation: budget semantics (allowed iff depth < maxDepth — lineage-based, monotone)", () => {
+	assert.equal(depthViolation(0, 1), null);
+	assert.equal(depthViolation(1, 2), null);
+	assert.equal(depthViolation(2, 3), null);
+	assert.match(depthViolation(1, 1)!, /delegation depth exhausted/);
+	assert.match(depthViolation(2, 2)!, /delegation depth exhausted/);
+	assert.match(depthViolation(1, 1)!, /cannot be raised/);
+	assert.match(depthViolation(-1, 1)!, /depth must be a non-negative integer/);
+	assert.match(depthViolation(1.5, 2)!, /depth must be a non-negative integer/);
+	assert.match(depthViolation(1, 0)!, /maxDepth must be an integer/);
+	assert.match(depthViolation(1, 1.5)!, /maxDepth must be an integer/);
+});
+
+await ok("depth gate: BEGIN at depth >= maxDepth dropped (a delegated child with a spent budget cannot delegate)", () => {
+	const a = makeActor();
+	begin(a, { depth: 1, maxDepth: 1 });
+	assert.equal(a.getSnapshot().value, "idle");
+	assert.equal(a.getSnapshot().context.sessionId, "");
+	a.stop();
+});
+
+await ok("depth gate: BEGIN at depth < maxDepth proceeds (granted budget spends one level)", () => {
+	const a = makeActor();
+	begin(a, { depth: 1, maxDepth: 2 });
+	assert.equal(a.getSnapshot().value, "spawning");
+	assert.equal(a.getSnapshot().context.depth, 1);
+	assert.equal(a.getSnapshot().context.maxDepth, 2);
+	a.stop();
 });
 
 const A_OK: ArtifactEntry = { path: "out.txt", content: "x", missing: false };

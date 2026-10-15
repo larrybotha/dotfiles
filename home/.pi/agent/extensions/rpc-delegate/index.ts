@@ -40,6 +40,7 @@ import { createActor, fromPromise, waitFor, type Actor } from "xstate";
 import { DELEGATION_PATTERNS } from "model-routing-classes";
 import { collectArtifacts } from "./collector.ts";
 import {
+	depthViolation,
 	evaluateSuccess,
 	formatDuration,
 	runDurationMs,
@@ -96,6 +97,18 @@ const EXEC_DIR =
 	process.env.RPC_DELEGATE_DIR ??
 	path.join(os.homedir(), ".pi/agent/extensions/rpc-delegate");
 const WATCHDOG = path.join(EXEC_DIR, "watchdog.mjs");
+
+/** Env-parsed delegation lineage — set by an ancestor rpc_delegate_task in
+ *  this process's spawn env (top-level pi: both unset). DEPTH = how many
+ *  hops produced THIS process (0 = top-level); INHERITED_MAX_DEPTH = the
+ *  ancestor-granted ceiling (null = no ancestor grant). */
+function parseEnvInt(raw: string | undefined): number | null {
+	if (raw == null || !/^\d+$/.test(raw.trim())) return null;
+	const n = Number.parseInt(raw.trim(), 10);
+	return Number.isSafeInteger(n) ? n : null;
+}
+const DEPTH = parseEnvInt(process.env.RPC_DELEGATE_DEPTH) ?? 0;
+const INHERITED_MAX_DEPTH = parseEnvInt(process.env.RPC_DELEGATE_MAX_DEPTH);
 
 // Command timeouts — each independent of the run deadline (plan: separate
 // after/service timeouts per rung).
@@ -210,7 +223,9 @@ function childArgs(input: {
 	// delegate does not auto-load in children, and project-local extension
 	// surprises stay off. It is not a recursion capability block: a child with
 	// bash can spawn a plain pi that rediscovers everything (unsupervised —
-	// invisible to the watchdog/telemetry). An explicit `extensions` param
+	// invisible to the watchdog/telemetry). Recursion is bounded by the depth
+	// budget (RPC_DELEGATE_DEPTH/MAX_DEPTH env lineage — machine.ts
+	// depthViolation), not by extension loading. An explicit `extensions` param
 	// opts in to loading SPECIFIC extension files — pi loads explicit
 	// --extension paths even under --no-extensions, so discovery stays off
 	// while the listed files load; --no-session is the one-shot
@@ -239,6 +254,32 @@ function childArgs(input: {
 	return args;
 }
 
+/** Warn-not-block: an `extensions` entry that resolves to this very extension
+ *  re-enables delegation in the child — a deliberate choice (the bash
+ *  sub-spawn route was never blocked; the depth budget still bounds it).
+ *  Catch the honest mistake; never reject. */
+function selfLoadWarnings(extensions: string[], cwdForRelative: string): string[] {
+	const resolve = (p: string): string | null => {
+		try {
+			return fs.realpathSync(path.isAbsolute(p) ? p : path.resolve(cwdForRelative, p));
+		} catch {
+			return null;
+		}
+	};
+	const selfDir = resolve(EXEC_DIR);
+	const selfIndex = resolve(path.join(EXEC_DIR, "index.ts"));
+	const out: string[] = [];
+	for (const e of extensions) {
+		const r = resolve(e);
+		if (r !== null && (r === selfDir || r === selfIndex)) {
+			out.push(
+				`⚠ extensions entry "${e}" is this rpc-delegate extension — the child gains rpc_delegate_task (its further delegation is still depth-bounded); deliberate recursion choice?`,
+			);
+		}
+	}
+	return out;
+}
+
 // ---------------------------------------------------------------------------
 // Wired services — real IO around the machine (machine.ts ships typed
 // stubs; test.ts wires controlled stubs).
@@ -249,6 +290,12 @@ async function runSpawnService(input: SpawnInput, signal: AbortSignal): Promise<
 		command: input.launch.pi.command,
 		baseArgs: [...input.launch.pi.args, ...childArgs(input)],
 		cwd: input.workingDir,
+		env: {
+			// Depth lineage — rides process env through every load route
+			// (-e paths, copies, symlinks, bash sub-spawns): lineage, not identity.
+			RPC_DELEGATE_DEPTH: String(input.depth + 1),
+			RPC_DELEGATE_MAX_DEPTH: String(input.maxDepth),
+		},
 		sink: input.launch.sink,
 		watchdog: {
 			scriptPath: input.launch.watchdogPath,
@@ -501,13 +548,21 @@ const TELEMETRY_PATH = fileURLToPath(new URL("./telemetry.jsonl", import.meta.ur
  *  read for routing; no task text logged; best-effort. */
 function appendTelemetryRow(
 	d: RpcDelegateDetails,
-	meta: { archetype: string | null; artifactPolicy: string; kind?: "rejected" | "inFlight" },
+	meta: {
+		archetype: string | null;
+		artifactPolicy: string;
+		kind?: "rejected" | "inFlight";
+		depth: number;
+		parentSessionId: string | null;
+	},
 ): void {
 	const early = meta.kind != null; // rejected / in-flight: no run facts to log
 	try {
 		const row = {
 			ts: new Date().toISOString().replace(/\.\d{3}Z$/, "Z"),
 			source: "rpc-delegate",
+			depth: meta.depth,
+			parentSessionId: meta.parentSessionId,
 			archetype: meta.archetype,
 			provider: d.provider,
 			model: d.childModelId,
@@ -539,12 +594,18 @@ function appendTelemetryRow(
 	}
 }
 
-function resultFromSnapshot(a: Actor<typeof wiredMachine>, rejected?: string) {
+function resultFromSnapshot(
+	a: Actor<typeof wiredMachine>,
+	rejected?: string,
+	warnings?: string[],
+) {
 	const ev = a.getSnapshot().context.transport?.getEvidence();
 	const d = detailsFromSnapshot(a, ev?.assistantTextTail ?? "", ev?.stderrTail ?? "");
 	if (rejected) d.rejected = rejected;
+	const text =
+		buildResultText(d) + (warnings && warnings.length > 0 ? `\n\n${warnings.join("\n")}` : "");
 	return {
-		content: [{ type: "text" as const, text: buildResultText(d) }],
+		content: [{ type: "text" as const, text }],
 		details: d,
 		isError: d.status !== "success",
 	};
@@ -599,6 +660,14 @@ export default function (pi: ExtensionAPI) {
 					"Extension file paths to load into the child (pi --extension). Explicit paths load even under the child's --no-extensions default, so auto-loading (including this extension) stays off — this is NOT a recursion block: a child with bash can spawn plain pi and rediscover everything. CAUTION: a `tools` allowlist disables extension tools unless their names are included (e.g. web_search, web_fetch)",
 				}),
 			),
+			maxDepth: Type.Optional(
+				Type.Integer({
+					minimum: 1,
+					maximum: 4,
+					description:
+					"Max delegation tree depth (default 1 — the child cannot delegate further; 2 = the child may spawn sub-agents, grandchildren may not). Monotone budget: clamped to the ancestor-granted ceiling and passed down — a delegated child can never raise it",
+				}),
+			),
 			agentPrompt: Type.Optional(
 				Type.String({ description: "Additional system prompt text appended for the child pi" }),
 			),
@@ -626,6 +695,7 @@ export default function (pi: ExtensionAPI) {
 				model,
 				tools,
 				extensions,
+				maxDepth,
 				agentPrompt,
 				archetype,
 				artifactPolicy = "stopReason",
@@ -633,18 +703,27 @@ export default function (pi: ExtensionAPI) {
 
 			const workingDir = taskCwd ?? ctx.cwd;
 
-			// Precheck — machine validator, single source of truth (the guard
-			// rejects the same event, so no actor spins up for an illegal call)
-			const violation = paramsViolation(
-				task,
-				timeout,
-				artifacts,
-				provider ?? null,
-				model ?? null,
-				tools ?? null,
-				artifactPolicy,
-				extensions ?? null,
+			// Precheck — machine validators, single source of truth (the guard
+			// rejects the same event, so no actor spins up for an illegal call).
+			// Depth budget is monotone: the per-call request is clamped to the
+			// ancestor-granted ceiling (env lineage — survives -e paths, copies,
+			// symlinks, bash sub-spawns; a delegated child can never raise it).
+			const effectiveMaxDepth = Math.min(
+				maxDepth ?? INHERITED_MAX_DEPTH ?? 1,
+				INHERITED_MAX_DEPTH ?? Number.POSITIVE_INFINITY,
 			);
+			const violation =
+				paramsViolation(
+					task,
+					timeout,
+					artifacts,
+					provider ?? null,
+					model ?? null,
+					tools ?? null,
+					artifactPolicy,
+					extensions ?? null,
+					maxDepth ?? null,
+			) ?? depthViolation(DEPTH, effectiveMaxDepth);
 			if (violation) {
 				const d: RpcDelegateDetails = {
 					status: "error",
@@ -677,7 +756,13 @@ export default function (pi: ExtensionAPI) {
 					failureClass: null,
 					rejected: violation,
 				};
-				appendTelemetryRow(d, { archetype: archetype ?? null, artifactPolicy, kind: "rejected" });
+				appendTelemetryRow(d, {
+					archetype: archetype ?? null,
+					artifactPolicy,
+					kind: "rejected",
+					depth: DEPTH,
+					parentSessionId: ctx.sessionManager?.getSessionId() ?? null,
+				});
 				return {
 					content: [{ type: "text", text: `Rejected: ${violation}` }],
 					details: d,
@@ -689,6 +774,11 @@ export default function (pi: ExtensionAPI) {
 			a.start();
 
 			const sessionId = `rpc-delegate-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+			const parentSessionId = ctx.sessionManager?.getSessionId() ?? null;
+			// Warn-not-block: an extensions entry pointing back at this very
+			// extension re-enables delegation in the child (deliberate choice —
+			// the bash route was never blocked; the depth budget still bounds it).
+			const selfWarnings = extensions == null ? [] : selfLoadWarnings(extensions, workingDir);
 			// Watchdog heartbeat file — the external orphan watchdog enforces
 			// the same stall policy if this process wedges; unlinked on settle
 			// here and by the watchdog on every exit path.
@@ -712,6 +802,8 @@ export default function (pi: ExtensionAPI) {
 				model: model ?? null,
 				tools: tools ?? null,
 				extensions: extensions ?? null,
+				depth: DEPTH,
+				maxDepth: effectiveMaxDepth,
 				artifactPolicy,
 				timeoutSecs: timeout,
 				workingDir,
@@ -785,7 +877,13 @@ export default function (pi: ExtensionAPI) {
 					transport?.getEvidence().assistantTextTail ?? "",
 					transport?.getEvidence().stderrTail ?? "",
 				);
-				appendTelemetryRow(d, { archetype: archetype ?? null, artifactPolicy, kind: "inFlight" });
+				appendTelemetryRow(d, {
+					archetype: archetype ?? null,
+					artifactPolicy,
+					kind: "inFlight",
+					depth: DEPTH,
+					parentSessionId,
+				});
 				return {
 					content: [
 						{
@@ -812,8 +910,13 @@ export default function (pi: ExtensionAPI) {
 				/* best-effort */
 			}
 
-			const result = resultFromSnapshot(a);
-			appendTelemetryRow(result.details, { archetype: archetype ?? null, artifactPolicy });
+			const result = resultFromSnapshot(a, undefined, selfWarnings);
+			appendTelemetryRow(result.details, {
+					archetype: archetype ?? null,
+					artifactPolicy,
+					depth: DEPTH,
+					parentSessionId,
+				});
 			return result;
 		},
 
