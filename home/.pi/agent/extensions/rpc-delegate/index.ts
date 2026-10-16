@@ -195,7 +195,7 @@ function isRec(v: unknown): v is Record<string, unknown> {
 
 /** v2 (C-lite) fact-typing: classify a terminal failure from every
  *  textual surface we hold. Never used for routing. Patterns are
- *  single-sourced in model-routing-classes (skills/model-routing/
+ *  single-sourced in model-routing-classes (./skills/model-routing/
  *  scripts/classes.mjs) — keep this a thin iterator. */
 function classifyFailure(d: {
 	status: DelegateStatus;
@@ -534,6 +534,13 @@ function buildResultText(d: RpcDelegateDetails): string {
 
 const TELEMETRY_PATH = fileURLToPath(new URL("./telemetry.jsonl", import.meta.url));
 
+/** Bundled skill (extension-local): model-routing ships inside this
+ *  extension dir and is declared through resources_discover — it loads
+ *  wherever this extension loads (user extension dir at startup, or a
+ *  delegated child given this file via the `extensions` param).
+ *  Module-relative path: survives the symlinked agent-dir layout. */
+const MODEL_ROUTING_SKILL_DIR = fileURLToPath(new URL("./skills/model-routing", import.meta.url));
+
 /** v2 (C-lite): one JSONL row per rpc_delegate_task terminal return —
  *  settled, param-rejected, or still-in-flight. Fact capture only — never
  *  read for routing; no task text logged; best-effort. */
@@ -607,6 +614,9 @@ function resultFromSnapshot(
 // ---------------------------------------------------------------------------
 
 export default function (pi: ExtensionAPI) {
+	// Bundled skill: contribute the extension-local model-routing skill.
+	// Fired by pi after session_start on startup and every reload.
+	pi.on("resources_discover", () => ({ skillPaths: [MODEL_ROUTING_SKILL_DIR] }));
 	pi.registerTool({
 		name: "rpc_delegate_task",
 		label: "RPC Delegate",

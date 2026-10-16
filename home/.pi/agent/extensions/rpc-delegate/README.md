@@ -81,6 +81,16 @@ the protocol failure modes via `FAKE_MODE` (see its header).
   is one-way. Mid-turn steering would ride the host's `streamingBehavior:
 "steer"` input channel; no emitter exists.
 
+## Bundled skill
+
+`skills/model-routing/` ships inside this extension and is declared
+through the `resources_discover` event (`skillPaths`) — it loads wherever
+this extension loads: the parent (user extension dir, startup + reload)
+and any delegated child given this file via the `extensions` param. The
+`model-routing-classes` dependency (extensions workspace package.json)
+points at `skills/model-routing/scripts/` — single source for the
+delegation failure-class patterns.
+
 ## Live-verified protocol facts
 
 - **pi rewrites its argv** (`process.title` = `pi-rpc` for `--mode rpc`
