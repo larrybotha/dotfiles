@@ -547,6 +547,23 @@ function errMsg(ev: unknown): string {
 	return e instanceof Error ? e.message : String(e);
 }
 
+/** Identical handlers shared by prompting and running: evidence-only
+ *  actions plus the identical lifecycle exits (KILL / CHILD_DEAD /
+ *  PROTOCOL_FATAL). AGENT_SETTLED differs — evidence-only pre-acceptance vs
+ *  routed to collecting — and stays state-local. Single source: the two
+ *  `on` blocks cannot drift apart. */
+const SHARED_RUN_ON = {
+	AGENT_START: { actions: "seeAgentStart" },
+	AGENT_END: { actions: "seeAgentEnd" },
+	MESSAGE_END: { actions: "seeMessageEnd" },
+	TOOL_START: { actions: "seeToolStart" },
+	TOOL_END: { actions: "seeToolEnd" },
+	EXT_UI_REQUEST: { actions: "seeUiRequest" },
+	KILL: { target: "cancelling", actions: "markAborted" },
+	CHILD_DEAD: { target: "collecting", actions: "markChildDead" },
+	PROTOCOL_FATAL: { target: "cancelling", actions: "markFatal" },
+} as const;
+
 export const rpcMachine = setup({
 	types: {
 		context: {} as RpcContext,
@@ -822,16 +839,8 @@ export const rpcMachine = setup({
 			// prompt response is still in flight (response is written at
 			// acceptance; run events follow) — record evidence, decide on response.
 			on: {
-				AGENT_START: { actions: "seeAgentStart" },
-				AGENT_END: { actions: "seeAgentEnd" },
+				...SHARED_RUN_ON,
 				AGENT_SETTLED: { actions: "seeSettled" },
-				MESSAGE_END: { actions: "seeMessageEnd" },
-				TOOL_START: { actions: "seeToolStart" },
-				TOOL_END: { actions: "seeToolEnd" },
-				EXT_UI_REQUEST: { actions: "seeUiRequest" },
-				KILL: { target: "cancelling", actions: "markAborted" },
-				CHILD_DEAD: { target: "collecting", actions: "markChildDead" },
-				PROTOCOL_FATAL: { target: "cancelling", actions: "markFatal" },
 			},
 		},
 		running: {
@@ -842,22 +851,14 @@ export const rpcMachine = setup({
 			// Fast completion race: agent_settled observed during prompting.
 			always: [{ guard: "settledFast", target: "collecting", actions: "markSettled" }],
 			on: {
-				AGENT_START: { actions: "seeAgentStart" },
-				AGENT_END: { actions: "seeAgentEnd" },
+				...SHARED_RUN_ON,
 				AGENT_SETTLED: { target: "collecting", actions: "markSettled" },
-				MESSAGE_END: { actions: "seeMessageEnd" },
-				TOOL_START: { actions: "seeToolStart" },
-				TOOL_END: { actions: "seeToolEnd" },
-				EXT_UI_REQUEST: { actions: "seeUiRequest" },
 				STEER: { actions: "steerSent" },
 				// Silent child (no protocol bytes, no open child tool) — the
 				// transport's liveness timer fired. Pre-run states do NOT declare
 				// this: their command timeouts (≤60s) beat the stall gap, so a
 				// stall there is unreachable by construction.
 				STALL_DETECTED: { target: "cancelling", actions: "markStalled" },
-				KILL: { target: "cancelling", actions: "markAborted" },
-				CHILD_DEAD: { target: "collecting", actions: "markChildDead" },
-				PROTOCOL_FATAL: { target: "cancelling", actions: "markFatal" },
 			},
 		},
 		// Cancellation ladder (clear_queue → abort → stdin close → TERM pg →
