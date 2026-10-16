@@ -353,12 +353,26 @@ async function runPromptService(input: PromptInput): Promise<PromptOutput> {
 	return { disposition };
 }
 
+/** Orderly shutdown tail shared by the cancel and stop ladders: stdin
+ *  close → wait → TERM pg → wait → KILL pg → wait → exit code. Every rung
+ *  tolerant of a dead child — a rung failure is logged evidence, never a
+ *  thrown error. One ladder, both paths (a duplicated ladder drifts apart). */
+async function shutdownTail(t: TransportHandle): Promise<number | null> {
+	t.closeStdin();
+	if (await t.waitForExit(STDIN_CLOSE_EXIT_MS)) return t.exitCode();
+	t.killTerm();
+	if (await t.waitForExit(TERM_EXIT_MS)) return t.exitCode();
+	t.killKill();
+	await t.waitForExit(KILL_EXIT_MS);
+	return t.exitCode();
+}
+
 async function runCancelService(input: CancelInput): Promise<CancelOutput> {
 	const t = input.transport;
 	if (!t || !t.alive()) return { exitCode: t ? t.exitCode() : null };
 	// Ladder: clear_queue (abort alone leaves queued steering/follow-ups) →
-	// abort → stdin close → TERM pg → KILL pg. Every rung tolerant of a dead
-	// child — a rung failure is logged evidence, never a thrown error.
+	// abort → shared shutdown tail. Every rung tolerant of a dead child — a
+	// rung failure is logged evidence, never a thrown error.
 	try {
 		await t.sendCommand({ type: "clear_queue" }, CLEAR_QUEUE_TIMEOUT_MS);
 	} catch {
@@ -369,47 +383,24 @@ async function runCancelService(input: CancelInput): Promise<CancelOutput> {
 	} catch {
 		/* child dead/fatal — escalate */
 	}
-	t.closeStdin();
-	if (await t.waitForExit(STDIN_CLOSE_EXIT_MS)) return { exitCode: t.exitCode() };
-	t.killTerm();
-	if (await t.waitForExit(TERM_EXIT_MS)) return { exitCode: t.exitCode() };
-	t.killKill();
-	await t.waitForExit(KILL_EXIT_MS);
-	return { exitCode: t.exitCode() };
+	return { exitCode: await shutdownTail(t) };
 }
 
 async function runStopService(input: StopInput): Promise<StopOutput> {
 	const t = input.transport;
-	const out = { exitCode: null as number | null, usage: null as SessionStatsData | null };
-	if (!t) return out;
-	if (t.alive()) {
-		// Best-effort session stats (cost/usage evidence) before shutdown.
-		// Note: export_html cannot export a --no-session child (in-memory
-		// session) — no session export on any outcome, by protocol limitation.
-		try {
-			const r = await t.sendCommand({ type: "get_session_stats" }, STATS_TIMEOUT_MS);
-			if (r.success && isRec(r.data)) out.usage = r.data as SessionStatsData;
-		} catch {
-			/* best-effort */
-		}
-		// Orderly shutdown: close stdin → wait → TERM pg → KILL pg.
-		t.closeStdin();
-		if (await t.waitForExit(STDIN_CLOSE_EXIT_MS)) {
-			out.exitCode = t.exitCode();
-			return out;
-		}
-		t.killTerm();
-		if (await t.waitForExit(TERM_EXIT_MS)) {
-			out.exitCode = t.exitCode();
-			return out;
-		}
-		t.killKill();
-		await t.waitForExit(KILL_EXIT_MS);
-		out.exitCode = t.exitCode();
-	} else {
-		out.exitCode = t.exitCode();
+	if (!t) return { exitCode: null, usage: null };
+	if (!t.alive()) return { exitCode: t.exitCode(), usage: null };
+	// Best-effort session stats (cost/usage evidence) before shutdown.
+	// Note: export_html cannot export a --no-session child (in-memory
+	// session) — no session export on any outcome, by protocol limitation.
+	let usage: SessionStatsData | null = null;
+	try {
+		const r = await t.sendCommand({ type: "get_session_stats" }, STATS_TIMEOUT_MS);
+		if (r.success && isRec(r.data)) usage = r.data as SessionStatsData;
+	} catch {
+		/* best-effort */
 	}
-	return out;
+	return { exitCode: await shutdownTail(t), usage };
 }
 
 export const wiredMachine = rpcMachine.provide({
