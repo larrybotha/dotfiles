@@ -119,7 +119,6 @@ export interface TransportHandle {
 	/** Resolve when the child exits, or false after ms. */
 	waitForExit(ms: number): Promise<boolean>;
 	exitCode(): number | null;
-	pid(): number | null;
 	getEvidence(): TransportEvidence;
 }
 
@@ -419,6 +418,20 @@ export function depthViolation(depth: number, maxDepth: number): string | null {
 	return null;
 }
 
+/** Trimmed keys appearing more than once in the list (artifact/extension
+ *  paths — each declared item must be unique; the dupe-detection itself is
+ *  single-sourced). */
+function duplicateKeys(items: string[]): string[] {
+	const seen = new Set<string>();
+	const dupes: string[] = [];
+	for (const item of items) {
+		const key = item.trim();
+		if (seen.has(key)) dupes.push(key);
+		seen.add(key);
+	}
+	return dupes;
+}
+
 export function paramsViolation(
 	task: string,
 	timeoutSecs: number,
@@ -443,15 +456,9 @@ export function paramsViolation(
 	if (artifactPaths.length > 64) {
 		return `too many artifact paths (${artifactPaths.length} > 64) — declare fewer, larger artifacts`;
 	}
-	const seen = new Set<string>();
-	const dupes: string[] = [];
-	for (const p of artifactPaths) {
-		const key = p.trim();
-		if (seen.has(key)) dupes.push(key);
-		seen.add(key);
-	}
-	if (dupes.length > 0) {
-		return `duplicate artifact paths (each artifact is read once): ${dupes.join(", ")}`;
+	const artifactDupes = duplicateKeys(artifactPaths);
+	if (artifactDupes.length > 0) {
+		return `duplicate artifact paths (each artifact is read once): ${artifactDupes.join(", ")}`;
 	}
 	if (provider && !model) {
 		return "provider requires model (pass both, or neither)";
@@ -470,13 +477,7 @@ export function paramsViolation(
 		}
 		if (extensions.length > 8) return `too many extension paths (${extensions.length} > 8)`;
 		if (extensions.some((e) => !e.trim())) return "extension paths must be non-empty strings";
-		const extSeen = new Set<string>();
-		const extDupes: string[] = [];
-		for (const e of extensions) {
-			const key = e.trim();
-			if (extSeen.has(key)) extDupes.push(key);
-			extSeen.add(key);
-		}
+		const extDupes = duplicateKeys(extensions);
 		if (extDupes.length > 0) {
 			return `duplicate extension paths (each is loaded once): ${extDupes.join(", ")}`;
 		}

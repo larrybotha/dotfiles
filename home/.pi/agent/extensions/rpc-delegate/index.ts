@@ -329,7 +329,7 @@ async function runSpawnService(input: SpawnInput, signal: AbortSignal): Promise<
 		transport.killHard();
 		throw new Error("spawn aborted");
 	}
-	return { pid: transport.pid() ?? -1, transport };
+	return { pid: transport.childPid() ?? -1, transport };
 }
 
 async function runHandshakeService(input: HandshakeInput): Promise<HandshakeOutput> {

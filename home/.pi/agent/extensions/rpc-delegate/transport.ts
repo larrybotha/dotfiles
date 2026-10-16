@@ -302,10 +302,6 @@ export class RpcTransport implements TransportHandle {
 		return this.child !== null && !this.exited;
 	}
 
-	pid(): number | null {
-		return this.child?.pid ?? null;
-	}
-
 	closeStdin(): void {
 		try {
 			this.child?.stdin?.end();

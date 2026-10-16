@@ -91,9 +91,6 @@ class FakeTransport implements TransportHandle {
 	exitCode() {
 		return this.dead ? 137 : 0;
 	}
-	pid() {
-		return 4242;
-	}
 	getEvidence(): TransportEvidence {
 		return {
 			stderrTail: "",
