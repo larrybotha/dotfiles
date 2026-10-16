@@ -265,6 +265,15 @@ export function startViolation(template: TemplateRecord): string | null {
 	return templateStepsViolation(template.steps);
 }
 
+/**
+ * First unanswered step index — the resume point (steps are answered in
+ * order). The interactive flow re-opens editors from here on resume;
+ * stepViolation expects this step next. Single source of truth for both.
+ */
+export function nextStepIndex(ctx: JournalContext): number {
+	return ctx.template ? Object.keys(ctx.answers).length : 0;
+}
+
 /** STEP_DONE: the step must be the next expected one; content size capped. */
 export function stepViolation(
 	ctx: JournalContext,
@@ -272,7 +281,7 @@ export function stepViolation(
 	content: string,
 ): string | null {
 	if (!ctx.template) return "no template — START first";
-	const expected = ctx.template.steps[Object.keys(ctx.answers).length];
+	const expected = ctx.template.steps[nextStepIndex(ctx)];
 	if (!expected) {
 		return `all steps already answered — TAGS_DONE is next (tags: ${ctx.tags.length ? "some recorded" : "none yet"})`;
 	}

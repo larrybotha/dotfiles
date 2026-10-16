@@ -20,6 +20,7 @@ import {
 	type JournalEvent,
 	journalMachine,
 	normalizeTags,
+	nextStepIndex,
 	type PersistServiceInput,
 	type PersistServiceOutput,
 	startViolation,
@@ -215,6 +216,24 @@ await ok("last STEP_DONE flips phase to tagging (targetless)", () => {
 		blockers: "sqlite locking",
 	});
 	assert.equal(a.getSnapshot().can({ type: "TAGS_DONE", tags: ["a"] }), true);
+});
+
+await ok("nextStepIndex: the resume point across phases (one source with stepViolation)", () => {
+	const a = makeActor(makeStubs());
+	// no template (idle) — 0, not resumable
+	assert.equal(nextStepIndex(a.getSnapshot().context), 0);
+	a.send({ type: "START", template: DAILY });
+	// phase writing, nothing answered — step 1 (wins) next
+	assert.equal(nextStepIndex(a.getSnapshot().context), 0);
+	a.send({ type: "STEP_DONE", stepName: "wins", content: "w" });
+	// phase writing, 1/2 answered — step 2 (blockers) is the resume point
+	assert.equal(nextStepIndex(a.getSnapshot().context), 1);
+	a.send({ type: "STEP_DONE", stepName: "blockers", content: "b" });
+	// phase tagging — all steps answered
+	assert.equal(nextStepIndex(a.getSnapshot().context), 2);
+	a.send({ type: "TAGS_DONE", tags: ["a"] });
+	// phase reviewing — unchanged
+	assert.equal(nextStepIndex(a.getSnapshot().context), 2);
 });
 
 await ok("TAGS_DONE: normalized (trim/lowercase/dedupe) -> phase reviewing; empty = no tags", () => {

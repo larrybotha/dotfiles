@@ -5,7 +5,10 @@ Machine-driven journalling workflow over a directory-local sqlite db.
 - `/journal add` — interactive gather flow (no model round-trips): template
   select → one editor dialog per template step (the user writes the
   content) → free-form tags → save confirm → persist. Every answer is a
-  machine event; illegal transitions abort honestly.
+  machine event; illegal transitions abort honestly. A cancelled dialog
+  **pauses** the flow (answers stay in the machine context, memory-only) —
+  rerun `/journal add` to continue where you left off or start over;
+  `/journal reset` discards.
 - `/journal status` (also bare `/journal`) · `/journal reset` ·
   `/journal list` (recent entries) · `/journal templates`
 

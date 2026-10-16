@@ -7,8 +7,10 @@
  * answer as a machine event; APPROVE invokes the persist service, which
  * writes the composed single-field markdown entry (+ tags, timestamp) to
  * the sqlite db via db.ts. No model round-trips mid-flow — the user writes
- * the content. The model observes (journal_status) and manages templates
- * and links through tools:
+ * the content. A cancelled dialog PAUSES the flow: gathered answers stay
+ * in the machine context; a later /journal add continues (or starts over),
+ * /journal reset discards. The model observes (journal_status) and manages
+ * templates and links through tools:
  *
  *   journal_read            — query entries / entry / tags / templates
  *                             (tag + substring filters, previews)
@@ -48,9 +50,11 @@ import {
 	type JournalEvent,
 	type JournalLimits,
 	journalMachine,
+	nextStepIndex,
 	type PersistServiceInput,
 	type PersistServiceOutput,
 	type TemplateRecord,
+	type TemplateStep,
 	templateDefaultTagsViolation,
 	templateDescriptionViolation,
 	templateNameViolation,
@@ -262,7 +266,7 @@ function allowedNext(): string {
 				return "Allowed next: /journal add (gather + persist an entry).";
 			case "writing":
 			case "tagging":
-				return "Allowed next: /journal add (restarts the flow after a discard confirm), or /journal reset (abort).";
+				return "Allowed next: /journal add (continue the paused entry, or start a new one after a discard confirm), or /journal reset (discard it).";
 			case "reviewing":
 				return "Allowed next: /journal add (save/retry the pending entry), or /journal reset (discard).";
 		}
@@ -312,9 +316,17 @@ function detailsFor(
 // The /journal add interactive flow (user-driven; zero model round-trips)
 // ---------------------------------------------------------------------------
 
-function abortFlow(ctx: JournalUiCtx, why: string): void {
-	getActor().send({ type: "RESET" });
-	ctx.ui.notify(`Journal aborted — ${why}`, "info");
+/**
+ * Pause the flow — the machine context keeps every gathered answer; no
+ * RESET is sent. A cancelled dialog, or a machine-rejected event (dropped;
+ * context untouched), leaves a resumable state: a later /journal add
+ * offers continue-or-start-over, /journal reset discards.
+ */
+function pauseFlow(ctx: JournalUiCtx, why: string): void {
+	ctx.ui.notify(
+		`Journal paused — ${why}. /journal add to continue, /journal reset to discard`,
+		"info",
+	);
 }
 
 /** Send APPROVE, wait for the persist service to settle, report the outcome. */
@@ -390,10 +402,169 @@ function progressText(c: JournalContext): string {
 }
 
 /**
+ * Template defaultTags for a resumed entry's tagging phase — the context
+ * keeps the template START carried (defaultTags dropped there), so look
+ * the record up by id. [] when the row is gone or the db errors:
+ * suggestions are cosmetic, never flow-blocking.
+ */
+function templateDefaults(templateId: number): string[] {
+	try {
+		return (
+			getDb().listTemplates().find((t) => t.id === templateId)?.defaultTags ??
+			[]
+		);
+	} catch {
+		return [];
+	}
+}
+
+/**
+ * One editor dialog per remaining step (from `fromIndex` — nextStepIndex
+ * on resume, 0 on a fresh entry), sending STEP_DONE per answer. False =
+ * paused: a cancelled dialog or a machine-rejected event (dropped;
+ * context untouched) — every gathered answer stays, the flow can rerun.
+ */
+async function gatherSteps(
+	ctx: JournalUiCtx,
+	template: { steps: TemplateStep[] },
+	fromIndex: number,
+): Promise<boolean> {
+	for (const [i, step] of template.steps.entries()) {
+		if (i < fromIndex) continue; // already answered — resume skips
+		const answer = await ctx.ui.editor(
+			`Journal (${i + 1}/${template.steps.length}): ${step.prompt}`,
+		);
+		if (answer === undefined) {
+			pauseFlow(
+				ctx,
+				`paused at step ${i + 1}/${template.steps.length} ("${step.name}")`,
+			);
+			return false;
+		}
+		const s = getActor().getSnapshot();
+		if (!s.can({ type: "STEP_DONE", stepName: step.name, content: answer })) {
+			pauseFlow(ctx, `machine rejected step "${step.name}" — /journal status`);
+			return false;
+		}
+		getActor().send({ type: "STEP_DONE", stepName: step.name, content: answer });
+	}
+	return true;
+}
+
+/**
+ * Tags dialog + TAGS_DONE. False = paused (cancelled dialog or machine
+ * rejection). Blank input + template defaults → one confirm (option C —
+ * explicit intent, never silently applied).
+ */
+async function gatherTags(
+	ctx: JournalUiCtx,
+	defaults: string[],
+): Promise<boolean> {
+	// Placeholder shows the template's defaultTags first, then existing db
+	// tags as suggestions; the machine normalizes whatever is sent.
+	let existingNames: string[] = [];
+	try {
+		existingNames = getDb().listTags().map((t) => t.name);
+	} catch {
+		/* suggestions are cosmetic — never block the flow */
+	}
+	const suggestionParts: string[] = [];
+	if (defaults.length > 0)
+		suggestionParts.push(`blank: ${defaults.join(", ")}`);
+	if (existingNames.length > 0)
+		suggestionParts.push(`existing: ${existingNames.slice(0, 8).join(", ")}`);
+	const rawTags = await ctx.ui.input(
+		"Journal: tags (comma-separated, blank for none)",
+		suggestionParts.length > 0
+			? suggestionParts.join(" · ")
+			: "e.g. work, deep-focus",
+	);
+	if (rawTags === undefined) {
+		pauseFlow(ctx, "paused at tags");
+		return false;
+	}
+	let tagInput = rawTags
+		.split(",")
+		.map((t) => t.trim())
+		.filter((t) => t.length > 0);
+	if (tagInput.length === 0 && defaults.length > 0) {
+		const useDefaults = await ctx.ui.confirm(
+			"Journal: no tags entered — use this template's default tags?",
+			defaults.join(", "),
+		);
+		if (useDefaults) tagInput = [...defaults];
+	}
+
+	const snap = getActor().getSnapshot();
+	if (!snap.can({ type: "TAGS_DONE", tags: tagInput })) {
+		pauseFlow(ctx, "machine rejected the tags — /journal status");
+		return false;
+	}
+	getActor().send({ type: "TAGS_DONE", tags: tagInput });
+	return true;
+}
+
+/**
+ * Review confirm — the composed single-field markdown the db will store —
+ * then APPROVE + persist. Declining discards: explicit intent, like the
+ * old flow.
+ */
+async function reviewAndPersist(ctx: JournalUiCtx): Promise<void> {
+	const c = getActor().getSnapshot().context;
+	if (!c.template) {
+		pauseFlow(ctx, "machine lost the template — /journal status");
+		return;
+	}
+	const composed = composeContent(
+		c.template.steps.map((s) => ({
+			name: s.name,
+			answer: c.answers[s.name] ?? "",
+		})),
+	);
+	const preview = [
+		`template: ${c.template.name}`,
+		c.tags.length > 0 ? `tags: ${c.tags.join(", ")}` : "tags: none",
+		"",
+		composed.length > 1500 ? `${composed.slice(0, 1500)}\n…` : composed,
+	].join("\n");
+	const save = await ctx.ui.confirm("Journal: save this entry?", preview);
+	if (!save) {
+		getActor().send({ type: "RESET" });
+		ctx.ui.notify("Journal entry discarded", "info");
+		return;
+	}
+	await persistAndReport(ctx);
+}
+
+/**
+ * Continue a paused entry: re-open dialogs from the machine context's
+ * phase — writing: editors from the first unanswered step; tagging: the
+ * tags dialog; reviewing: straight to review + persist. The context holds
+ * every gathered answer; no events are replayed.
+ */
+async function resumeEntry(ctx: JournalUiCtx): Promise<void> {
+	const c = getActor().getSnapshot().context;
+	if (!c.template || c.phase === null) {
+		// phase-gated by the caller; defensive — state changed mid-dialog
+		pauseFlow(ctx, "no resumable entry in the machine — /journal status");
+		return;
+	}
+	const template = c.template;
+	const defaults = templateDefaults(template.id);
+	if (c.phase === "writing") {
+		if (!(await gatherSteps(ctx, template, nextStepIndex(c)))) return;
+		if (!(await gatherTags(ctx, defaults))) return;
+	} else if (c.phase === "tagging") {
+		if (!(await gatherTags(ctx, defaults))) return;
+	}
+	await reviewAndPersist(ctx);
+}
+
+/**
  * The gather flow: template select -> editor per step -> tags -> review
  * confirm -> APPROVE -> persist. Every user answer becomes a machine event;
- * illegal transitions (a bug or a concurrent change) abort the flow
- * honestly instead of forcing state.
+ * illegal transitions (a bug or a concurrent change) pause the flow
+ * honestly (event dropped, state kept) instead of forcing state.
  */
 async function runAddFlow(ctx: JournalUiCtx): Promise<void> {
 	if (!ctx.hasUI) {
@@ -422,13 +593,21 @@ async function runAddFlow(ctx: JournalUiCtx): Promise<void> {
 		}
 		getActor().send({ type: "RESET" });
 	} else if (snap.matches("authoring") && snap.context.phase !== null) {
-		// Mid-flow restart: confirm the discard — never silently drop answers
-		const discard = await ctx.ui.confirm(
-			"Journal: an entry is already in progress. Discard it and start over?",
-			progressText(snap.context),
+		// Paused entry: continue or start over — never silently drop answers
+		const resumeOptions = [
+			`Continue — ${progressText(snap.context)}`,
+			"Start over — discard it and pick a template",
+		];
+		const resumePick = await ctx.ui.select(
+			"Journal: an entry is in progress",
+			resumeOptions,
 		);
-		if (!discard) {
+		if (resumePick === undefined) {
 			ctx.ui.notify("Journal flow kept as-is — /journal status", "info");
+			return;
+		}
+		if (resumePick === resumeOptions[0]) {
+			await resumeEntry(ctx);
 			return;
 		}
 		getActor().send({ type: "RESET" });
@@ -470,103 +649,10 @@ async function runAddFlow(ctx: JournalUiCtx): Promise<void> {
 	}
 	getActor().send({ type: "START", template });
 
-	// 2. One editor dialog per template step — the user writes the content
-	for (const [i, step] of template.steps.entries()) {
-		const answer = await ctx.ui.editor(
-			`Journal (${i + 1}/${template.steps.length}): ${step.prompt}`,
-		);
-		if (answer === undefined) {
-			abortFlow(
-				ctx,
-				`cancelled at step ${i + 1}/${template.steps.length} ("${step.name}")`,
-			);
-			return;
-		}
-		const s = getActor().getSnapshot();
-		if (!s.can({ type: "STEP_DONE", stepName: step.name, content: answer })) {
-			abortFlow(ctx, `machine rejected step "${step.name}" — /journal status`);
-			return;
-		}
-		getActor().send({ type: "STEP_DONE", stepName: step.name, content: answer });
-	}
-
-	// 3. Tags — free-form, comma-separated. Placeholder shows the
-	// template's defaultTags first (blank + defaults → confirm dialog),
-	// then existing db tags as suggestions. Machine normalizes whatever is
-	// sent: trim/lowercase/dedupe.
-	let existingNames: string[] = [];
-	try {
-		existingNames = getDb().listTags().map((t) => t.name);
-	} catch {
-		/* suggestions are cosmetic — never block the flow */
-	}
-	const defaults = template.defaultTags;
-	const suggestionParts: string[] = [];
-	if (defaults.length > 0)
-		suggestionParts.push(`blank: ${defaults.join(", ")}`);
-	if (existingNames.length > 0)
-		suggestionParts.push(
-			`existing: ${existingNames.slice(0, 8).join(", ")}`,
-		);
-	const rawTags = await ctx.ui.input(
-		"Journal: tags (comma-separated, blank for none)",
-		suggestionParts.length > 0
-			? suggestionParts.join(" · ")
-			: "e.g. work, deep-focus",
-	);
-	if (rawTags === undefined) {
-		abortFlow(ctx, "cancelled at tags");
-		return;
-	}
-	let tagInput = rawTags
-		.split(",")
-		.map((t) => t.trim())
-		.filter((t) => t.length > 0);
-	// Option C: blank input + template defaults → one confirm; explicit
-	// intent every time — defaults are never silently applied, and typing
-	// your own tags replaces them without asking
-	if (tagInput.length === 0 && defaults.length > 0) {
-		const useDefaults = await ctx.ui.confirm(
-			"Journal: no tags entered — use this template's default tags?",
-			defaults.join(", "),
-		);
-		if (useDefaults) tagInput = [...defaults];
-	}
-
-	const tagsSnap = getActor().getSnapshot();
-	if (!tagsSnap.can({ type: "TAGS_DONE", tags: tagInput })) {
-		abortFlow(ctx, "machine rejected the tags — /journal status");
-		return;
-	}
-	getActor().send({ type: "TAGS_DONE", tags: tagInput });
-
-	// 4. Review — the composed single-field markdown the db will store
-	const c = getActor().getSnapshot().context;
-	if (!c.template) {
-		abortFlow(ctx, "machine lost the template — /journal status");
-		return;
-	}
-	const composed = composeContent(
-		c.template.steps.map((s) => ({
-			name: s.name,
-			answer: c.answers[s.name] ?? "",
-		})),
-	);
-	const preview = [
-		`template: ${c.template.name}`,
-		c.tags.length > 0 ? `tags: ${c.tags.join(", ")}` : "tags: none",
-		"",
-		composed.length > 1500 ? `${composed.slice(0, 1500)}\n…` : composed,
-	].join("\n");
-	const save = await ctx.ui.confirm("Journal: save this entry?", preview);
-	if (!save) {
-		getActor().send({ type: "RESET" });
-		ctx.ui.notify("Journal entry discarded", "info");
-		return;
-	}
-
-	// 5. Persist
-	await persistAndReport(ctx);
+	// 2-5. Steps -> tags -> review -> persist (shared with resumeEntry)
+	if (!(await gatherSteps(ctx, template, 0))) return;
+	if (!(await gatherTags(ctx, template.defaultTags))) return;
+	await reviewAndPersist(ctx);
 }
 
 // ---------------------------------------------------------------------------
@@ -574,7 +660,11 @@ async function runAddFlow(ctx: JournalUiCtx): Promise<void> {
 // ---------------------------------------------------------------------------
 
 const SUBCOMMANDS: { value: string; description: string }[] = [
-	{ value: "add", description: "gather + persist an entry (interactive)" },
+	{
+		value: "add",
+		description:
+			"gather + persist an entry (interactive; a cancelled dialog pauses — rerun to continue)",
+	},
 	{ value: "status", description: "show workflow state" },
 	{ value: "reset", description: "clear workflow state" },
 	{ value: "list", description: "recent entries (one line each)" },
