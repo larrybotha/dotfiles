@@ -4,5 +4,8 @@
   "defaultProvider": "opencode",
   "defaultModel": "glm-5.1",
   "hideThinkingBlock": false,
-  "theme": "dark"
+  "theme": "dark",
+  "packages": [
+    "npm:pi-autoresearch"
+  ]
 }
