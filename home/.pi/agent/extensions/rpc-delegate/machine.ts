@@ -123,7 +123,10 @@ export interface TransportHandle {
 	getEvidence(): TransportEvidence;
 }
 
-export interface RpcContext {
+/** The caller's request — carried unchanged through BEGIN → context → spawn
+ *  (single-sourced: RpcContext, the BEGIN event, and SpawnInput compose from
+ *  it; field docs live here once). */
+export interface RequestSpec {
 	/** Delegation id (also passed as the child's --name). */
 	sessionId: string;
 	task: string;
@@ -147,7 +150,9 @@ export interface RpcContext {
 	timeoutSecs: number;
 	workingDir: string;
 	artifactPaths: string[];
+}
 
+export interface RpcContext extends RequestSpec {
 	/** IO handle — set from spawnService output. Null before spawn (and on spawn-fail). */
 	transport: TransportHandle | null;
 	childPid: number | null;
@@ -221,23 +226,7 @@ export interface SpawnLaunch {
 }
 
 export type RpcEvent =
-	| {
-			type: "BEGIN";
-			sessionId: string;
-			task: string;
-			agentPrompt: string | null;
-			provider: string | null;
-			model: string | null;
-			tools: string[] | null;
-			extensions: string[] | null;
-			depth: number;
-			maxDepth: number;
-			artifactPolicy: "stopReason" | "artifacts";
-			timeoutSecs: number;
-			workingDir: string;
-			artifactPaths: string[];
-			launch: SpawnLaunch;
-	  }
+	| ({ type: "BEGIN"; launch: SpawnLaunch } & RequestSpec)
 	| { type: "KILL" }
 	| { type: "CHILD_DEAD"; code: number | null; signal: string | null }
 	| { type: "PROTOCOL_FATAL"; reason: string }
@@ -256,18 +245,7 @@ export type RpcEvent =
 // Service contracts (typed stubs; index.ts wires real IO, test.ts stubs)
 // ---------------------------------------------------------------------------
 
-export interface SpawnInput {
-	sessionId: string;
-	task: string;
-	agentPrompt: string | null;
-	provider: string | null;
-	model: string | null;
-	tools: string[] | null;
-	extensions: string[] | null;
-	depth: number;
-	maxDepth: number;
-	workingDir: string;
-	timeoutSecs: number;
+export interface SpawnInput extends Omit<RequestSpec, "artifactPolicy" | "artifactPaths"> {
 	launch: SpawnLaunch;
 }
 export interface SpawnOutput {
@@ -642,22 +620,8 @@ export const rpcMachine = setup({
 	actions: {
 		begin: assign(({ event }) => {
 			if (event.type !== "BEGIN") return {};
-			return {
-				sessionId: event.sessionId,
-				task: event.task,
-				agentPrompt: event.agentPrompt,
-				provider: event.provider,
-				model: event.model,
-				tools: event.tools,
-				extensions: event.extensions ?? null,
-				depth: event.depth,
-				maxDepth: event.maxDepth,
-				artifactPolicy: event.artifactPolicy,
-				timeoutSecs: event.timeoutSecs,
-				workingDir: event.workingDir,
-				artifactPaths: event.artifactPaths,
-				beginAt: Date.now(),
-			};
+			const { type: _type, launch: _launch, ...spec } = event;
+			return { ...spec, beginAt: Date.now() };
 		}),
 		recordSpawn: assign(({ event }) => {
 			if (!("output" in event)) return {};
@@ -817,20 +781,8 @@ export const rpcMachine = setup({
 				src: "spawnService",
 				input: ({ event }) => {
 					if (event.type !== "BEGIN") throw new Error(`spawning entered by ${event.type}`);
-					return {
-						sessionId: event.sessionId,
-						task: event.task,
-						agentPrompt: event.agentPrompt,
-						provider: event.provider,
-						model: event.model,
-						tools: event.tools,
-						extensions: event.extensions ?? null,
-						depth: event.depth,
-						maxDepth: event.maxDepth,
-						workingDir: event.workingDir,
-						timeoutSecs: event.timeoutSecs,
-						launch: event.launch,
-					};
+					const { type: _type, artifactPolicy: _policy, artifactPaths: _paths, ...spawnInput } = event;
+					return spawnInput;
 				},
 				onDone: { target: "handshaking", actions: "recordSpawn" },
 				// Spawn-fail self-cleans (wired service kills what it made):
