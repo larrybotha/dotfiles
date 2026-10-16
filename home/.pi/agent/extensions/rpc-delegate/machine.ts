@@ -548,6 +548,31 @@ function errMsg(ev: unknown): string {
 	return e instanceof Error ? e.message : String(e);
 }
 
+/** assign() factory: apply a context patch when the triggering event is
+ *  `kind` ({} otherwise) — the event-type guard + narrowing lives here once,
+ *  not in every action; apply() gets the narrowed event + current context.
+ *  (event is annotated RpcEvent — the exact catalog type XState expects;
+ *  synthetic done/error events never reach machine-event actions.) */
+function on<K extends RpcEvent["type"]>(
+	kind: K,
+	apply: (ev: Extract<RpcEvent, { type: K }>, c: RpcContext) => Partial<RpcContext>,
+) {
+	return assign<RpcContext, RpcEvent, undefined, RpcEvent, never>(({ context, event }) =>
+		event.type === kind ? apply(event as Extract<RpcEvent, { type: K }>, context) : {},
+	);
+}
+
+/** assign() factory for invoke onDone events: apply(output) when the event
+ *  carries one ({} otherwise) — the probe-then-cast boilerplate lives here
+ *  once, not in every done action. (Runtime done events are not RpcEvents;
+ *  the annotation matches the action catalog, the cast is local.) */
+function onOutput<T>(apply: (output: T, c: RpcContext) => Partial<RpcContext>) {
+	return assign<RpcContext, RpcEvent, undefined, RpcEvent, never>(({ context, event }) => {
+		const out = (event as { output?: unknown }).output;
+		return out !== undefined ? apply(out as T, context) : {};
+	});
+}
+
 /** Identical handlers shared by prompting and running: evidence-only
  *  actions plus the identical lifecycle exits (KILL / CHILD_DEAD /
  *  PROTOCOL_FATAL). AGENT_SETTLED differs — evidence-only pre-acceptance vs
@@ -641,29 +666,24 @@ export const rpcMachine = setup({
 			const { type: _type, launch: _launch, ...spec } = event;
 			return { ...spec, beginAt: Date.now() };
 		}),
-		recordSpawn: assign(({ event }) => {
-			if (!("output" in event)) return {};
-			const out = (event as { output: SpawnOutput }).output;
-			return { childPid: out.pid, transport: out.transport };
-		}),
+		recordSpawn: onOutput<SpawnOutput>((out) => ({ childPid: out.pid, transport: out.transport })),
 		recordSpawnError: assign(({ event }) => {
 			if (!("error" in event)) return {};
 			return { failureDetail: `Failed to spawn RPC child: ${errMsg(event)}` };
 		}),
-		recordHandshake: assign(({ event }) => {
-			if (!("output" in event)) return {};
-			const out = (event as { output: HandshakeOutput }).output;
-			return { childSessionId: out.sessionId, childModelId: out.modelId };
-		}),
+		recordHandshake: onOutput<HandshakeOutput>((out) => ({
+			childSessionId: out.sessionId,
+			childModelId: out.modelId,
+		})),
 		markHandshakeError: assign(({ event }) => ({
 			outcome: "error" as const,
 			failureDetail: `Handshake failed: ${errMsg(event)}`,
 		})),
-		markPromptAccepted: assign(({ event }) => {
-			if (!("output" in event)) return {};
-			const out = (event as { output: PromptOutput }).output;
-			return { promptDisposition: out.disposition, runStartedSeen: true, runStartedAt: Date.now() };
-		}),
+		markPromptAccepted: onOutput<PromptOutput>((out) => ({
+			promptDisposition: out.disposition,
+			runStartedSeen: true,
+			runStartedAt: Date.now(),
+		})),
 		markHandled: assign(() => ({
 			promptDisposition: "handled",
 			outcome: "error" as const,
@@ -682,89 +702,69 @@ export const rpcMachine = setup({
 			runEndedAt: Date.now(),
 			failureDetail: `run hard cap exceeded (${context.timeoutSecs}s)`,
 		})),
-		markStalled: assign(({ event }) =>
-			event.type === "STALL_DETECTED"
-				? {
-						outcome: "timeout" as const,
-						stallHit: true,
-						runEndedAt: Date.now(),
-						failureDetail: `child stalled — no protocol activity for ${Math.round(event.stallMs / 1000)}s (no child tool running); cancelled by stall detection`,
-					}
-				: {},
+		markStalled: on("STALL_DETECTED", (ev) => ({
+			outcome: "timeout" as const,
+			stallHit: true,
+			runEndedAt: Date.now(),
+			failureDetail: `child stalled — no protocol activity for ${Math.round(ev.stallMs / 1000)}s (no child tool running); cancelled by stall detection`,
+		})),
+		markAborted: on("KILL", (ev, c) =>
+			c.outcome === null ? { outcome: "aborted" as const, runEndedAt: Date.now() } : {},
 		),
-		markAborted: assign(({ context }) =>
-			context.outcome === null ? { outcome: "aborted" as const, runEndedAt: Date.now() } : {},
+		markFatal: on("PROTOCOL_FATAL", (ev, c) =>
+			c.outcome === null
+				? { outcome: "error" as const, protoFatal: ev.reason, runEndedAt: Date.now(), failureDetail: `RPC protocol violation: ${ev.reason}` }
+				: { protoFatal: ev.reason },
 		),
-		markFatal: assign(({ context, event }) => {
-			if (event.type !== "PROTOCOL_FATAL") return {};
-			return context.outcome === null
-				? {
-						outcome: "error" as const,
-						protoFatal: event.reason,
-						runEndedAt: Date.now(),
-						failureDetail: `RPC protocol violation: ${event.reason}`,
-					}
-				: { protoFatal: event.reason };
-		}),
-		markSettled: assign(({ context }) => {
-			if (context.outcome !== null) return { agentSettledSeen: true };
-			return { agentSettledSeen: true, outcome: "settled" as const, runEndedAt: Date.now() };
-		}),
-		markChildDead: assign(({ context, event }) => {
-			if (event.type !== "CHILD_DEAD") return {};
-			const base = {
-				childExit: event.code,
-				childExitSignal: event.signal,
-			};
-			if (context.outcome !== null) return base;
+		// Context-only, deliberately NOT on("AGENT_SETTLED"): fires from two
+		// contexts — running.on.AGENT_SETTLED (real event) AND running's
+		// `always` settledFast exit, whose triggering event is the prompt-service
+		// onDone, not AGENT_SETTLED. The settledFast guard already proves the
+		// settle was observed; the event guard would no-op here and strand
+		// outcome=null → routeError.
+		markSettled: assign(({ context }) =>
+			context.outcome === null
+				? { agentSettledSeen: true, outcome: "settled" as const, runEndedAt: Date.now() }
+				: { agentSettledSeen: true },
+		),
+		markChildDead: on("CHILD_DEAD", (ev, c) => {
+			const base = { childExit: ev.code, childExitSignal: ev.signal };
+			if (c.outcome !== null) return base;
 			return {
 				...base,
 				outcome: "error" as const,
 				runEndedAt: Date.now(),
-				failureDetail: `RPC child process died (exit ${event.code ?? "?"}${event.signal ? `, signal ${event.signal}` : ""}) — run lost`,
+				failureDetail: `RPC child process died (exit ${ev.code ?? "?"}${ev.signal ? `, signal ${ev.signal}` : ""}) — run lost`,
 			};
 		}),
-		recordChildExit: assign(({ event }) => {
-			if (event.type !== "CHILD_DEAD") return {};
-			return { childExit: event.code, childExitSignal: event.signal };
-		}),
+		recordChildExit: on("CHILD_DEAD", (ev) => ({ childExit: ev.code, childExitSignal: ev.signal })),
 		// Evidence self-transition actions (no target — no state re-entry)
-		seeAgentStart: assign(() => ({ runStartedSeen: true })),
+		seeAgentStart: on("AGENT_START", () => ({ runStartedSeen: true })),
 		// Settled observed before the prompt response resolved its path —
 		// evidence only; running's `always` (settledFast) routes once accepted.
-		seeSettled: assign(() => ({ agentSettledSeen: true })),
-		seeAgentEnd: assign(({ event, context }) =>
-			event.type === "AGENT_END"
-				? { agentEndWillRetry: context.agentEndWillRetry + (event.willRetry ? 1 : 0) }
-				: {},
-		),
-		seeMessageEnd: assign(({ event }) =>
-			event.type === "MESSAGE_END"
-				? { lastAssistantStopReason: event.stopReason, lastAssistantError: event.errorMessage }
-				: {},
-		),
-		seeToolStart: assign(({ context, event }) =>
-			event.type === "TOOL_START"
-				? { toolCalls: context.toolCalls + 1, lastToolNames: pushToolRing(context.lastToolNames, event.toolName) }
-				: {},
-		),
+		seeSettled: on("AGENT_SETTLED", () => ({ agentSettledSeen: true })),
+		seeAgentEnd: on("AGENT_END", (ev, c) => ({
+			agentEndWillRetry: c.agentEndWillRetry + (ev.willRetry ? 1 : 0),
+		})),
+		seeMessageEnd: on("MESSAGE_END", (ev) => ({
+			lastAssistantStopReason: ev.stopReason,
+			lastAssistantError: ev.errorMessage,
+		})),
+		seeToolStart: on("TOOL_START", (ev, c) => ({
+			toolCalls: c.toolCalls + 1,
+			lastToolNames: pushToolRing(c.lastToolNames, ev.toolName),
+		})),
 		// Tool END only enters the ring when it failed — starts carry the name.
-		seeToolEnd: assign(({ context, event }) =>
-			event.type === "TOOL_END" && event.isError
-				? { lastToolNames: pushToolRing(context.lastToolNames, `${event.toolName} (error)`) }
-				: {},
+		seeToolEnd: on("TOOL_END", (ev, c) =>
+			ev.isError ? { lastToolNames: pushToolRing(c.lastToolNames, `${ev.toolName} (error)`) } : {},
 		),
-		seeUiRequest: assign(({ context }) => ({ uiRequests: context.uiRequests + 1 })),
-		steerSent: assign(({ event }) => (event.type === "STEER" ? { lastSteer: event.message } : {})),
-		collect: assign(({ context, event }) => {
-			if (!("output" in event)) return {};
-			const out = (event as { output: CollectOutput }).output;
-			return {
-				artifacts: out.artifacts,
-				summary: buildSummary(context.artifactPaths, out.artifacts),
-				collected: true,
-			};
-		}),
+		seeUiRequest: on("EXT_UI_REQUEST", (ev, c) => ({ uiRequests: c.uiRequests + 1 })),
+		steerSent: on("STEER", (ev) => ({ lastSteer: ev.message })),
+		collect: onOutput<CollectOutput>((out, c) => ({
+			artifacts: out.artifacts,
+			summary: buildSummary(c.artifactPaths, out.artifacts),
+			collected: true,
+		})),
 		collectFailed: assign(({ context, event }) => {
 			if (!("error" in event)) return {};
 			const msg = errMsg(event);
@@ -774,14 +774,10 @@ export const rpcMachine = setup({
 				collected: true,
 			};
 		}),
-		recordStop: assign(({ event, context }) => {
-			if (!("output" in event)) return {};
-			const out = (event as { output: StopOutput }).output;
-			return {
-				childExit: out.exitCode ?? context.childExit,
-				usage: out.usage ?? null,
-			};
-		}),
+		recordStop: onOutput<StopOutput>((out, c) => ({
+			childExit: out.exitCode ?? c.childExit,
+			usage: out.usage ?? null,
+		})),
 		// Terminal entry stamp — whole-delegation duration (BEGIN → terminal)
 		// includes the collect + stop ladders; guarded (finals entered once).
 		markEnded: assign(({ context }) => (context.endedAt === null ? { endedAt: Date.now() } : {}))
