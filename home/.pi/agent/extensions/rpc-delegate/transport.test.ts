@@ -17,7 +17,14 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 import type { RpcEvent } from "./machine.ts";
-import { ChildDiedError, CommandTimeoutError, ProtocolFatalError, RpcTransport } from "./transport.ts";
+import {
+	ChildDiedError,
+	CommandTimeoutError,
+	nodeShimBinary,
+	ProtocolFatalError,
+	resolveNodeBinary,
+	RpcTransport,
+} from "./transport.ts";
 
 const FIXTURE = fileURLToPath(new URL("./fixtures/fake-child.mjs", import.meta.url));
 
@@ -80,6 +87,34 @@ await ok("spawn failure (bad binary) rejects start", async () => {
 	});
 	await assert.rejects(() => t.start(), /ENOENT|spawn|binary/i);
 	assert.equal(t.alive(), false);
+});
+
+// -- node-binary resolution (brew-upgrade liveness) ---------------------------
+
+await ok("resolveNodeBinary: live execPath preferred", () => {
+	assert.equal(resolveNodeBinary(), process.execPath);
+});
+
+await ok("resolveNodeBinary: vanished node execPath falls back to the brew shim", () => {
+	const gone = "/nonexistent/Cellar/node/99.0.0/bin/node";
+	const resolved = resolveNodeBinary(gone);
+	const shim = nodeShimBinary();
+	if (shim) {
+		// brew-upgrade case: the captured Cellar realpath vanished — the
+		// stable shim replaces it (same major lineage brew's pi bundle runs).
+		assert.equal(resolved, shim);
+	} else {
+		// no shim on this machine — the dead execPath passes through so the
+		// spawn surfaces it (spawn-enoent class), never a silent guess.
+		assert.equal(resolved, gone);
+	}
+});
+
+await ok("resolveNodeBinary: vanished non-node runtime is never substituted", () => {
+	// a bun execPath has no node substitute — a wrong-runtime guess is
+	// never made; callers fall back to `pi` on PATH or surface the failure.
+	const goneBun = "/nonexistent/Cellar/bun/1.0.0/bin/bun";
+	assert.equal(resolveNodeBinary(goneBun), goneBun);
 });
 
 // -- happy protocol ---------------------------------------------------------------

@@ -36,6 +36,7 @@
  */
 import { spawn, type ChildProcess } from "node:child_process";
 import * as fs from "node:fs";
+import * as path from "node:path";
 import type {
 	CommandResponse,
 	RpcEvent,
@@ -123,6 +124,32 @@ interface PendingEntry {
 
 function isRec(v: unknown): v is Record<string, unknown> {
 	return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** A node binary that still exists, for spawning pi (index.ts) or the
+ *  watchdog (below). The running `process.execPath` is a captured
+ *  realpath — Homebrew's Cellar path is DELETED by `brew upgrade node`
+ *  while a long-lived parent pi survives it, so a delegation from any
+ *  parent started before the upgrade dies with ENOENT (telemetry has the
+ *  row). Re-check existence per spawn and fall back to the stable brew
+ *  shim; never bare `node`/`which node` — nvm can resolve a different
+ *  major than the pi bundle runs on. A vanished NON-node runtime (bun)
+ *  has no substitute — the dead execPath passes through so callers fall
+ *  back to `pi` on PATH or surface the failure as `spawn-enoent`; a
+ *  wrong-runtime guess is never made. */
+export function nodeShimBinary(): string | null {
+	for (const c of ["/opt/homebrew/bin/node", "/usr/local/bin/node"]) {
+		if (fs.existsSync(c)) return c;
+	}
+	return null;
+}
+
+export function resolveNodeBinary(execPath: string = process.execPath): string {
+	if (fs.existsSync(execPath)) return execPath;
+	if (/^node(\.exe)?$/.test(path.basename(execPath).toLowerCase())) {
+		return nodeShimBinary() ?? execPath;
+	}
+	return execPath;
 }
 function str(v: unknown): string {
 	return typeof v === "string" ? v : "";
@@ -246,7 +273,10 @@ export class RpcTransport implements TransportHandle {
 			if (this.hbPath && this.stallGapMs) {
 				wdArgs.push(this.hbPath, String(this.stallGapMs));
 			}
-			const w = spawn(process.execPath, wdArgs, { stdio: "ignore", detached: true });
+			const w = spawn(resolveNodeBinary(), wdArgs, { stdio: "ignore", detached: true });
+			// Best-effort orphan guard: a missing binary must degrade the
+			// watchdog, not crash the parent — an unhandled 'error' would.
+			w.on("error", () => {});
 			w.unref();
 			this.watchdogPid = w.pid ?? null;
 		}

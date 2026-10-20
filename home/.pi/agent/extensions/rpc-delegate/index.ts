@@ -68,7 +68,7 @@ import {
 	summaryForSnapshot,
 	type TransportHandle,
 } from "./machine.ts";
-import { RpcTransport } from "./transport.ts";
+import { resolveNodeBinary, RpcTransport } from "./transport.ts";
 
 // ---------------------------------------------------------------------------
 // Config
@@ -177,16 +177,26 @@ interface RpcDelegateDetails {
 // ---------------------------------------------------------------------------
 
 /** Resolve the pi binary (must run inside
- *  the pi process — process.argv points at pi here). */
+ *  the pi process — process.argv points at pi here). Re-resolved per
+ *  delegation (never cached at startup): the node binary can vanish
+ *  under a long-lived parent (`brew upgrade node` deletes the Cellar
+ *  realpath) — resolveNodeBinary re-checks existence per call. */
 function resolvePiBinary(): { command: string; args: string[] } {
 	const currentScript = process.argv[1];
 	const isBunVirtual = currentScript?.startsWith("/$bunfs/root/");
 	if (currentScript && !isBunVirtual && fs.existsSync(currentScript)) {
-		return { command: process.execPath, args: [currentScript] };
+		// Per-spawn liveness: a vanished node execPath falls to the brew
+		// shim; a vanished non-node runtime (bun) leaves the dead execPath
+		// — fall through to `pi` on PATH rather than spawn a
+		// wrong-runtime binary.
+		const bin = resolveNodeBinary();
+		if (fs.existsSync(bin)) return { command: bin, args: [currentScript] };
 	}
 	const exe = path.basename(process.execPath).toLowerCase();
 	if (!/^(node|bun)(\.exe)?$/.test(exe)) {
-		return { command: process.execPath, args: [] };
+		return fs.existsSync(process.execPath)
+			? { command: process.execPath, args: [] }
+			: { command: "pi", args: [] };
 	}
 	return { command: "pi", args: [] };
 }
