@@ -192,7 +192,11 @@ free-tier-403 | param-400 | unavailable-400 | spawn-enoent | other`
 `source` is the provenance marker (`rpc-delegate`); rows without it
 are pre-writer legacy — summarized by `--lint`, excluded from re-rank
 flags. `archetype` comes from the `archetype` tool param and may be
-null when omitted. `stopReason` domain:
+null when omitted. Terminal rows carry the failure detail in `note`
+when any exists (machine `failureDetail` → last assistant error →
+stderr tail, ≤140 chars, credential-shaped substrings redacted —
+authorization/bearer/api-key/sk-token shapes) — an empty note on a
+failure row means every surface was blank. `stopReason` domain:
 `stop | success | error | aborted | pending | length | deferred` —
 novel values warn, malformed values fail lint. Rejected and in-flight
 rows carry `note` prefixes (`rejected:` / `tool return in flight`)

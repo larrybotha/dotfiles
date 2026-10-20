@@ -553,6 +553,32 @@ const TELEMETRY_PATH = fileURLToPath(new URL("./telemetry.jsonl", import.meta.ur
  *  Module-relative path: survives the symlinked agent-dir layout. */
 const MODEL_ROUTING_SKILL_DIR = fileURLToPath(new URL("./skills/model-routing", import.meta.url));
 
+/** Redact credential-shaped substrings before anything reaches the
+ *  persistent telemetry log (F12 hardening: lastAssistantError/stderr are
+ *  provider/child surfaces we do not control). Narrow, structural shapes
+ *  only — prose about tokens survives. */
+function redactSecrets(t: string): string {
+	return t
+		.replace(/authorization[^\n]{0,120}/gi, "authorization [redacted]")
+		.replace(/bearer\s+\S+/gi, "bearer [redacted]")
+		.replace(/api[-_]?key[^\n]{0,80}/gi, "api-key [redacted]")
+		.replace(/\b(?:sk|rk)-[A-Za-z0-9_-]{8,}\b/g, "[redacted]");
+}
+
+/** Telemetry note: first non-blank surface (failureDetail → last
+ *  assistant error → stderr tail), CR/LF-flattened, secrets redacted,
+ *  ≤140 chars. An empty note on a failure row means every surface was
+ *  blank (F12: 15 of 18 flagged rows were like that — the detail lived
+ *  in lastAssistantError/stderr, now captured). */
+function noteText(parts: (string | null)[]): string {
+	for (const p of parts) {
+		if (typeof p === "string" && p.trim()) {
+			return redactSecrets(p).slice(0, 140).replace(/[\r\n]+/g, " ");
+		}
+	}
+	return "";
+}
+
 /** v2 (C-lite): one JSONL row per rpc_delegate_task terminal return —
  *  settled, param-rejected, or still-in-flight. Fact capture only — never
  *  read for routing; no task text logged; best-effort. */
@@ -589,14 +615,16 @@ function appendTelemetryRow(
 					? d.artifacts.every((a) => !a.missing && !a.readError)
 					: null,
 			artifactPolicy: meta.artifactPolicy,
+			// On failures the note must be self-describing — F12: 15 of 18
+			// flagged rows logged an empty note (provider errors leave
+			// failureDetail null; the text lives in lastAssistantError/stderr)
+			// and made the `other` bucket unclassifiable post-hoc.
 			note:
 				meta.kind === "rejected"
-					? `rejected: ${(d.failureDetail ?? "").slice(0, 120).replace(/\n/g, " ")}`
+					? `rejected: ${noteText([d.failureDetail])}`
 					: meta.kind === "inFlight"
 						? `tool return in flight (status ${d.status}) — no terminal row`
-						: d.failureDetail
-							? d.failureDetail.slice(0, 140).replace(/\n/g, " ")
-							: "",
+						: noteText([d.failureDetail, d.lastAssistantError, d.stderr]),
 		};
 		fs.appendFileSync(TELEMETRY_PATH, `${JSON.stringify(row)}\n`, "utf8");
 	} catch {
