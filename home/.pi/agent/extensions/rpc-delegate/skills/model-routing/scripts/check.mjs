@@ -1,13 +1,13 @@
 #!/usr/bin/env node
-// Model-routing matrix maintenance.
+// Model-routing verdicts maintenance.
 //
 // Modes:
-//   (default)      probe roster, rewrite assets/matrix.json (revision), report
+//   (default)      probe roster, rewrite assets/verdicts.json (revision), report
 //   --full          default + probe every first-party catalog model
 //   --status        read-only: cadence, catalog diff, telemetry re-rank
 //                  flags, thinking-map record + managed-block drift
 //                  (zero-spawn policy check via shared.mjs)
-//   --lint          read-only: roster/matrix/telemetry/store/class validation
+//   --lint          read-only: roster/verdicts/telemetry/store/class validation
 //
 // Flags:
 //   --catalog <path>      override catalog location (default: paths.json)
@@ -32,9 +32,9 @@
 // store+models.json merge estimate, and --status reports the policy
 // drift (zero spawns) without rewriting anything.
 //
-// Roster (rankings, alternatives, never-delegate) lives in
+// Roster (rankings, alternatives, never_delegate) lives in
 // assets/roster.json (tracked). Verdicts + probed timestamps in
-// assets/matrix.json are per-machine (gitignored).
+// assets/verdicts.json are per-machine (gitignored).
 import fs from 'node:fs/promises';
 import path from 'node:path';
 import { spawn } from 'node:child_process';
@@ -60,12 +60,12 @@ const TIMEOUT_MS = 30_000;
 const MAX_PARALLEL = 5;
 // Fail-closed refresh: when at least this fraction of probes fail to
 // *spawn* (ENOENT etc. — harness broken, not model state), abort without
-// writing the matrix. A failed refresh must never look like a clean one.
+// writing the verdicts. A failed refresh must never look like a clean one.
 const SPAWN_ERROR_ABORT_FRACTION = 0.25;
 
 const TELEMETRY_FAILURE_CLASSES = new Set(FAILURE_CLASSES);
 // Probe-classifiable classes + the two probe-only outcomes.
-const MATRIX_VERDICTS = new Set(['reachable', 'indeterminate', ...Object.keys(PROBE_PATTERNS)]);
+const VERDICT_VALUES = new Set(['reachable', 'indeterminate', ...Object.keys(PROBE_PATTERNS)]);
 // Hard classes: fresh probe truth always replaces any prior verdict.
 // 'reachable' likewise. 'indeterminate' (timeout/spawn-error/unmatched
 // exit) is transient — hysteresis: never overwrites a prior verdict.
@@ -287,9 +287,9 @@ function lintRoster(roster, catalog, overrides, derived, problems, warnings) {
 			neverIds.add(e.id);
 		}
 	}
-	for (const a of roster?.matrix || []) {
+	for (const a of roster?.archetypes || []) {
 		if (!a.archetype) {
-			problems.push('roster: matrix entry missing archetype');
+			problems.push('roster: archetypes entry missing archetype');
 		} else if (archetypes.has(a.archetype)) {
 			problems.push(`roster: duplicate archetype "${a.archetype}"`);
 		} else {
@@ -453,18 +453,18 @@ async function lintAll(roster, rosterSet, paths, problems, warnings) {
 
 	lintRoster(roster, catalog, overrides, derived, problems, warnings);
 
-	let matrix = null;
+	let verdicts = null;
 	try {
-		matrix = await readJson(paths.matrix);
+		verdicts = await readJson(paths.verdicts);
 	} catch {
-		problems.push('matrix: assets/matrix.json missing or unparseable — run scripts/check.mjs (default)');
+		problems.push('verdicts: assets/verdicts.json missing or unparseable — run scripts/check.mjs (default)');
 	}
-	if (matrix) {
-		if (typeof matrix.revised !== 'string' || Number.isNaN(Date.parse(matrix.revised))) {
-			problems.push('matrix: missing or invalid "revised" (ISO 8601 timestamp required)');
+	if (verdicts) {
+		if (typeof verdicts.revised !== 'string' || Number.isNaN(Date.parse(verdicts.revised))) {
+			problems.push('verdicts: missing or invalid "revised" (ISO 8601 timestamp required)');
 		}
 		// Roster placement map: id -> sections ("archetype|picks",
-		// "archetype|alt", "never|never"). A matrix entry must sit in a
+		// "archetype|alt", "never|never"). A verdicts entry must sit in a
 		// section the roster places its id in.
 		const rosterPlaces = new Map();
 		const place = (id, where) => {
@@ -472,59 +472,59 @@ async function lintAll(roster, rosterSet, paths, problems, warnings) {
 			if (!s) { s = new Set(); rosterPlaces.set(id, s); }
 			s.add(where);
 		};
-		for (const a of roster?.matrix || []) {
+		for (const a of roster?.archetypes || []) {
 			for (const id of a.picks || []) place(id, `${a.archetype}|picks`);
 			for (const id of a.alt || []) place(id, `${a.archetype}|alt`);
 		}
 		for (const e of roster?.never_delegate || []) place(e.id, 'never|never');
 
-		const matrixIds = new Set();
+		const verdictIds = new Set();
 		const seenAt = new Map(); // id -> Set(where) — duplicate detection
 		const checkEntry = (e, where) => {
 			if (!e?.id) {
-				problems.push(`matrix: entry without id in ${where}`);
+				problems.push(`verdicts: entry without id in ${where}`);
 				return;
 			}
-			matrixIds.add(e.id);
+			verdictIds.add(e.id);
 			let seen = seenAt.get(e.id);
 			if (!seen) { seen = new Set(); seenAt.set(e.id, seen); }
 			if (seen.has(where)) {
-				problems.push(`matrix: duplicate id "${e.id}" in ${where}`);
+				problems.push(`verdicts: duplicate id "${e.id}" in ${where}`);
 			} else {
 				seen.add(where);
 			}
 			const places = rosterPlaces.get(e.id);
-			if (!places) problems.push(`matrix: id "${e.id}" (${where}) not in roster`);
-			else if (!places.has(where)) problems.push(`matrix: id "${e.id}" listed under ${where} but roster places it: ${[...places].join(', ')}`);
-			if (!MATRIX_VERDICTS.has(e.verdict)) problems.push(`matrix: id "${e.id}" bad verdict "${e.verdict}"`);
+			if (!places) problems.push(`verdicts: id "${e.id}" (${where}) not in roster`);
+			else if (!places.has(where)) problems.push(`verdicts: id "${e.id}" listed under ${where} but roster places it: ${[...places].join(', ')}`);
+			if (!VERDICT_VALUES.has(e.verdict)) problems.push(`verdicts: id "${e.id}" bad verdict "${e.verdict}"`);
 		};
-		for (const [arche, row] of Object.entries(matrix.matrix || {})) {
+		for (const [arche, row] of Object.entries(verdicts.archetypes || {})) {
 			(row.picks || []).forEach((e) => checkEntry(e, `${arche}|picks`));
 			(row.alt || []).forEach((e) => checkEntry(e, `${arche}|alt`));
 		}
-		for (const e of matrix.never_delegate || []) checkEntry(e, 'never|never');
+		for (const e of verdicts.never_delegate || []) checkEntry(e, 'never|never');
 
-		// Archetype keys bidirectional: matrix sections ↔ roster archetypes.
-		const rosterArchetypes = new Set((roster?.matrix || []).map((a) => a.archetype));
-		for (const arche of Object.keys(matrix.matrix || {})) {
-			if (!rosterArchetypes.has(arche)) problems.push(`matrix: archetype "${arche}" not in roster`);
+		// Archetype keys bidirectional: verdicts archetype sections ↔ roster archetypes.
+		const rosterArchetypes = new Set((roster?.archetypes || []).map((a) => a.archetype));
+		for (const arche of Object.keys(verdicts.archetypes || {})) {
+			if (!rosterArchetypes.has(arche)) problems.push(`verdicts: archetype "${arche}" not in roster`);
 		}
 		for (const arche of rosterArchetypes) {
-			if (!(matrix.matrix || {})[arche]) problems.push(`matrix: roster archetype "${arche}" missing from matrix`);
+			if (!(verdicts.archetypes || {})[arche]) problems.push(`verdicts: roster archetype "${arche}" missing from verdicts`);
 		}
 		for (const id of rosterSet) {
-			if (!matrixIds.has(id)) problems.push(`matrix: roster id "${id}" missing from matrix — refresh stale`);
+			if (!verdictIds.has(id)) problems.push(`verdicts: roster id "${id}" missing from verdicts — refresh stale`);
 		}
 
 		// Catalog section (--full persistence): non-roster ids only.
-		for (const [id, e] of Object.entries(matrix.catalog || {})) {
+		for (const [id, e] of Object.entries(verdicts.catalog || {})) {
 			if (!e || typeof e !== 'object' || Array.isArray(e)) {
-				problems.push(`matrix: catalog entry "${id}" not an object`);
+				problems.push(`verdicts: catalog entry "${id}" not an object`);
 				continue;
 			}
-			if (rosterSet.has(id)) problems.push(`matrix: catalog id "${id}" also in roster — belongs in archetype/never sections`);
-			if (!MATRIX_VERDICTS.has(e.verdict)) problems.push(`matrix: catalog id "${id}" bad verdict "${e.verdict}"`);
-			if (catalog.size && !catalog.has(id)) warnings.push(`matrix: catalog id "${id}" not in models-store — gone`);
+			if (rosterSet.has(id)) problems.push(`verdicts: catalog id "${id}" also in roster — belongs in archetype/never sections`);
+			if (!VERDICT_VALUES.has(e.verdict)) problems.push(`verdicts: catalog id "${id}" bad verdict "${e.verdict}"`);
+			if (catalog.size && !catalog.has(id)) warnings.push(`verdicts: catalog id "${id}" not in models-store — gone`);
 		}
 	}
 
@@ -582,7 +582,7 @@ async function lintAll(roster, rosterSet, paths, problems, warnings) {
 		for (const p of problems) console.log(`  - ${p}`);
 		process.exitCode = 1;
 	} else {
-		console.log('pass: roster/matrix/telemetry/classes consistent');
+		console.log('pass: roster/verdicts/telemetry/classes consistent');
 	}
 }
 
@@ -605,7 +605,7 @@ async function main() {
 		catalog: flags.has('--catalog') ? expandTilde(flags.get('--catalog')) : expandTilde(pathsCfg.catalog),
 		modelsConfig: flags.has('--models-config') ? expandTilde(flags.get('--models-config')) : expandTilde(pathsCfg.modelsConfig),
 		telemetry: flags.has('--telemetry') ? expandTilde(flags.get('--telemetry')) : expandTilde(pathsCfg.telemetry),
-		matrix: path.join(skillDir, 'assets/matrix.json'),
+		verdicts: path.join(skillDir, 'assets/verdicts.json'),
 		thinkingLevels: path.join(skillDir, 'assets/thinking-levels.json'),
 		defaultProvider: pathsCfg.defaultProvider || 'opencode',
 		probeCommand: pathsCfg.probeCommand,
@@ -613,7 +613,7 @@ async function main() {
 
 	const roster = await readJson(rosterPath); // missing roster = loud failure
 	const rosterSet = new Set([
-		...(roster.matrix || []).flatMap((a) => [...(a.picks || []), ...(a.alt || [])]),
+		...(roster.archetypes || []).flatMap((a) => [...(a.picks || []), ...(a.alt || [])]),
 		...(roster.never_delegate || []).map((x) => x.id),
 	]);
 
@@ -637,7 +637,7 @@ async function main() {
 
 	let prior = null;
 	try {
-		prior = await readJson(paths.matrix);
+		prior = await readJson(paths.verdicts);
 	} catch {}
 	const priorCatalog = new Map(Object.entries(prior?.catalog || {}));
 	// unprobed-new: first-party catalog ids outside the roster that hold no
@@ -659,10 +659,10 @@ async function main() {
 
 	if (modeStatus) {
 		console.log(`# check.mjs report (status — read-only)`);
-		console.log(`matrix: ${paths.matrix}`);
+		console.log(`verdicts: ${paths.verdicts}`);
 		console.log(prior?.revised
 			? `revised: ${prior.revised} (${ageDays}d old)`
-			: 'revised: (no matrix — run default refresh)');
+			: 'revised: (no verdicts — run default refresh)');
 		if (catalogErr) {
 			console.log(`catalog diff: skipped — catalog unavailable (${catalogErr?.code === 'ENOENT' ? 'missing' : 'unparseable'}); --catalog overrides the path`);
 		} else {
@@ -674,7 +674,7 @@ async function main() {
 			console.log(`catalog id collisions (first provider wins): ${collisions.length}`);
 			for (const c of collisions) console.log(`  - ${c.id}: ${c.providers.join(' + ')}`);
 		}
-		if (priorCatalog.size) console.log(`catalog verdicts persisted (matrix.catalog, --full): ${priorCatalog.size}`);
+		if (priorCatalog.size) console.log(`catalog verdicts persisted (verdicts catalog section, --full): ${priorCatalog.size}`);
 		console.log(`cadence: rowsSinceLastRevision=${rowsSince}, daysSinceLastRevision=${ageDays}, due=${cadenceDue}`);
 
 		// Thinking-map derivation state + managed-block drift. Zero
@@ -738,12 +738,12 @@ async function main() {
 		}
 
 		printFlags(flagsOut);
-		console.log('no probes run, matrix not written');
+		console.log('no probes run, verdicts not written');
 		return;
 	}
 	if (!catalog) throw catalogErr;
 
-	// ---- refresh: probe, rewrite matrix ----
+	// ---- refresh: probe, rewrite verdicts ----
 	const probeIds = full ? Array.from(catalogIds) : Array.from(rosterSet);
 	const probes = await runPool(
 		probeIds,
@@ -755,14 +755,14 @@ async function main() {
 	// refresh must be distinguishable from a clean one.
 	const spawnErrors = probes.filter((p) => p.spawnError).length;
 	if (spawnErrors > 0 && spawnErrors >= Math.ceil(probes.length * SPAWN_ERROR_ABORT_FRACTION)) {
-		console.error(`refresh aborted: ${spawnErrors}/${probes.length} probes failed to spawn — probe harness broken; matrix not written`);
+		console.error(`refresh aborted: ${spawnErrors}/${probes.length} probes failed to spawn — probe harness broken; verdicts not written`);
 		process.exit(1);
 	}
 	const verdictById = new Map(probes.map((p) => [p.id, p]));
 
 	const priorVerdictById = new Map();
 	for (const entry of prior?.never_delegate || []) priorVerdictById.set(entry.id, entry.verdict);
-	for (const arche of Object.values(prior?.matrix || {})) {
+	for (const arche of Object.values(prior?.archetypes || {})) {
 		for (const e of [...(arche.picks || []), ...(arche.alt || [])]) {
 			priorVerdictById.set(e.id, e.verdict);
 		}
@@ -795,9 +795,9 @@ async function main() {
 		return entry;
 	};
 
-	const matrix = {};
-	for (const row of roster.matrix || []) {
-		matrix[row.archetype] = {
+	const archetypes = {};
+	for (const row of roster.archetypes || []) {
+		archetypes[row.archetype] = {
 			picks: row.picks.map((id) => mark(id)),
 			alt: row.alt.map((id) => mark(id)),
 		};
@@ -805,7 +805,7 @@ async function main() {
 
 	const never_delegate = (roster.never_delegate || []).map((entry) => mark(entry.id, entry.note));
 
-	// --full persists non-roster first-party verdicts (matrix.catalog) so
+	// --full persists non-roster first-party verdicts (verdicts catalog section) so
 	// new-candidate state survives the run; a default refresh retains the
 	// prior section verbatim (ids that moved into the roster drop out).
 	// --status excludes hard-verdict catalog ids from unprobed-new.
@@ -821,10 +821,10 @@ async function main() {
 		}
 	}
 
-	const nextMatrix = {
+	const nextVerdicts = {
 		revised: nowIso,
 		provider: paths.defaultProvider,
-		matrix,
+		archetypes,
 		never_delegate,
 		catalog: catalogSection,
 		notes: 'Roster: assets/roster.json (tracked, hand-curated). Verdicts + probed timestamps regenerated per machine by scripts/check.mjs. Rankings are priors (n=1 origin); telemetry flags (--status, min 3 writer rows) are the re-rank review path. Indeterminate probes retain prior verdicts (hysteresis). catalog: non-roster first-party verdicts from --full runs, retained on default refresh.',
@@ -833,7 +833,7 @@ async function main() {
 	const changedById = new Map();
 	const nextEntries = [
 		...never_delegate.map((x) => [x.id, x.verdict]),
-		...Object.values(matrix).flatMap((row) => [...row.picks, ...row.alt].map((x) => [x.id, x.verdict])),
+		...Object.values(archetypes).flatMap((row) => [...row.picks, ...row.alt].map((x) => [x.id, x.verdict])),
 		...(full ? Object.entries(catalogSection).map(([id, e]) => [id, e.verdict]) : []),
 	];
 	for (const [id, verdict] of nextEntries) {
@@ -842,11 +842,11 @@ async function main() {
 	}
 	const changed = Array.from(changedById.values());
 
-	await fs.mkdir(path.dirname(paths.matrix), { recursive: true });
-	// Atomic write: tmp + rename — no half-written matrix on a mid-write crash.
-	const tmpMatrix = `${paths.matrix}.tmp`;
-	await fs.writeFile(tmpMatrix, `${JSON.stringify(nextMatrix, null, 2)}\n`, 'utf8');
-	await fs.rename(tmpMatrix, paths.matrix);
+	await fs.mkdir(path.dirname(paths.verdicts), { recursive: true });
+	// Atomic write: tmp + rename — no half-written verdicts on a mid-write crash.
+	const tmpVerdicts = `${paths.verdicts}.tmp`;
+	await fs.writeFile(tmpVerdicts, `${JSON.stringify(nextVerdicts, null, 2)}\n`, 'utf8');
+	await fs.rename(tmpVerdicts, paths.verdicts);
 
 	console.log(`# check.mjs report (refresh${full ? ', full' : ''})`);
 	console.log(`probed: ${probes.length}${spawnErrors ? ` (spawn errors: ${spawnErrors})` : ''}`);
@@ -863,7 +863,7 @@ async function main() {
 	if (full) console.log(`catalog section: ${Object.keys(catalogSection).length} non-roster verdicts persisted`);
 	console.log(`cadence (vs prior revision): rowsSinceLastRevision=${rowsSince}, daysSinceLastRevision=${ageDays}, due=${cadenceDue}`);
 	printFlags(flagsOut);
-	console.log(`matrix written: ${paths.matrix} (revised ${nowIso})`);
+	console.log(`verdicts written: ${paths.verdicts} (revised ${nowIso})`);
 }
 
 main().catch((err) => {

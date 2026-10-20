@@ -49,7 +49,7 @@ export async function readJson(file) {
 	return JSON.parse(txt);
 }
 
-// Keyed by model id (roster/matrix vocabulary); the first provider
+// Keyed by model id (roster/verdicts vocabulary); the first provider
 // listing wins on a cross-provider id collision (reported, not silent).
 export function flattenCatalog(store) {
 	const map = new Map();

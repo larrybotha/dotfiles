@@ -666,7 +666,7 @@ export default function (pi: ExtensionAPI) {
 					minimum: 1,
 					maximum: 4,
 					description:
-					"Max delegation tree depth (default 1 — the child cannot delegate further; 2 = the child may spawn sub-agents, grandchildren may not). Monotone budget: clamped to the ancestor-granted ceiling and passed down — a delegated child can never raise it",
+					"Max delegation tree depth (default 1 — the child cannot delegate further; 2 = the child may spawn delegated children, grandchildren may not). Monotone budget: clamped to the ancestor-granted ceiling and passed down — a delegated child can never raise it",
 				}),
 			),
 			agentPrompt: Type.Optional(

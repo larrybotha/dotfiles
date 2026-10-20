@@ -1,5 +1,5 @@
 {
-  "matrix": [
+  "archetypes": [
     {
       "archetype": "Deep research / synthesis",
       "picks": ["gpt-5.5-pro", "claude-opus-5-5", "gemini-3.1-pro"],

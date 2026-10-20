@@ -204,7 +204,7 @@ async function main() {
 
 	const roster = await readJson(path.join(skillDir, 'assets/roster.json')); // missing = loud failure
 	const rosterSet = new Set([
-		...((roster.matrix || []).flatMap((a) => [...(a.picks || []), ...(a.alt || [])])),
+		...((roster.archetypes || []).flatMap((a) => [...(a.picks || []), ...(a.alt || [])])),
 		...(roster.never_delegate || []).map((x) => x.id),
 	]);
 
