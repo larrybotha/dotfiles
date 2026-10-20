@@ -4,15 +4,21 @@
 // Modes:
 //   (default)      probe roster, rewrite assets/verdicts.json (revision), report
 //   --full          default + probe every first-party catalog model
-//   --status        read-only: cadence, catalog diff, telemetry re-rank
-//                  flags, thinking-map record + managed-block drift
-//                  (zero-spawn policy check via shared.mjs)
+//   --status        read-only: cadence, live diff (fail-soft), catalog
+//                  diff, telemetry re-rank flags, thinking-map record
+//                  + managed-block drift (zero-spawn policy check via
+//                  shared.mjs)
+//   --live          read-only: live provider /models listing vs the
+//                  store (store-only retired ids, live-only ids, roster
+//                  absence) — fail-soft (no key / network); --status
+//                  embeds the same diff
 //   --lint          read-only: roster/verdicts/telemetry/store/class validation
 //
 // Flags:
 //   --catalog <path>      override catalog location (default: paths.json)
 //   --models-config <path>  override models config location
 //   --telemetry <path>    override telemetry location
+//   --auth <path>        override auth.json location (live-listing key)
 //   Unknown flags or stray arguments exit 2 — a typo must never fall
 //   through to a paid network refresh.
 //
@@ -36,8 +42,9 @@
 // assets/roster.json (tracked). Verdicts + probed timestamps in
 // assets/verdicts.json are per-machine (gitignored).
 import fs from 'node:fs/promises';
+import os from 'node:os';
 import path from 'node:path';
-import { spawn } from 'node:child_process';
+import { execSync, spawn } from 'node:child_process';
 import {
 	FAILURE_CLASSES,
 	CLASS_DETECTION,
@@ -64,12 +71,14 @@ const MAX_PARALLEL = 5;
 const SPAWN_ERROR_ABORT_FRACTION = 0.25;
 
 const TELEMETRY_FAILURE_CLASSES = new Set(FAILURE_CLASSES);
-// Probe-classifiable classes + the two probe-only outcomes.
-const VERDICT_VALUES = new Set(['reachable', 'indeterminate', ...Object.keys(PROBE_PATTERNS)]);
+// Probe-classifiable classes + the probe-only outcomes + retired
+// (absent from the live /models listing — synthetic, never probed).
+const VERDICT_VALUES = new Set(['reachable', 'indeterminate', 'retired', ...Object.keys(PROBE_PATTERNS)]);
 // Hard classes: fresh probe truth always replaces any prior verdict.
-// 'reachable' likewise. 'indeterminate' (timeout/spawn-error/unmatched
+// 'reachable' likewise; 'retired' (absent from the live listing) is
+// hard truth too. 'indeterminate' (timeout/spawn-error/unmatched
 // exit) is transient — hysteresis: never overwrites a prior verdict.
-const HARD_VERDICTS = new Set(['reachable', ...Object.keys(PROBE_PATTERNS)]);
+const HARD_VERDICTS = new Set(['reachable', 'retired', ...Object.keys(PROBE_PATTERNS)]);
 // Hard keys: every row must carry them. Nullable keys: required only
 // after their first appearance in the log — rows before adoption are
 // legacy (summarized, not defects); rows after are writer regressions.
@@ -92,8 +101,8 @@ const CADENCE_ROWS = 50;
 const CADENCE_DAYS = 30;
 const VISION_ARCHETYPE = 'Vision (image input)';
 
-const KNOWN_FLAGS = new Set(['--lint', '--status', '--full', '--catalog', '--models-config', '--telemetry']);
-const VALUE_FLAGS = new Set(['--catalog', '--models-config', '--telemetry']);
+const KNOWN_FLAGS = new Set(['--lint', '--status', '--live', '--full', '--catalog', '--models-config', '--telemetry', '--auth']);
+const VALUE_FLAGS = new Set(['--catalog', '--models-config', '--telemetry', '--auth']);
 
 // Failure substrings are evidence only on a non-zero exit: a probe
 // exiting 0 whose output merely mentions a pattern (e.g. "free tier"
@@ -115,6 +124,85 @@ function classifyDelegation(hay) {
 		if (pattern.test(hay)) return cls;
 	}
 	return 'other';
+}
+
+// Live provider listing: GET <url> with the provider key (auth.json;
+// '!'-prefixed key = shell command, executed — the resolved key never
+// crosses stdout/logs). Store ⊇ live — a stale store keeps retired ids
+// until pi refreshes it, so availability truth is the live list; an id
+// absent from it is retired (no probe needed). Fail-soft at every
+// step: no URL, no key, network error, non-200, empty data[] → the
+// callers degrade to store-only behavior (fail open).
+async function resolveProviderKey(provider, authPath) {
+	let auth;
+	try {
+		auth = JSON.parse(await fs.readFile(authPath, 'utf8'));
+	} catch (e) {
+		return { key: null, note: `auth.json unavailable (${e?.code === 'ENOENT' ? 'missing' : 'unparseable'}); --auth overrides the path` };
+	}
+	let key = auth?.[provider]?.key;
+	if (typeof key !== 'string' || !key) {
+		return { key: null, note: `no key for provider "${provider}" in auth.json` };
+	}
+	if (key.startsWith('!')) {
+		try {
+			const out = execSync(key.slice(1), { encoding: 'utf8', timeout: 15_000, stdio: ['ignore', 'pipe', 'ignore'] });
+			key = out.split('\n').map((l) => l.trim()).filter(Boolean)[0] || null;
+		} catch {
+			return { key: null, note: 'key command failed (auth.json "!" resolution)' };
+		}
+		if (!key) return { key: null, note: 'key command produced no output' };
+	}
+	return { key, note: null };
+}
+
+async function fetchLiveModels(url, key) {
+	const res = await fetch(url, { headers: { authorization: `Bearer ${key}` }, signal: AbortSignal.timeout(20_000) });
+	if (!res.ok) throw new Error(`HTTP ${res.status}`);
+	const body = await res.json();
+	const ids = (body?.data || []).map((m) => m?.id).filter((x) => typeof x === 'string');
+	if (!ids.length) throw new Error('empty data[]');
+	return new Set(ids);
+}
+
+// {ids, url, storeOnly, liveOnly} on success; {ids: null, note} on any
+// failure (store-only callers degrade, retired detection fails open).
+async function liveListing(paths, catalog) {
+	const url = (paths.liveModels || {})[paths.defaultProvider];
+	if (!url) return { ids: null, note: `no liveModels URL for provider "${paths.defaultProvider}" in paths.json` };
+	const { key, note } = await resolveProviderKey(paths.defaultProvider, paths.auth);
+	if (!key) return { ids: null, note };
+	try {
+		const ids = await fetchLiveModels(url, key);
+		// store-only: first-party store ids the live list dropped
+		// (retired) — scoped to the default provider (the listing is
+		// per-provider; cross-provider ids are never another provider's
+		// retirements). live-only: live ids the store has never seen.
+		const storeOnly = catalog
+			? Array.from(catalog.keys())
+				.filter(firstParty)
+				.filter((id) => catalog.get(id)?.provider === paths.defaultProvider)
+				.filter((id) => !ids.has(id))
+				.sort()
+			: [];
+		const liveOnly = catalog ? Array.from(ids).filter((id) => !catalog.has(id)).sort() : [];
+		return { ids, url, storeOnly, liveOnly };
+	} catch (e) {
+		const msg = e instanceof Error ? e.message : String(e ?? '');
+		// Self-authored messages only (HTTP status / empty data[]); anything
+		// else gets a fixed category — arbitrary exception text (URL, key
+		// material) never reaches the report.
+		const why = /^HTTP \d/.test(msg)
+			? msg
+			: msg === 'empty data[]'
+				? 'empty data[]'
+				: e?.name === 'TimeoutError' || e?.name === 'AbortError'
+					? 'timeout'
+					: e instanceof TypeError
+						? 'network failure'
+						: 'error (detail suppressed)';
+		return { ids: null, note: `live fetch failed (${why})` };
+	}
 }
 
 function probeModel(provider, id, cmdTemplate) {
@@ -213,6 +301,11 @@ async function readTelemetry(file, validate = false) {
 // demotion flags.
 function telemetryStats(rows) {
 	const writerRows = rows.filter((r) => r?.source === TELEMETRY_SOURCE);
+	// spawn-enoent rows are harness failures (node/pi binary missing),
+	// never model state — excluded from re-rank statistics entirely;
+	// reported as a count so the harness issue stays visible.
+	const harnessFailures = writerRows.filter((r) => r?.failureClass === 'spawn-enoent').length;
+	const usable = writerRows.filter((r) => r?.failureClass !== 'spawn-enoent');
 	const byModel = new Map();
 	const byCell = new Map();
 	const push = (map, key, r) => {
@@ -228,12 +321,12 @@ function telemetryStats(rows) {
 		if (r.stallHit === true) s.stall += 1;
 		if (r.failureClass) s.failures[r.failureClass] = (s.failures[r.failureClass] || 0) + 1;
 	};
-	for (const r of writerRows) {
+	for (const r of usable) {
 		if (!r?.model) continue;
 		push(byModel, r.model, r);
 		if (r.archetype) push(byCell, `${r.archetype} x ${r.model}`, r);
 	}
-	return { byModel, byCell };
+	return { byModel, byCell, harnessFailures };
 }
 
 function reRankFlags(stats) {
@@ -590,6 +683,7 @@ async function main() {
 	const { flags, modes } = parseArgs(process.argv.slice(2), KNOWN_FLAGS, VALUE_FLAGS);
 	const modeLint = modes.includes('--lint');
 	const modeStatus = modes.includes('--status');
+	const modeLive = modes.includes('--live');
 	const full = modes.includes('--full');
 
 	const scriptDir = path.dirname(new URL(import.meta.url).pathname);
@@ -605,6 +699,8 @@ async function main() {
 		catalog: flags.has('--catalog') ? expandTilde(flags.get('--catalog')) : expandTilde(pathsCfg.catalog),
 		modelsConfig: flags.has('--models-config') ? expandTilde(flags.get('--models-config')) : expandTilde(pathsCfg.modelsConfig),
 		telemetry: flags.has('--telemetry') ? expandTilde(flags.get('--telemetry')) : expandTilde(pathsCfg.telemetry),
+		auth: flags.has('--auth') ? expandTilde(flags.get('--auth')) : expandTilde(pathsCfg.auth || '~/.pi/agent/auth.json'),
+		liveModels: pathsCfg.liveModels || {},
 		verdicts: path.join(skillDir, 'assets/verdicts.json'),
 		thinkingLevels: path.join(skillDir, 'assets/thinking-levels.json'),
 		defaultProvider: pathsCfg.defaultProvider || 'opencode',
@@ -634,20 +730,59 @@ async function main() {
 	const catalog = catalogFlat?.map ?? null;
 	const collisions = catalogFlat?.collisions ?? [];
 	const catalogIds = new Set(catalog ? Array.from(catalog.keys()).filter(firstParty) : []);
+	// Retirement/listing scope: only ids the store lists under the default
+	// provider — the liveModels URL is per-provider, so a cross-provider id
+	// is never judged by another provider's listing (it keeps its probe
+	// path, fail-open). Store-absent ids have no provider to check; the
+	// default-provider listing decides them (the same assumption the probe
+	// fallback makes).
+	const onDefaultProvider = (id) =>
+		!catalog || !catalog.has(id) || catalog.get(id).provider === paths.defaultProvider;
 
 	let prior = null;
 	try {
 		prior = await readJson(paths.verdicts);
 	} catch {}
 	const priorCatalog = new Map(Object.entries(prior?.catalog || {}));
-	// unprobed-new: first-party catalog ids outside the roster that hold no
-	// hard verdict in the persisted catalog section (--full).
+	// unprobed-new: first-party catalog ids outside the roster with NO
+	// persisted catalog-section verdict — never probed/decided at all. A
+	// prior 'indeterminate' was probed (inconclusively) — not unprobed.
 	const unprobedNew = Array.from(catalogIds)
-		.filter((id) => !rosterSet.has(id) && !HARD_VERDICTS.has(priorCatalog.get(id)?.verdict))
+		.filter((id) => !rosterSet.has(id) && !priorCatalog.get(id))
 		.sort();
+	// Live provider listing — fetched for --live, --status, and refresh
+	// (retired detection); --lint stays offline. Fail-soft: ids null on
+	// any failure and every consumer degrades to store-only behavior.
+	const live = await liveListing(paths, catalog);
 	// 'gone' checks the unfiltered catalog map — a roster id listed under
 	// any provider is present; firstParty filtering is for new-id discovery.
-	const gone = catalog ? Array.from(rosterSet).filter((id) => !catalog.has(id)).sort() : [];
+	// Live-aware: an id present in the live list (store lags behind it) is
+	// not gone; live unavailable → store-only, as before.
+	const gone = catalog
+		? Array.from(rosterSet).filter((id) => !catalog.has(id) && !live.ids?.has(id)).sort()
+		: [];
+
+	if (modeLive) {
+		console.log(`# check.mjs report (live — read-only)`);
+		if (live.ids) {
+			console.log(`live: ${live.url} — ${live.ids.size} ids (provider ${paths.defaultProvider})`);
+			if (catalog) {
+				console.log(`store diff (first-party): store-only=${live.storeOnly.length}, live-only=${live.liveOnly.length}`);
+				if (live.storeOnly.length) console.log(`  store-only (retired — in store, absent live): ${live.storeOnly.join(', ')}`);
+				if (live.liveOnly.length) console.log(`  live-only (in live, absent store): ${live.liveOnly.join(', ')}`);
+			} else {
+				console.log('store diff: skipped — catalog unavailable; --catalog overrides the path');
+			}
+			const rosterAbsent = Array.from(rosterSet)
+				.filter((id) => onDefaultProvider(id) && !live.ids.has(id))
+				.sort();
+			if (rosterAbsent.length) console.log(`roster absent live (retired verdicts on next refresh): ${rosterAbsent.join(', ')}`);
+		} else {
+			console.log(`live: skipped — ${live.note}`);
+		}
+		console.log('no probes run, verdicts not written');
+		return;
+	}
 
 	const tel = await readTelemetry(paths.telemetry);
 	const stats = telemetryStats(tel.rows);
@@ -663,6 +798,21 @@ async function main() {
 		console.log(prior?.revised
 			? `revised: ${prior.revised} (${ageDays}d old)`
 			: 'revised: (no verdicts — run default refresh)');
+		// Live diff leads — store ⊇ live: a stale store keeps retired ids
+		// (checkedAt age is a weak freshness signal; the live list is
+		// availability truth). Fail-soft: no key / network degrades to
+		// store-only output below.
+		if (live.ids) {
+			console.log(`live diff (${live.url}): live=${live.ids.size}, store-only=${live.storeOnly.length}, live-only=${live.liveOnly.length}`);
+			if (live.storeOnly.length) console.log(`  store-only (retired — in store, absent live): ${live.storeOnly.join(', ')}`);
+			if (live.liveOnly.length) console.log(`  live-only (in live, absent store): ${live.liveOnly.join(', ')}`);
+			const neverRetired = (roster.never_delegate || [])
+				.map((x) => x.id)
+				.filter((id) => onDefaultProvider(id) && !live.ids.has(id));
+			if (neverRetired.length) console.log(`  never_delegate absent live (retires on next refresh): ${neverRetired.join(', ')}`);
+		} else {
+			console.log(`live diff: skipped — ${live.note}`);
+		}
 		if (catalogErr) {
 			console.log(`catalog diff: skipped — catalog unavailable (${catalogErr?.code === 'ENOENT' ? 'missing' : 'unparseable'}); --catalog overrides the path`);
 		} else {
@@ -738,13 +888,27 @@ async function main() {
 		}
 
 		printFlags(flagsOut);
+		if (stats.harnessFailures) {
+			console.log(`telemetry harness failures (spawn-enoent — excluded from re-rank stats): ${stats.harnessFailures}`);
+		}
 		console.log('no probes run, verdicts not written');
 		return;
 	}
 	if (!catalog) throw catalogErr;
 
 	// ---- refresh: probe, rewrite verdicts ----
-	const probeIds = full ? Array.from(catalogIds) : Array.from(rosterSet);
+	const probeIdsAll = full ? Array.from(catalogIds) : Array.from(rosterSet);
+	// Retirement scope: see onDefaultProvider above.
+	// Retired-by-listing: ids absent from the live /models listing are
+	// fresh truth — no probe ($0), a synthetic hard 'retired' verdict.
+	// Fail-open: no live (no key / network) probes everything as before.
+	const retiredIds = live.ids
+		? probeIdsAll.filter((id) => onDefaultProvider(id) && !live.ids.has(id))
+		: [];
+	// Everything not retired is probed — including cross-provider ids
+	// (their provider listing was never fetched; fail open by probing).
+	const retiredSet = new Set(retiredIds);
+	const probeIds = probeIdsAll.filter((id) => !retiredSet.has(id));
 	const probes = await runPool(
 		probeIds,
 		async (id) => probeModel(catalog.get(id)?.provider || paths.defaultProvider, id, paths.probeCommand),
@@ -759,7 +923,6 @@ async function main() {
 		process.exit(1);
 	}
 	const verdictById = new Map(probes.map((p) => [p.id, p]));
-
 	const priorVerdictById = new Map();
 	for (const entry of prior?.never_delegate || []) priorVerdictById.set(entry.id, entry.verdict);
 	for (const arche of Object.values(prior?.archetypes || {})) {
@@ -770,6 +933,9 @@ async function main() {
 	for (const [id, e] of Object.entries(prior?.catalog || {})) priorVerdictById.set(id, e.verdict);
 
 	const nowIso = new Date().toISOString();
+	// Retired-by-listing: synthetic hard verdicts — the probe loop never
+	// saw these ids (absent from the live /models listing).
+	for (const id of retiredIds) verdictById.set(id, { id, verdict: 'retired', probed: nowIso });
 	let retainedOnInconclusive = 0;
 	// Hysteresis: a hard verdict (reachable or failure class) is fresh
 	// truth and always wins. 'indeterminate' is transient (timeout /
@@ -806,12 +972,14 @@ async function main() {
 	const never_delegate = (roster.never_delegate || []).map((entry) => mark(entry.id, entry.note));
 
 	// --full persists non-roster first-party verdicts (verdicts catalog section) so
-	// new-candidate state survives the run; a default refresh retains the
-	// prior section verbatim (ids that moved into the roster drop out).
-	// --status excludes hard-verdict catalog ids from unprobed-new.
+	// new-candidate state survives the run; retired ids persist too (synthetic
+	// verdicts — F1 review: they must not vanish on a full run). A default
+	// refresh retains the prior section verbatim (ids that moved into the
+	// roster drop out). --status excludes catalog ids with any persisted
+	// verdict from unprobed-new.
 	const catalogSection = {};
 	if (full) {
-		for (const id of probeIds) {
+		for (const id of probeIdsAll) {
 			if (rosterSet.has(id)) continue;
 			catalogSection[id] = mark(id);
 		}
@@ -827,7 +995,7 @@ async function main() {
 		archetypes,
 		never_delegate,
 		catalog: catalogSection,
-		notes: 'Roster: assets/roster.json (tracked, hand-curated). Verdicts + probed timestamps regenerated per machine by scripts/check.mjs. Rankings are priors (n=1 origin); telemetry flags (--status, min 3 writer rows) are the re-rank review path. Indeterminate probes retain prior verdicts (hysteresis). catalog: non-roster first-party verdicts from --full runs, retained on default refresh.',
+		notes: 'Roster: assets/roster.json (tracked, hand-curated). Verdicts + probed timestamps regenerated per machine by scripts/check.mjs. Rankings are priors (n=1 origin); telemetry flags (--status, min 3 writer rows) are the re-rank review path. Indeterminate probes retain prior verdicts (hysteresis). retired: id absent from the live /models listing (check.mjs --live; fail-open when the live list is unavailable). catalog: non-roster first-party verdicts from --full runs, retained on default refresh.',
 	};
 
 	const changedById = new Map();
@@ -850,6 +1018,7 @@ async function main() {
 
 	console.log(`# check.mjs report (refresh${full ? ', full' : ''})`);
 	console.log(`probed: ${probes.length}${spawnErrors ? ` (spawn errors: ${spawnErrors})` : ''}`);
+	if (retiredIds.length) console.log(`retired-by-live (absent from the live listing, no probe): ${retiredIds.length} (${retiredIds.join(', ')})`);
 	console.log(`changed verdicts: ${changed.length}`);
 	for (const c of changed) console.log(`  - ${c.id}: ${c.from} -> ${c.to}`);
 	console.log(`retained priors on inconclusive probe (hysteresis): ${retainedOnInconclusive}`);
@@ -863,6 +1032,9 @@ async function main() {
 	if (full) console.log(`catalog section: ${Object.keys(catalogSection).length} non-roster verdicts persisted`);
 	console.log(`cadence (vs prior revision): rowsSinceLastRevision=${rowsSince}, daysSinceLastRevision=${ageDays}, due=${cadenceDue}`);
 	printFlags(flagsOut);
+	if (stats.harnessFailures) {
+		console.log(`telemetry harness failures (spawn-enoent — excluded from re-rank stats): ${stats.harnessFailures}`);
+	}
 	console.log(`verdicts written: ${paths.verdicts} (revised ${nowIso})`);
 }
 

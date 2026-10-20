@@ -3,6 +3,10 @@
 	"catalog": "~/.pi/agent/models-store.json",
 	"modelsConfig": "~/.pi/agent/models.json",
 	"telemetry": "~/.pi/agent/extensions/rpc-delegate/telemetry.jsonl",
+	"auth": "~/.pi/agent/auth.json",
+	"liveModels": {
+		"opencode": "https://opencode.ai/inference/v1/models"
+	},
 	"rpcCommand": [
 		"pi",
 		"--mode", "rpc",

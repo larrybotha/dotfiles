@@ -28,10 +28,14 @@ any `~/.pi/agent/models.json` edit (`--dry-run` verifies drift;
 
 1. **Classify** the task: one of 8 archetypes (roster); none fits →
    research vs code vs judgment.
-2. **Hard filters** (model store, `~/.pi/agent/models-store.json`):
-   contextWindow ≥ corpus, `image` in `input` for vision, `maxTokens` ≥
-   output, cost ceiling. Absent `maxTokens`/`reasoning` = fail. Fail =
-   out, regardless of rank.
+2. **Hard filters** (live list + model store): id present in the
+   live provider list (`node scripts/check.mjs --live`; store ⊇ live
+   — the stale store keeps retired ids, so the live list is
+   availability truth; `retired` verdict = out; fail open on no
+   key/network — fall back to store), then store (`~/.pi/agent/models-
+   store.json`): contextWindow ≥ corpus, `image` in `input` for
+   vision, `maxTokens` ≥ output, cost ceiling. Absent
+   `maxTokens`/`reasoning` = fail. Fail = out, regardless of rank.
 3. **Verdict lookup**: first candidate with `verdict: "reachable"`
    passing all step-2 filters, from `assets/verdicts.json`.
    Non-reachable or missing verdict = not eligible — probe (step 4)
