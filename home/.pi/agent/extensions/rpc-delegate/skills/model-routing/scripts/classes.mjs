@@ -17,6 +17,10 @@ export const FAILURE_CLASSES = Object.freeze([
 	'free-tier-403',
 	'param-400',
 	'unavailable-400',
+	// Delegation-only (never probe-classifiable): the harness binary
+	// (node/pi) itself failed to spawn — not a model failure. Probes
+	// report spawn errors as 'indeterminate' + a spawnError flag.
+	'spawn-enoent',
 	'other',
 ]);
 
@@ -32,6 +36,7 @@ export const CLASS_DETECTION = Object.freeze({
 	'free-tier-403': 'probe+delegation',
 	'param-400': 'probe+delegation',
 	'unavailable-400': 'probe+delegation',
+	'spawn-enoent': 'delegation',
 	other: 'delegation',
 });
 
@@ -45,8 +50,17 @@ export const PROBE_PATTERNS = Object.freeze({
 });
 
 /** Delegation-side regexes. The extension's classifyFailure iterates
- *  these in order; first match wins. */
+ *  these in order; first match wins. spawn-enoent sits first: a harness
+ *  spawn failure makes every model-surface in the same text unknowable —
+ *  harness state outranks model state. Its regexes are anchored to the
+ *  machine-authored failureDetail prefixes ("Failed to spawn RPC
+ *  child:" / the child-died exit signal "signal error: spawn …") — a
+ *  child tool's own spawn ENOENT in stderr never matches. */
 export const DELEGATION_PATTERNS = Object.freeze([
+	Object.freeze({
+		cls: 'spawn-enoent',
+		pattern: /Failed to spawn RPC child:[^\n]{0,300}ENOENT|signal error: spawn[^\n]{0,300}ENOENT/i,
+	}),
 	Object.freeze({ cls: 'free-tier-403', pattern: /FreeTierError|free tier/i }),
 	Object.freeze({ cls: 'access-403', pattern: /Model access is disabled/i }),
 	Object.freeze({ cls: 'endpoint-410', pattern: /Endpoint unavailable|has been deprecated|ModelDeprecated/i }),
@@ -72,6 +86,10 @@ export const PROBE_SAMPLES = Object.freeze({
 });
 
 export const DELEGATION_SAMPLES = Object.freeze({
+	'spawn-enoent': Object.freeze([
+		'Error: Failed to spawn RPC child: spawn /opt/homebrew/Cellar/node/26.11.1/bin/node ENOENT',
+		'RPC child process died (exit ?, signal error: spawn /opt/homebrew/Cellar/node/26.11.1/bin/node ENOENT) — run lost',
+	]),
 	'free-tier-403': Object.freeze(['FreeTierError: the free tier is app-only']),
 	'access-403': Object.freeze(['Error: Model access is disabled for this account']),
 	'endpoint-410': Object.freeze(['410: endpoint unavailable', 'ModelDeprecated: kimi-k2.7-code']),

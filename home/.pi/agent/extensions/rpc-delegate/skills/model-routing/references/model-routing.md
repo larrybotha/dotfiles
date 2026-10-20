@@ -59,7 +59,7 @@ pool) are single-sourced in `../scripts/shared.mjs` — used by both
 
 ## Failure classes
 
-Seven classes. Detection mechanism per class:
+Eight classes. Detection mechanism per class:
 
 **Metadata-detected (store lint — never probe-classifiable):**
 
@@ -88,7 +88,24 @@ probe output; probe recipe in `../SKILL.md` catches these directly):**
 **Telemetry-only (delegation path; probes return `indeterminate`,
 never this value):**
 
-7. **other** — uncategorized delegation failure.
+7. **spawn-enoent** — harness spawn failure: the node/pi binary itself
+   is missing (ENOENT — e.g. `brew upgrade node` deleted the Cellar
+   realpath a long-lived parent pi had captured; telemetry has the
+   row, surfaced as "RPC child process died (… signal error: spawn …
+   ENOENT)"). Not a model failure: these rows are excluded from re-rank
+   statistics (`--status` reports the excluded count). Order-first in
+   the pattern list — a harness failure makes any model surface in the
+   same text unknowable; the regexes are anchored to the
+   machine-authored failureDetail prefixes ("Failed to spawn RPC
+   child:" / the child-died "signal error: spawn …") so a child
+   tool's own spawn ENOENT in stderr never matches. The extension
+   re-checks binary existence per spawn (live execPath → brew node
+   shim for a node runtime → `pi` on PATH; a vanished non-node runtime
+   (bun) is never substituted — fall back to `pi`, never a
+   wrong-runtime guess). Probes report spawn errors as `indeterminate`
+   + a spawnError flag (the probe command resolves `pi` on PATH, not
+   execPath), and a refresh aborts at ≥ 25% spawn errors.
+8. **other** — uncategorized delegation failure.
 
 ## Thinking-map derivation + ownership split
 
@@ -155,7 +172,8 @@ param-rejected, or in-flight), auto-appended by the extension at:
 ```
 
 `failureClass`: `thinking-map-400 | access-403 | endpoint-410 |
-free-tier-403 | param-400 | unavailable-400 | other`.
+free-tier-403 | param-400 | unavailable-400 | spawn-enoent | other`
+(`spawn-enoent` = harness, not model — excluded from re-rank stats).
 `source` is the provenance marker (`rpc-delegate`); rows without it
 are pre-writer legacy — summarized by `--lint`, excluded from re-rank
 flags. `archetype` comes from the `archetype` tool param and may be
@@ -190,8 +208,10 @@ cell) with ≥ 3 artifact-policy writer rows (`source: rpc-delegate`;
 `artifactOk` true or false — artifact-less runs under `artifactPolicy:
 "stopReason"` are null and excluded; pre-writer legacy rows carry no
 `source` and are excluded) and ≥ 1 broken — demotion candidate.
-Rankings are priors (n=1 origin, single task shape); no
-promotion/demotion without these flags.
+`spawn-enoent` rows are excluded from these statistics entirely — a
+harness failure is never a demotion signal (`--status` reports the
+excluded count separately). Rankings are priors (n=1 origin, single
+task shape); no promotion/demotion without these flags.
 
 ## Mechanism
 

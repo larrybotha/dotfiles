@@ -164,7 +164,9 @@ interface RpcDelegateDetails {
 	failureDetail: string | null;
 	/** v2 fact-typing (never used for routing): thinking-map-400 /
 	 *  access-403 / endpoint-410 / free-tier-403 / param-400 /
-	 *  unavailable-400 / other. Null when no failure. */
+	 *  unavailable-400 / spawn-enoent / other. Null when no failure.
+	 *  spawn-enoent = harness spawn failure (node/pi binary missing) —
+	 *  never a model failure; the skill excludes it from re-rank stats. */
 	failureClass: string | null;
 	protoFatal: string | null;
 	rejected?: string;
