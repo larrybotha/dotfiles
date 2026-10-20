@@ -2,10 +2,8 @@
   "lastChangelogVersion": "1.3.0",
   "defaultThinkingLevel": "off",
   "defaultProvider": "opencode",
-  "defaultModel": "glm-5.1",
+  "defaultModel": "deepseek-v4.1-flash",
   "hideThinkingBlock": false,
   "theme": "dark",
-  "packages": [
-    "npm:pi-autoresearch"
-  ]
+  "packages": ["npm:pi-autoresearch"]
 }
