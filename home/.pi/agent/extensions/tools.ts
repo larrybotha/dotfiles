@@ -39,6 +39,18 @@ export default function toolsExtension(pi: ExtensionAPI) {
 	function restoreFromBranch(ctx: ExtensionContext) {
 		allTools = pi.getAllTools();
 
+		// Only `direct` tools are ever declared to the model. codemode/deferred
+		// tools are reached via scripts or tool_search, and naming one in
+		// setActiveTools() would activate it and re-declare its schema on every
+		// request — undoing the context savings. Never restore those here.
+		// `exposure` is on ToolInfo at runtime (pi >= 1.x); the pinned dev types
+		// (0.87.x) predate it, so read it defensively rather than widening types.
+		const exposureOf = (t: ToolInfo): string | undefined =>
+			(t as ToolInfo & { exposure?: string }).exposure;
+		const restorable = new Set(
+			allTools.filter((t) => exposureOf(t) === "direct").map((t) => t.name),
+		);
+
 		// Get entries in current branch only
 		const branchEntries = ctx.sessionManager.getBranch();
 		let savedTools: string[] | undefined;
@@ -53,9 +65,9 @@ export default function toolsExtension(pi: ExtensionAPI) {
 		}
 
 		if (savedTools) {
-			// Restore saved tool selection (filter to only tools that still exist)
-			const allToolNames = allTools.map((t) => t.name);
-			enabledTools = new Set(savedTools.filter((t: string) => allToolNames.includes(t)));
+			// Restore saved selection, filtered to tools that still exist and are
+			// `direct` (non-direct tools stay reachable through codemode/tool_search)
+			enabledTools = new Set(savedTools.filter((t: string) => restorable.has(t)));
 			applyTools();
 		} else {
 			// No saved state - sync with currently active tools
