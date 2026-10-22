@@ -279,7 +279,33 @@ function rej(action: string, reason: string): ToolResult {
 	return {
 		content: [{ type: "text", text: reason }],
 		details: { action, registry: registry(), error: reason },
+		isError: true,
 	};
+}
+
+/** Machine-readable output for tmux_capture — success and failure both schema-valid. */
+const CAPTURE_OUTPUT_SCHEMA = Type.Union([
+	Type.Object({
+		ok: Type.Literal(true),
+		target: Type.String(),
+		text: Type.String(),
+		meta: Type.String(),
+	}),
+	Type.Object({ ok: Type.Literal(false), error: Type.String() }),
+]);
+
+function captureOk(action: string, target: string, text: string, meta: string): ToolResult {
+	return {
+		content: [{ type: "text", text: `${meta}${text}` }],
+		details: { action, registry: registry() },
+		structuredContent: { ok: true, target, text, meta },
+	};
+}
+
+function captureRej(action: string, reason: string): ToolResult {
+	const r = rej(action, reason);
+	r.structuredContent = { ok: false, error: reason };
+	return r;
 }
 
 function monitorCmd(id: string): string {
@@ -474,6 +500,8 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "tmux_start",
 		label: "tmux start",
+		exposure: "codemode",
+		namespace: { name: "tmux", description: "Drive interactive CLI sessions in managed tmux panes" },
 		description:
 			"Start an interactive CLI (python, gdb, node, ...) in a managed tmux session and wait for its prompt. " +
 			`Omit prompt_regex for servers/novel TTY apps (ready immediately). Prompt wait: escalating attempts, max ${DEFAULT_LIMITS.maxPromptWaits}. ` +
@@ -587,6 +615,8 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "tmux_send",
 		label: "tmux send",
+		exposure: "codemode",
+		namespace: { name: "tmux", description: "Drive interactive CLI sessions in managed tmux panes" },
 		description:
 			"Send text to a live session. Embedded \\n submit lines; no extra Enter is appended if text ends with \\n. " +
 			"End REPL blocks (def/class/if) with a trailing blank line — e.g. send exactly 'def f():\\n    return 1\\n\\n' " +
@@ -637,6 +667,8 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "tmux_wait",
 		label: "tmux wait",
+		exposure: "codemode",
+		namespace: { name: "tmux", description: "Drive interactive CLI sessions in managed tmux panes" },
 		description:
 			"Poll a session pane for a regex until it matches or timeout. Anchor the regex (^/$) to avoid matching source text you typed. " +
 			`Default timeout ${WAIT_TIMEOUT}s. Timeout returns the last pane for diagnosis.`,
@@ -695,6 +727,8 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "tmux_capture",
 		label: "tmux capture",
+		exposure: "codemode",
+		namespace: { name: "tmux", description: "Drive interactive CLI sessions in managed tmux panes" },
 		description:
 			`Capture pane text, bounded (default ${CAPTURE_LINES} lines, max 2000). ` +
 			"Registered pi.sock session ids use the managed path. For panes outside pi.sock pass socket " +
@@ -715,13 +749,14 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 				Type.Boolean({ description: "join wrapped lines (default true; false keeps the physical wrap)" }),
 			),
 		}),
+		outputSchema: CAPTURE_OUTPUT_SCHEMA,
 		executionMode: "sequential",
 
 		async execute(_toolCallId, params): Promise<ToolResult> {
 			const sock = normalizeSocket(params.socket);
-			if (!sock.ok) return rej("tmux_capture", sock.reason);
+			if (!sock.ok) return captureRej("tmux_capture", sock.reason);
 			const t = validateTarget(params.target);
-			if (!t.ok) return rej("tmux_capture", t.reason);
+			if (!t.ok) return captureRej("tmux_capture", t.reason);
 			const target = t.value;
 			const lines = Math.max(1, Math.min(2000, Math.floor(params.lines ?? CAPTURE_LINES)));
 			const join = params.join ?? true;
@@ -729,21 +764,21 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 			// managed path: registered pi.sock session id
 			if (sock.value === "pi" && findSession(registry(), target)) {
 				const v = validateKnown(registry(), target);
-				if (!v.ok) return rej("tmux_capture", v.reason);
+				if (!v.ok) return captureRej("tmux_capture", v.reason);
 				const r = await runExecutor("capture.sh", [target, String(lines)], 10000);
-				if ("text" in r) return ok("tmux_capture", r.text);
+				if ("text" in r) return captureOk("tmux_capture", target, r.text, "");
 				// targeted liveness check: mark dead only when the session is
 				// confirmed absent (read-only; emits no RECONCILE)
 				const { peers } = await probeLive();
 				if (!peers.some((p) => p.name === target)) {
 					send({ type: "SESSION_DEAD", id: target });
 				}
-				return rej("tmux_capture", `capture of ${target} failed: ${execError(r)}`);
+				return captureRej("tmux_capture", `capture of ${target} failed: ${execError(r)}`);
 			}
 
 			// external read: stateless, never touches the registry
 			if (!externalReadEnabled()) {
-				return rej(
+				return captureRej(
 					"tmux_capture",
 					"external tmux reads disabled (TMUX_EXTERNAL_READ=0)",
 				);
@@ -754,13 +789,13 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 				10000,
 			);
 			if (!("text" in r)) {
-				return rej("tmux_capture", `capture of ${target} failed: ${execError(r)}`);
+				return captureRej("tmux_capture", `capture of ${target} failed: ${execError(r)}`);
 			}
 			const meta =
 				r.resolvedTarget && r.paneId
 					? `[external ${sock.value} ${r.resolvedTarget} ${r.paneId}${r.truncated ? " truncated" : ""}]\n`
 					: "";
-			return ok("tmux_capture", `${meta}${r.text}`);
+			return captureOk("tmux_capture", r.resolvedTarget ?? target, r.text, meta);
 		},
 
 		renderCall(args, theme) {
@@ -779,6 +814,8 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "tmux_kill",
 		label: "tmux kill",
+		exposure: "codemode",
+		namespace: { name: "tmux", description: "Drive interactive CLI sessions in managed tmux panes" },
 		description:
 			"Kill a session and unregister it. Killing an already-dead entry just unregisters. Explicit kill overrides monitor. " +
 			"Sessions owned by another live pi instance are rejected (see tmux_status).", 
@@ -827,6 +864,8 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "tmux_status",
 		label: "tmux status",
+		exposure: "codemode",
+		namespace: { name: "tmux", description: "Drive interactive CLI sessions in managed tmux panes" },
 		description:
 			"Probe pi.sock, reconcile the registry (mark dead, adopt stray pi-* sessions, flag foreign-owned), and report session states + monitor commands. " +
 			"Also lists metadata-only external panes on the default socket (read-only; disable with TMUX_EXTERNAL_READ=0).",

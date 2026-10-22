@@ -660,6 +660,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "rpc_delegate_task",
 		label: "RPC Delegate",
+		exposure: "deferred",
+		namespace: { name: "rpc-delegate", description: "Delegate a task to an ephemeral child pi over RPC" },
 		description: [
 			"Delegate a task to an ephemeral child pi supervised through the raw RPC protocol.",
 			"Streaming evidence (tool activity, final assistant text) and honest outcomes (agent_settled ≠ success — the final stopReason decides).",

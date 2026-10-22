@@ -967,6 +967,8 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "mermaid_validate",
     label: "Mermaid validate",
+    exposure: "codemode",
+    namespace: { name: "mermaid", description: "Mermaid diagram workflow: validate, render, embed, reset" },
     description:
       "Validate a Mermaid diagram and move the workflow to `validated` (returns the ASCII preview). " +
       "Only a validated source (same path, unchanged content) can be rendered or embedded. " +
@@ -1185,6 +1187,8 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "mermaid_render",
     label: "Mermaid render",
+    exposure: "codemode",
+    namespace: { name: "mermaid", description: "Mermaid diagram workflow: validate, render, embed, reset" },
     description:
       "Render the validated diagram to SVG or PNG (Docker; format follows the outPath extension). Only legal for the source " +
       "that last passed mermaid_validate, with unchanged content — an edit invalidates the pass (re-validate). " +
@@ -1353,6 +1357,8 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "mermaid_embed",
     label: "Mermaid embed",
+    exposure: "codemode",
+    namespace: { name: "mermaid", description: "Mermaid diagram workflow: validate, render, embed, reset" },
     description:
       "Embed the validated diagram into a Markdown file as a fenced mermaid block. Only legal for the source " +
       "that last passed mermaid_validate, with unchanged content — an edit invalidates the pass (re-validate). " +
@@ -1535,6 +1541,8 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "mermaid_reset",
     label: "Mermaid reset",
+    exposure: "codemode",
+    namespace: { name: "mermaid", description: "Mermaid diagram workflow: validate, render, embed, reset" },
     description: "Clear the mermaid workflow state machine and start over.",
     parameters: Type.Object({}),
 

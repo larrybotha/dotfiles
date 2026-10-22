@@ -1072,6 +1072,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_start",
     label: "browser start",
+    exposure: "codemode",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Launch or attach a browser with CDP and wait for the debug endpoint. Modes: auto (default — evaluates running " +
       "browsers: attach the single CDP browser, prompt to choose between several, launch your default browser when none " +
@@ -1172,6 +1174,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_navigate",
     label: "browser navigate",
+    exposure: "codemode",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Navigate the active tab, or open a new tab. Applies the active emulation preset if one is set. " +
       "Warnings about stale active-tab state come through in the output.",
@@ -1243,6 +1247,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_eval",
     label: "browser eval",
+    exposure: "codemode",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Evaluate JavaScript in the active tab (async context, returnByValue). Requires an extension-recorded " +
       "active tab (browser_navigate / browser_switch_tab first — never auto-targets an unchosen tab). " +
@@ -1279,6 +1285,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_screenshot",
     label: "browser screenshot",
+    exposure: "codemode",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Screenshot the active tab — requires an extension-recorded active tab (browser_navigate / " +
       "browser_switch_tab first — never auto-targets an unchosen tab). Default: current viewport. full_page captures the whole document; " +
@@ -1350,6 +1358,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_pick",
     label: "browser pick",
+    exposure: "deferred",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Interactive element picker in the active tab: the user clicks elements (Cmd/Ctrl+click for multi-select, Enter to finish, Esc to cancel) " +
       "and gets tag/id/class/text/parents for each. Use when the user points at UI elements.",
@@ -1389,6 +1399,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_annotate",
     label: "browser annotate",
+    exposure: "deferred",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Open visual annotation mode in the browser so the user can click/select elements and add comments. " +
       "Only use when the user explicitly asks to annotate, visually point something out, or show you UI issues. " +
@@ -1461,6 +1473,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_tabs",
     label: "browser tabs",
+    exposure: "codemode",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "List open tabs (title, URL, visibility, Arc space/folder). visible filters to tabs in visible windows.",
     parameters: Type.Object({
@@ -1508,6 +1522,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_switch_tab",
     label: "browser switch tab",
+    exposure: "codemode",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Switch the active tab. query matches by title/URL/Arc space (best score wins; ties report alternatives), " +
       "target_id switches by exact targetId. Restores hidden windows. See browser_tabs for targetIds.",
@@ -1584,6 +1600,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_emulate",
     label: "browser emulate",
+    exposure: "codemode",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Set a device emulation preference (viewport/DPR/touch/UA) applied by navigate/eval/screenshot/pick, " +
       "or reset it. The preference persists across browser restarts (until reset). reload pages for UA-dependent responses.",
@@ -1650,6 +1668,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_status",
     label: "browser status",
+    exposure: "codemode",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Probe the debug endpoint, reconcile the machine (adopt a live browser / mark drift), and report: state, browser info, active tab, tabs, emulation preference, recent events.",
     parameters: Type.Object({}),
@@ -1677,6 +1697,8 @@ export default function webBrowserExtension(pi: ExtensionAPI) {
   pi.registerTool({
     name: "browser_stop",
     label: "browser stop",
+    exposure: "codemode",
+    namespace: { name: "web-browser", description: "CDP browser automation: start, navigate, eval, screenshot, tabs, emulate, stop" },
     description:
       "Stop a browser this extension launched (fresh/profile/reset_profile) and clear its state files. " +
       "attach/foreign instances are never killed — only the machine is marked stopped. Idempotent.",

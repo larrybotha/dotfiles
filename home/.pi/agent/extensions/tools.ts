@@ -35,44 +35,60 @@ export default function toolsExtension(pi: ExtensionAPI) {
 		pi.setActiveTools(Array.from(enabledTools));
 	}
 
-	// Find the last tools-config entry in the current branch
-	function restoreFromBranch(ctx: ExtensionContext) {
+	// Restore tool selection from the branch.
+	//
+	// Pi replays the transcript's tool changes (system messages carrying
+	// toolsAdded/toolsRemoved) before session_start/session_tree fires, so the
+	// live active set is already authoritative — including codemode, tool_search
+	// and any tool_search loads. Those keep their codemode/deferred exposure, so
+	// re-declaring them here would be wrong (and filtering by exposure would drop
+	// the loads).
+	//
+	// The only state replay misses is a /tools toggle made after the last request
+	// on the branch: that exists solely as a `tools-config` entry, because pi
+	// writes tool changes lazily just before the next request. Apply it only when
+	// it is newer than the branch's last system message.
+	//
+	// Known limitation: applying an unrecorded toggle calls setActiveTools, which
+	// clears pi's pending (not-yet-registered) tool names if the new set drops an
+	// active one. This only bites when a toggle lands while MCP servers are still
+	// connecting, and only until the next request records it.
+	function restoreFromBranch(ctx: ExtensionContext, reason?: string) {
 		allTools = pi.getAllTools();
 
-		// Only `direct` tools are ever declared to the model. codemode/deferred
-		// tools are reached via scripts or tool_search, and naming one in
-		// setActiveTools() would activate it and re-declare its schema on every
-		// request — undoing the context savings. Never restore those here.
-		// `exposure` is on ToolInfo at runtime (pi >= 1.x); the pinned dev types
-		// (0.87.x) predate it, so read it defensively rather than widening types.
-		const exposureOf = (t: ToolInfo): string | undefined =>
-			(t as ToolInfo & { exposure?: string }).exposure;
-		const restorable = new Set(
-			allTools.filter((t) => exposureOf(t) === "direct").map((t) => t.name),
-		);
+		// /reload keeps the live active set (plus pending); nothing to replay.
+		if (reason === "reload") {
+			enabledTools = new Set(pi.getActiveTools());
+			return;
+		}
 
 		// Get entries in current branch only
 		const branchEntries = ctx.sessionManager.getBranch();
+		let lastSystemMessage = -1;
+		let lastConfig = -1;
 		let savedTools: string[] | undefined;
 
-		for (const entry of branchEntries) {
-			if (entry.type === "custom" && entry.customType === "tools-config") {
+		for (let i = 0; i < branchEntries.length; i++) {
+			const entry = branchEntries[i];
+			if (entry.type === "message" && entry.message?.role === "system") {
+				lastSystemMessage = i;
+			} else if (entry.type === "custom" && entry.customType === "tools-config") {
 				const data = entry.data as ToolsState | undefined;
 				if (data?.enabledTools) {
+					lastConfig = i;
 					savedTools = data.enabledTools;
 				}
 			}
 		}
 
-		if (savedTools) {
-			// Restore saved selection, filtered to tools that still exist and are
-			// `direct` (non-direct tools stay reachable through codemode/tool_search)
-			enabledTools = new Set(savedTools.filter((t: string) => restorable.has(t)));
-			applyTools();
-		} else {
-			// No saved state - sync with currently active tools
-			enabledTools = new Set(pi.getActiveTools());
+		// Replay an unrecorded toggle. `savedTools` is a full getActiveTools()
+		// snapshot taken when the toggle was made, so it already includes the
+		// codemode/tool_search loads active at that point.
+		if (savedTools && lastConfig > lastSystemMessage) {
+			pi.setActiveTools(savedTools);
 		}
+
+		enabledTools = new Set(pi.getActiveTools());
 	}
 
 	// Register /tools command
@@ -111,7 +127,8 @@ export default function toolsExtension(pi: ExtensionAPI) {
 					Math.min(items.length + 2, 15),
 					getSettingsListTheme(),
 					(id, newValue) => {
-						// Update enabled state and apply immediately
+						// Resync first: tool_search may have loaded tools since restore
+						enabledTools = new Set(pi.getActiveTools());
 						if (newValue === "enabled") {
 							enabledTools.add(id);
 						} else {
@@ -147,8 +164,8 @@ export default function toolsExtension(pi: ExtensionAPI) {
 	});
 
 	// Restore state on session start
-	pi.on("session_start", async (_event, ctx) => {
-		restoreFromBranch(ctx);
+	pi.on("session_start", async (event, ctx) => {
+		restoreFromBranch(ctx, event.reason);
 	});
 
 	// Restore state when navigating the session tree

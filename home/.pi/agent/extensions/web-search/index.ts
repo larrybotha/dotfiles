@@ -26,7 +26,7 @@ import { execFile } from "node:child_process";
 import { appendFileSync, mkdirSync } from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
-import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
+import type { AgentToolResult, ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import {
 	type AutocompleteItem,
 	type AutocompleteProvider,
@@ -335,6 +335,22 @@ function detailsFor(action: WebDetails["action"], extra: Partial<WebDetails> = {
 
 const text = (t: string) => [{ type: "text" as const, text: t }];
 
+/** Machine-readable web_search output — success and failure both schema-valid. */
+const SEARCH_OUTPUT_SCHEMA = Type.Union([
+	Type.Object({
+		ok: Type.Literal(true),
+		results: Type.Array(
+			Type.Object({
+				title: Type.String(),
+				link: Type.String(),
+				snippet: Type.String(),
+				age: Type.String(),
+			}),
+		),
+	}),
+	Type.Object({ ok: Type.Literal(false), error: Type.String() }),
+]);
+
 // ---------------------------------------------------------------------------
 // Extension
 // ---------------------------------------------------------------------------
@@ -410,6 +426,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_search",
 		label: "Web search",
+		exposure: "codemode",
+		namespace: { name: "web-search", description: "Budgeted web research workflow: search, fetch, report, archive, reset" },
 		description:
 			"Run a Brave web search as part of a research workflow. Results are tracked by a state machine: " +
 			`budgets are enforced (${LIMITS.maxSearches} searches, ${LIMITS.maxFetches} page fetches per research run). ` +
@@ -424,8 +442,9 @@ export default function (pi: ExtensionAPI) {
 				Type.String({ description: "pd, pw, pm, py, or YYYY-MM-DDtoYYYY-MM-DD" }),
 			),
 		}),
+		outputSchema: SEARCH_OUTPUT_SCHEMA,
 
-		async execute(_toolCallId, params) {
+		async execute(_toolCallId, params): Promise<AgentToolResult<WebDetails>> {
 			const snap = getActor().getSnapshot();
 
 			const searchParams: SearchParams = {
@@ -451,6 +470,8 @@ export default function (pi: ExtensionAPI) {
 							"Allowed next steps: web_report (if you have results), web_reset, or web_archive after a report.",
 					),
 					details: detailsFor("search", { rejected: violation }),
+					structuredContent: { ok: false, error: violation },
+					isError: true,
 				};
 			}
 
@@ -489,6 +510,7 @@ export default function (pi: ExtensionAPI) {
 								"Refine the query (different terms, site: operator, or drop restrictive freshness filter).",
 						),
 						details: detailsFor("search", { error: "no results" }),
+						structuredContent: { ok: true, results: [] },
 					};
 				}
 				getActor().send({
@@ -504,17 +526,24 @@ export default function (pi: ExtensionAPI) {
 							"Use web_fetch on links worth reading in full, or web_report to finish.",
 					),
 					details: detailsFor("search"),
+					structuredContent: { ok: true, results },
 				};
 			} catch (e) {
-				log("ERROR", `search failed: ${(e as Error).message?.split("\n")[0]}`);
+				const msg = String((e as Error).message ?? e);
+				log("ERROR", `search failed: ${msg.split("\n")[0]}`);
 				getActor().send({
 					type: "SEARCH_DONE",
 					query: params.query,
 					params: searchParams,
 					results: [],
-					error: String((e as Error).message ?? e),
+					error: msg,
 				});
-				throw new Error(`Brave search failed: ${(e as Error).message}`);
+				return {
+					content: text(`Brave search failed: ${msg}`),
+					details: detailsFor("search", { error: msg }),
+					structuredContent: { ok: false, error: msg },
+					isError: true,
+				};
 			}
 		},
 
@@ -533,6 +562,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_fetch",
 		label: "Web fetch",
+		exposure: "codemode",
+		namespace: { name: "web-search", description: "Budgeted web research workflow: search, fetch, report, archive, reset" },
 		description:
 			"Extract readable page content as markdown for links returned by web_search. " +
 			"Only known, not-yet-fetched links are allowed; duplicates and unknown URLs are rejected. " +
@@ -614,6 +645,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_report",
 		label: "Web report",
+		exposure: "codemode",
+		namespace: { name: "web-search", description: "Budgeted web research workflow: search, fetch, report, archive, reset" },
 		description:
 			"End the research workflow and report what was gathered (requires at least one successful web_search). " +
 			"After reporting, continue with web_archive (fresh budget window, known links kept) or start over with web_reset. " +
@@ -676,6 +709,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_archive",
 		label: "Web research archive",
+		exposure: "codemode",
+		namespace: { name: "web-search", description: "Budgeted web research workflow: search, fetch, report, archive, reset" },
 		description:
 			"Archive the reported research run and start a fresh budget window. Legal only after web_report. " +
 			"Known links (search results) and query history survive; " +
@@ -726,6 +761,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "web_reset",
 		label: "Web research reset",
+		exposure: "codemode",
+		namespace: { name: "web-search", description: "Budgeted web research workflow: search, fetch, report, archive, reset" },
 		description:
 			"Clear the web research state machine entirely (results, known links, history) and start a fresh run. " +
 			"For continuing research after a report, prefer web_archive (fresh budget window, known links kept).",

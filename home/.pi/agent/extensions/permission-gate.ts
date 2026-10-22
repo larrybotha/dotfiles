@@ -25,6 +25,16 @@ export default function (pi: ExtensionAPI) {
     const isDangerous = dangerousPatterns.some((p) => p.test(command));
 
     if (isDangerous) {
+      if (event.parentToolCallId) {
+        // Nested call (a codemode script). Prompting would block the script on
+        // the user and hold a codemode worker; block instead and point back.
+        return {
+          block: true,
+          reason:
+            "Dangerous command blocked: cannot prompt for confirmation from a script. " +
+            "Ask the user to run it directly.",
+        };
+      }
       if (!ctx.hasUI) {
         // In non-interactive mode, block by default
         return {

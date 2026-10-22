@@ -743,6 +743,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "journal_read",
 		label: "Journal read",
+		exposure: "codemode",
+		namespace: { name: "journal", description: "Local journal sqlite db: entries, tags, links, templates" },
 		description:
 			"Read the journal sqlite db: entries (latest-first previews with tags, links, template), a single entry's full markdown content, tag counts, or template schemas. " +
 			'what=entries (default) supports tag="work" (exact tag filter), search="substring" (content search), limit (default 20, max 100); what=entry requires id.',
@@ -913,6 +915,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "journal_template_create",
 		label: "Journal template create",
+		exposure: "deferred",
+		namespace: { name: "journal", description: "Local journal sqlite db: entries, tags, links, templates" },
 		description:
 			"Create a journal template — a schema written as content to the db, used by /journal add. Steps shape gathering: each step is one editor dialog (name becomes the `## name` markdown section of the composed entry; prompt is shown as the dialog title). " +
 			"A single-step template persists the answer as-is (the freeform contract); a multi-step template composes `## name` sections, skipping empty answers. " +
@@ -1009,6 +1013,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "journal_link",
 		label: "Journal link",
+		exposure: "codemode",
+		namespace: { name: "journal", description: "Local journal sqlite db: entries, tags, links, templates" },
 		description:
 			"Create many-to-many links between journal entries, post-hoc. Links are symmetric for reads (both directions shown by journal_read) — a pair already linked in either direction is skipped as a duplicate. Missing ids and self-links are skipped, not errors.",
 		parameters: Type.Object({
@@ -1083,6 +1089,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "journal_status",
 		label: "Journal status",
+		exposure: "codemode",
+		namespace: { name: "journal", description: "Local journal sqlite db: entries, tags, links, templates" },
 		description:
 			"Show the journal workflow state (machine snapshot, current template progress, tags, last entry).",
 		parameters: Type.Object({}),
@@ -1116,6 +1124,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "journal_reset",
 		label: "Journal reset",
+		exposure: "codemode",
+		namespace: { name: "journal", description: "Local journal sqlite db: entries, tags, links, templates" },
 		description:
 			"Clear the journal workflow state machine and start over. " +
 			"Discarding an entry in progress (answered steps, pending save) requires user confirmation; " +

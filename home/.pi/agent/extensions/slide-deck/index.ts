@@ -681,6 +681,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "slide_deck_start",
 		label: "Slide deck start",
+		exposure: "deferred",
+		namespace: { name: "slide-deck", description: "HTML slide-deck workflow: start, research, plan, build, status, reset" },
 		description:
 			"Start a slide-deck workflow: records the topic and moves to `researching`. " +
 			"Optional phase tracking — slide_deck_build is legal without it (the machine enforces the build pipeline, not the authoring ceremony).",
@@ -728,6 +730,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "slide_deck_research",
 		label: "Slide deck research",
+		exposure: "deferred",
+		namespace: { name: "slide-deck", description: "HTML slide-deck workflow: start, research, plan, build, status, reset" },
 		description:
 			"Record the research phase: the sources the deck is built from (URLs, file paths). Moves `researching` -> `planning`. Optional phase tracking.",
 		parameters: Type.Object({
@@ -780,6 +784,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "slide_deck_plan",
 		label: "Slide deck plan",
+		exposure: "deferred",
+		namespace: { name: "slide-deck", description: "HTML slide-deck workflow: start, research, plan, build, status, reset" },
 		description:
 			"Record the slide plan: the planned slide ids (bare slugs, e.g. `intro`, `history`). Moves `planning` -> `writing`. Optional phase tracking.",
 		parameters: Type.Object({
@@ -834,6 +840,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "slide_deck_build",
 		label: "Slide deck build",
+		exposure: "deferred",
+		namespace: { name: "slide-deck", description: "HTML slide-deck workflow: start, research, plan, build, status, reset" },
 		description:
 			"Build and validate a self-contained HTML slide deck — one event carries the full content, the machine drives the pipeline " +
 			"(copy templates/sidebar-deck.html + inject -> Docker html5lib validation -> opens the deck in the browser on success). " +
@@ -987,6 +995,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "slide_deck_status",
 		label: "Slide deck status",
+		exposure: "deferred",
+		namespace: { name: "slide-deck", description: "HTML slide-deck workflow: start, research, plan, build, status, reset" },
 		description: "Show the slide-deck workflow state (machine snapshot).",
 		parameters: Type.Object({}),
 
@@ -1017,6 +1027,8 @@ export default function (pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "slide_deck_reset",
 		label: "Slide deck reset",
+		exposure: "deferred",
+		namespace: { name: "slide-deck", description: "HTML slide-deck workflow: start, research, plan, build, status, reset" },
 		description: "Clear the slide-deck workflow state machine and start over.",
 		parameters: Type.Object({}),
 

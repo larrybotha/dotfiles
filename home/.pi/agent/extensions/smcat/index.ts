@@ -974,6 +974,8 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "smcat_validate",
     label: "Smcat validate",
+    exposure: "codemode",
+    namespace: { name: "smcat", description: "Smcat state-machine diagram workflow: validate, render, embed, reset" },
     description:
       "Validate a Smcat diagram and move the workflow to `validated` (returns the DOT source preview). " +
       "Only a validated source (same path, unchanged content) can be rendered or embedded. " +
@@ -1192,6 +1194,8 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "smcat_render",
     label: "Smcat render",
+    exposure: "codemode",
+    namespace: { name: "smcat", description: "Smcat state-machine diagram workflow: validate, render, embed, reset" },
     description:
       "Render the validated diagram to SVG, PNG, or PDF (Docker; format follows the outPath extension). Only legal for the source " +
       "that last passed smcat_validate, with unchanged content — an edit invalidates the pass (re-validate). " +
@@ -1362,6 +1366,8 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "smcat_embed",
     label: "Smcat embed",
+    exposure: "codemode",
+    namespace: { name: "smcat", description: "Smcat state-machine diagram workflow: validate, render, embed, reset" },
     description:
       "Embed the validated diagram into a Markdown file as a fenced smcat block. Only legal for the source " +
       "that last passed smcat_validate, with unchanged content — an edit invalidates the pass (re-validate). " +
@@ -1544,6 +1550,8 @@ export default function (pi: ExtensionAPI) {
   pi.registerTool({
     name: "smcat_reset",
     label: "Smcat reset",
+    exposure: "codemode",
+    namespace: { name: "smcat", description: "Smcat state-machine diagram workflow: validate, render, embed, reset" },
     description: "Clear the smcat workflow state machine and start over.",
     parameters: Type.Object({}),
 
