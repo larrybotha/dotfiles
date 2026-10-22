@@ -1,9 +1,11 @@
 {
-  "lastChangelogVersion": "1.3.0",
+  "lastChangelogVersion": "1.4.0",
   "defaultThinkingLevel": "off",
   "defaultProvider": "opencode",
   "defaultModel": "deepseek-v4.1-flash",
   "hideThinkingBlock": false,
   "theme": "dark",
-  "packages": ["npm:pi-autoresearch"]
+  "packages": [
+    "npm:pi-autoresearch"
+  ]
 }
