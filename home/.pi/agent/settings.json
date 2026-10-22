@@ -3,6 +3,9 @@
   "defaultThinkingLevel": "off",
   "defaultProvider": "opencode",
   "defaultModel": "deepseek-v4.1-flash",
+  "defaultTools": ["+codemode", "+tool_search"],
+  "codemode": { "mode": "on", "inlineBudget": 0 },
+  "showCacheMissNotices": true,
   "hideThinkingBlock": false,
   "theme": "dark",
   "packages": [
