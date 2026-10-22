@@ -11,7 +11,7 @@
 	"include": [
 		"./*.ts",
 		"filechanges/*.ts",
-		"mermaid/*.ts",
+		"mermaid/*.ts",	"smcat/*.ts",
 		"pi-typesafe/*.ts",
 		"web-browser/*.ts",
 		"web-browser/annotate/*.ts",
