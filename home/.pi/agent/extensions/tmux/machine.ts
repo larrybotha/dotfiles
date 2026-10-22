@@ -194,7 +194,7 @@ export function validateKill(
 function unknownReason(ctx: RegistryContext, id: string): string {
   const live = liveNames(ctx);
   const peers = live.length > 0 ? live.join(", ") : "none";
-  return `unknown session "${id}" — live on pi.sock: ${peers} (was it killed outside the extension? retry, or tmux_status)`;
+  return `unknown session "${id}" — live on pi.sock: ${peers} (was it killed outside the extension? retry, or tmux_status). For panes outside pi.sock use tmux_status, then tmux_capture {socket:"default", target:"sess:win.pane"}`;
 }
 
 // readable drift between registry snapshots (reconcile reporting)

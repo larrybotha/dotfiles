@@ -17,6 +17,7 @@ import {
   type RegistryLimits,
   type SessionEntry,
 } from "./machine.ts";
+import { normalizeSocket, validateTarget, externalReadEnabled } from "./sockets.ts";
 
 let passed = 0;
 let failed = 0;
@@ -394,6 +395,48 @@ function status(a: A, id: string): string | undefined {
   const c = freshActor();
   c.send({ type: "RECONCILE", live: [{ name: "pi-x-1", owner: "999", ownerAlive: true }] });
   ok(validateKill(ctx(c), "pi-x-1", true).ok, "unidentified context (owner '') skips isolation");
+}
+
+// 19. socket specs + target grammar (sockets.ts, mirrors executors/lib.sh)
+{
+  const prevTmux = process.env.TMUX;
+  const prevExt = process.env.TMUX_EXTERNAL_READ;
+
+  const sockSpec = (raw?: string): string | undefined => {
+    const r = normalizeSocket(raw);
+    return r.ok ? r.value : undefined;
+  };
+  delete process.env.TMUX;
+  ok(sockSpec(undefined) === "pi", "socket: undefined -> pi");
+  ok(sockSpec("") === "pi", "socket: empty -> pi");
+  ok(sockSpec("   ") === "pi", "socket: whitespace -> pi");
+  ok(sockSpec("pi") === "pi", "socket: pi -> pi");
+  ok(sockSpec(" default ") === "default", "socket: default -> default");
+  ok(sockSpec("/tmp/pi.sock") === undefined, "socket: absolute path rejected");
+  ok(sockSpec("garbage") === undefined, "socket: garbage rejected");
+  ok(sockSpec("current") === undefined, "socket: current rejected when $TMUX unset");
+  process.env.TMUX = "/tmp/tmux-501/default,12345,0";
+  ok(sockSpec("current") === "current", "socket: current accepted when $TMUX set");
+  if (prevTmux === undefined) delete process.env.TMUX; else process.env.TMUX = prevTmux;
+
+  const tgt = (raw: string) => validateTarget(raw);
+  ok(!tgt("").ok, "target: empty rejected");
+  ok(!tgt("   ").ok, "target: whitespace rejected");
+  ok(!tgt("x".repeat(257)).ok, "target: over 256 rejected");
+  ok(!tgt("a\x01b").ok, "target: control char rejected");
+  ok(tgt("sess").ok, "target: bare sess ok");
+  ok(tgt("sess:2").ok, "target: sess:win ok");
+  ok(tgt("sess:2.3").ok, "target: sess:win.pane ok");
+  ok(tgt("%0").ok, "target: %0 syntactically ok");
+  ok(tgt("%12").ok, "target: %12 ok");
+  ok(!tgt("%abc").ok, "target: %abc rejected");
+  ok(!tgt("sess:2.3.4").ok, "target: too many dot parts rejected");
+
+  delete process.env.TMUX_EXTERNAL_READ;
+  ok(externalReadEnabled(), "external reads enabled by default");
+  process.env.TMUX_EXTERNAL_READ = "0";
+  ok(!externalReadEnabled(), "TMUX_EXTERNAL_READ=0 disables external reads");
+  if (prevExt === undefined) delete process.env.TMUX_EXTERNAL_READ; else process.env.TMUX_EXTERNAL_READ = prevExt;
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

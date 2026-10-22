@@ -23,18 +23,19 @@ case $lines in ''|*[!0-9]*) json_fail "invalid lines: '$lines'" ;; esac
 [ -n "$regex" ] || json_fail "empty regex"
 [ "$lines" -gt 0 ] 2>/dev/null || lines=200
 
-# resolve the session's active pane by id once (stable while it lives):
-# tmux rejects a bare =name as a pane target, and a bare name would
-# prefix-match another session. %N pane ids are server-unique. A session
-# death mid-poll surfaces as "can't find pane: %N" — dead, not timeout
-pane_id=$(tmux -S "$SOCKET" list-panes -t "=$name" -F '#{pane_id}' 2>/dev/null | head -n 1)
-[ -n "$pane_id" ] || json_fail "can't find pane: $name"
+# resolve the session's active pane once via the shared resolver (same
+# grammar as tmux_capture: sess | sess:win | sess:win.pane | %N). %N pane ids
+# are server-unique. A session death mid-poll surfaces as "no pane ..."
+# from capture-pane — dead, not timeout.
+resolve_socket pi || json_fail "$SOCKET_ERROR"
+resolve_pane "$name" || json_fail "$SOCKET_ERROR"
+pane_id=$PANE_ID
 
 deadline=$(( $(date +%s) + timeout ))
 pane=""
 
 while :; do
-  pane=$(tmux -S "$SOCKET" capture-pane -p -J -t "$pane_id" -S "-$lines" 2>&1)
+  pane=$(tmux "${TMUX_ARGS[@]}" capture-pane -p -J -t "$pane_id" -S "-$lines" 2>&1)
   if [ $? -ne 0 ]; then
     json_fail "$pane"
   fi

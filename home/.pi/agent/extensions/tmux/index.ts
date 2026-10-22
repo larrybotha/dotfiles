@@ -15,6 +15,13 @@
  * Command: /tmux status | kill --all | footer | viz [off]
  * Env: TMUX_VIZ=1 auto-start inspector; TMUX_VIZ_PORT (default 8080, walks to
  * the first free port if busy — web-search viz defaults to 8080 too)
+ *
+ * Managed vs observed: managed sessions live on pi.sock (registry, machine-
+ * gated, writable). Observed panes are a stateless read path — tmux_status
+ * lists metadata, tmux_capture reads text — and never enter the registry, so
+ * they cannot be sent to, waited on, killed, or hit by quit-kill. Socket
+ * specs (sockets.ts / executors/lib.sh): pi (default) | default | current;
+ * absolute paths are rejected. TMUX_EXTERNAL_READ=0 disables external reads.
  */
 
 import { execFile } from "node:child_process";
@@ -33,6 +40,11 @@ import type {
 } from "@earendil-works/pi-coding-agent";
 import { Text } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
+import {
+	normalizeSocket,
+	validateTarget,
+	externalReadEnabled,
+} from "./sockets.ts";
 import {
 	tmuxMachine,
 	DEFAULT_LIMITS,
@@ -145,11 +157,27 @@ interface ProbeSession {
 	ownerAlive: boolean;
 }
 
+/** Metadata for one pane on an observed socket (panes.sh). */
+interface ExternalPane {
+	session_name: string;
+	window_index: number;
+	pane_index: number;
+	pane_id: string;
+	pane_active: number;
+	window_active: number;
+	pane_current_command: string;
+	pane_pid: number;
+	pane_tty: string;
+	pane_dead: number;
+	window_name: string;
+}
+
 type ExecResult =
 	| { sessions: ProbeSession[] }
 	| { socket: string; name: string }
 	| { matched: boolean; lastPane: string }
-	| { text: string }
+	| { text: string; resolvedTarget?: string; paneId?: string; truncated?: boolean }
+	| { panes: ExternalPane[]; total?: number; truncated?: boolean }
 	| { error: string };
 
 const execFileP = promisify(execFile);
@@ -372,40 +400,68 @@ function formatEntry(s: SessionEntry): string {
 	return `  ${s.id.padEnd(20)} ${s.tool.padEnd(10)} ${s.status.padEnd(15)} ${prompt}${monitor}`;
 }
 
-async function buildStatus(): Promise<{ text: string; error?: string }> {
-	const a = getActor();
-	const { peers, error: probeError } = await probeLive();
-	if (probeError) {
-		return { text: `probe failed: ${probeError}`, error: probeError };
-	}
-	const before = registry().sessions;
-	send({ type: "RECONCILE", live: ownSessions(peers) });
-	const after = registry().sessions;
-	const drift = driftReport(before, after, registry().owner);
-
-	const lines: string[] = [];
-	lines.push(`registry (${after.length} registered, live cap ${registry().limits.maxSessions}):`);
-	if (after.length === 0) {
-		lines.push("  (no sessions)");
-	}
-	for (const s of after) lines.push(formatEntry(s));
-	if (drift.length > 0) {
-		lines.push("drift:");
-		for (const d of drift) lines.push(`  ${d}`);
-	}
-	const piPeers = ownSessions(peers);
-	lines.push(`live on pi.sock: ${piPeers.map((p) => p.name).join(", ") || "none"}`);
-	const foreign = piPeers.filter(isForeignLive);
-	if (foreign.length > 0) {
+/** External panes on the default socket: metadata only, bounded to 10 lines.
+ *  Null when there is nothing to show (no default server, or no panes). */
+async function externalSection(): Promise<string | null> {
+	const r = await runExecutor("panes.sh", ["default", "10"], 5000);
+	if (!("panes" in r) || !Array.isArray(r.panes) || r.panes.length === 0) return null;
+	const lines = [
+		`external panes on default socket (read-only; tmux_capture {socket:"default", target}):`,
+	];
+	for (const p of r.panes.slice(0, 10)) {
+		const active = p.pane_active === 1 ? " [active]" : "";
 		lines.push(
-			`foreign (owned by other live pi): ${foreign.map((p) => `${p.name} (pid ${p.owner})`).join(", ")} — protected from kill`,
+			`  ${p.session_name}:${p.window_index}.${p.pane_index} ${p.pane_id} ${p.pane_current_command} pid=${p.pane_pid} tty=${p.pane_tty} win=${p.window_name}${active}`,
 		);
 	}
+	if (r.truncated && typeof r.total === "number") {
+		lines.push(`  (${Math.max(0, r.total - r.panes.length)} more)`);
+	}
+	return lines.join("\n");
+}
+
+async function buildStatus(external = true): Promise<{ text: string; error?: string }> {
+	const { peers, error: probeError } = await probeLive();
+	const lines: string[] = [];
+
+	if (probeError) {
+		// probe failure is reported inline; registry stays last-known (no RECONCILE)
+		lines.push(`pi.sock probe failed: ${probeError}`);
+	} else {
+		const before = registry().sessions;
+		send({ type: "RECONCILE", live: ownSessions(peers) });
+		const after = registry().sessions;
+		const drift = driftReport(before, after, registry().owner);
+
+		lines.push(`registry (${after.length} registered, live cap ${registry().limits.maxSessions}):`);
+		if (after.length === 0) {
+			lines.push("  (no sessions)");
+		}
+		for (const s of after) lines.push(formatEntry(s));
+		if (drift.length > 0) {
+			lines.push("drift:");
+			for (const d of drift) lines.push(`  ${d}`);
+		}
+		const piPeers = ownSessions(peers);
+		lines.push(`live on pi.sock: ${piPeers.map((p) => p.name).join(", ") || "none"}`);
+		const foreign = piPeers.filter(isForeignLive);
+		if (foreign.length > 0) {
+			lines.push(
+				`foreign (owned by other live pi): ${foreign.map((p) => `${p.name} (pid ${p.owner})`).join(", ")} — protected from kill`,
+			);
+		}
+	}
+
 	lines.push("monitor:");
-	for (const s of after.filter((e) => e.status !== "dead")) {
+	for (const s of registry().sessions.filter((e) => e.status !== "dead")) {
 		lines.push(`  ${s.id}: ${monitorCmd(s.id)}`);
 	}
-	return { text: lines.join("\n") };
+
+	if (external && externalReadEnabled()) {
+		const ext = await externalSection();
+		if (ext) lines.push(ext);
+	}
+	return { text: lines.join("\n"), error: probeError };
 }
 
 // ---------------------------------------------------------------------------
@@ -639,33 +695,78 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 	pi.registerTool({
 		name: "tmux_capture",
 		label: "tmux capture",
-		description: `Capture a session's pane text, bounded (default ${CAPTURE_LINES} lines, max 2000).`,
+		description:
+			`Capture pane text, bounded (default ${CAPTURE_LINES} lines, max 2000). ` +
+			"Registered pi.sock session ids use the managed path. For panes outside pi.sock pass socket " +
+			"(default|current) and a pane target (sess, sess:win.pane, or %id); external reads are read-only " +
+			"and never register. External bare sess = active pane of the active window; managed = first pane.",
 		parameters: Type.Object({
-			target: Type.String({ description: "session id" }),
+			target: Type.String({
+				description:
+					"managed session id, or external pane target: sess, sess:win.pane, %id (use tmux_status to list external panes)",
+			}),
 			lines: Type.Optional(
 				Type.Number({ description: `history window in lines (default ${CAPTURE_LINES})` }),
+			),
+			socket: Type.Optional(
+				Type.String({ description: "pi (default) | default | current — external reads need non-pi" }),
+			),
+			join: Type.Optional(
+				Type.Boolean({ description: "join wrapped lines (default true; false keeps the physical wrap)" }),
 			),
 		}),
 		executionMode: "sequential",
 
 		async execute(_toolCallId, params): Promise<ToolResult> {
-			const v = validateKnown(registry(), params.target);
-			if (!v.ok) return rej("tmux_capture", v.reason);
+			const sock = normalizeSocket(params.socket);
+			if (!sock.ok) return rej("tmux_capture", sock.reason);
+			const t = validateTarget(params.target);
+			if (!t.ok) return rej("tmux_capture", t.reason);
+			const target = t.value;
+			const lines = Math.max(1, Math.min(2000, Math.floor(params.lines ?? CAPTURE_LINES)));
+			const join = params.join ?? true;
 
-			const lines = params.lines ?? CAPTURE_LINES;
+			// managed path: registered pi.sock session id
+			if (sock.value === "pi" && findSession(registry(), target)) {
+				const v = validateKnown(registry(), target);
+				if (!v.ok) return rej("tmux_capture", v.reason);
+				const r = await runExecutor("capture.sh", [target, String(lines)], 10000);
+				if ("text" in r) return ok("tmux_capture", r.text);
+				// targeted liveness check: mark dead only when the session is
+				// confirmed absent (read-only; emits no RECONCILE)
+				const { peers } = await probeLive();
+				if (!peers.some((p) => p.name === target)) {
+					send({ type: "SESSION_DEAD", id: target });
+				}
+				return rej("tmux_capture", `capture of ${target} failed: ${execError(r)}`);
+			}
+
+			// external read: stateless, never touches the registry
+			if (!externalReadEnabled()) {
+				return rej(
+					"tmux_capture",
+					"external tmux reads disabled (TMUX_EXTERNAL_READ=0)",
+				);
+			}
 			const r = await runExecutor(
 				"capture.sh",
-				[params.target, String(Math.max(1, Math.min(2000, Math.floor(lines))))],
+				[target, String(lines), sock.value, join ? "1" : "0"],
 				10000,
 			);
-			if ("text" in r) return ok("tmux_capture", r.text);
-			send({ type: "SESSION_DEAD", id: params.target });
-			return rej("tmux_capture", `capture of ${params.target} failed: ${execError(r)}`);
+			if (!("text" in r)) {
+				return rej("tmux_capture", `capture of ${target} failed: ${execError(r)}`);
+			}
+			const meta =
+				r.resolvedTarget && r.paneId
+					? `[external ${sock.value} ${r.resolvedTarget} ${r.paneId}${r.truncated ? " truncated" : ""}]\n`
+					: "";
+			return ok("tmux_capture", `${meta}${r.text}`);
 		},
 
 		renderCall(args, theme) {
 			let text =
 				theme.fg("toolTitle", theme.bold("tmux_capture ")) + theme.fg("accent", args.target);
+			if (args.socket) text += theme.fg("dim", ` @${args.socket}`);
 			if (args.lines !== undefined) text += theme.fg("dim", ` ${args.lines} lines`);
 			return new Text(text, 0, 0);
 		},
@@ -727,13 +828,20 @@ export default function tmuxExtension(pi: ExtensionAPI) {
 		name: "tmux_status",
 		label: "tmux status",
 		description:
-			"Probe pi.sock, reconcile the registry (mark dead, adopt stray pi-* sessions, flag foreign-owned), and report session states + monitor commands.", 
-		parameters: Type.Object({}),
+			"Probe pi.sock, reconcile the registry (mark dead, adopt stray pi-* sessions, flag foreign-owned), and report session states + monitor commands. " +
+			"Also lists metadata-only external panes on the default socket (read-only; disable with TMUX_EXTERNAL_READ=0).",
+		parameters: Type.Object({
+			external: Type.Optional(
+				Type.Boolean({
+					description:
+						"include external panes on the default socket (default true; TMUX_EXTERNAL_READ=0 disables)",
+				}),
+			),
+		}),
 		executionMode: "sequential",
 
-		async execute(): Promise<ToolResult> {
-			const { text, error } = await buildStatus();
-			if (error) return rej("tmux_status", text);
+		async execute(_toolCallId, params): Promise<ToolResult> {
+			const { text } = await buildStatus(params.external ?? true);
 			return ok("tmux_status", text);
 		},
 
