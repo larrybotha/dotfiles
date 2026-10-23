@@ -54,7 +54,8 @@ dropped).
 | `slide_deck_reset`  | Clear state, start over                                                   |
 
 Output defaults to `decks/{yyyy-mm-dd}-{slug}.html` (scratch intermediates
-in `decks/scratch/`).
+in `decks/scratch/`). `outPath` is clamped to the extension `decks/` dir:
+relative paths resolve under `decks/`, absolute paths outside it are rejected.
 
 `/slidedeck` (or `/slidedeck status`) shows state; `/slidedeck reset`
 clears (reset count tracked outside the machine, surfaced in
@@ -178,7 +179,6 @@ the `slide_deck_build` tool description:
 | `SLIDE_DECK_EXEC_DIR`               | `executors/`       | Executor dir (swappable)        |
 | `SLIDE_DECK_TEMPLATE`               | `templates/sidebar-deck.html` | Build's template |
 | `SLIDE_DECK_TEMPLATE_PATH` (in-container) | `/template/sidebar-deck.html` | Validate's template mount |
-| `SLIDE_DECK_DECKS_DIR`              | `decks/`           | Default output dir              |
 | `SLIDE_DECK_INSPECT_PORT`           | 8083               | Stately inspector port          |
 | `SLIDE_DECK_INSPECT`                | —                  | Attach inspector at session start |
 | `SLIDE_DECK_FOOTER`                 | —                  | `1` enables the footer line     |

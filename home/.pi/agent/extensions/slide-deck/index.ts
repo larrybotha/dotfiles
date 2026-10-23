@@ -41,7 +41,7 @@ import {
 	writeFileSync,
 } from "node:fs";
 import { homedir } from "node:os";
-import { basename, dirname, isAbsolute, join, resolve } from "node:path";
+import { basename, dirname, isAbsolute, join, relative, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import type {
 	AgentToolUpdateCallback,
@@ -112,7 +112,7 @@ const EXEC_DIR = resolve(
 );
 const BUILD_SCRIPT = join(EXEC_DIR, "build.mjs");
 const VALIDATE_SCRIPT = join(EXEC_DIR, "validate.sh");
-const DECKS_DIR = process.env.SLIDE_DECK_DECKS_DIR ?? join(EXT_DIR, "decks");
+const DECKS_DIR = join(EXT_DIR, "decks");
 
 const LOG_DIR =
 	process.env.SLIDE_DECK_LOG_DIR ?? join(homedir(), ".cache", "slide-deck");
@@ -577,8 +577,32 @@ function detailsFor(
 
 const text = (t: string) => [{ type: "text" as const, text: t }];
 
-function absPath(p: string): string {
-	return isAbsolute(p) ? p : resolve(process.cwd(), p);
+/**
+ * Clamp an agent-supplied deck path into the extension decks dir. Absolute
+ * paths are honored only when they already live inside DECKS_DIR; relative
+ * paths resolve against DECKS_DIR (never the process cwd). Omit `outPath`
+ * for the default date-slug name. Subdirectories (e.g. `scratch/x.html`)
+ * are allowed as long as they stay under DECKS_DIR.
+ */
+function resolveDeckPath(
+	outPath: string | undefined,
+	title: string,
+): { path: string; error: string | null } {
+	const requested =
+		outPath === undefined
+			? defaultOutPath(title)
+			: isAbsolute(outPath)
+				? outPath
+				: join(DECKS_DIR, outPath);
+	const resolved = resolve(requested);
+	const rel = relative(DECKS_DIR, resolved);
+	const inside = rel !== "" && !rel.startsWith("..") && !isAbsolute(rel);
+	return {
+		path: resolved,
+		error: inside
+			? null
+			: `outPath must stay inside the extension decks dir (${DECKS_DIR}); got ${outPath ?? "(default)"}. Omit outPath for the default name, or pass a path relative to decks/.`,
+	};
 }
 
 // ---------------------------------------------------------------------------
@@ -848,7 +872,7 @@ export default function (pi: ExtensionAPI) {
 			"navHtml and slidesHtml are hand-written HTML blocks following the template's classes. " +
 			`${CONTENT_RULES} ` +
 			"Out-of-date decks fail validation with readable errors — resubmit the fixed content with the same tool (retry loop, capped). " +
-			"outPath defaults to the extension's decks/ dir.",
+			"outPath defaults to the extension's decks/ dir; agent-supplied paths are clamped to it.",
 		parameters: Type.Object({
 			title: Type.String({ description: "Deck title (sidebar header + <title>)" }),
 			subtitle: Type.String({
@@ -865,7 +889,7 @@ export default function (pi: ExtensionAPI) {
 			outPath: Type.Optional(
 				Type.String({
 					description:
-					"Output .html path (default: decks/{date}-{slug}.html in the extension dir)",
+					"Output .html path. Must stay inside the extension decks/ dir: relative paths resolve against decks/, absolute paths are honored only inside decks/. Default: decks/{date}-{slug}.html.",
 				}),
 			),
 			overwrite: Type.Optional(
@@ -879,7 +903,20 @@ export default function (pi: ExtensionAPI) {
 		async execute(_toolCallId, params, _signal, onUpdate) {
 			return withToolLock(async () => {
 				const snap = getActor().getSnapshot();
-				const outPath = absPath(params.outPath ?? defaultOutPath(params.title));
+				const deckPath = resolveDeckPath(params.outPath, params.title);
+				if (deckPath.error) {
+					log("WARN", `build rejected: ${deckPath.error}`);
+					return {
+						content: text(
+							`Build rejected: ${deckPath.error}\n${statusLine(snap.context)}\n${allowedNext()}`,
+						),
+						details: detailsFor("build", {
+							rejected: deckPath.error,
+							file: basename(deckPath.path),
+						}),
+					};
+				}
+				const outPath = deckPath.path;
 				// Silent-overwrite guard: explicit param, or a path this machine
 				// itself built and validated (rebuild-tweaks flow stays free)
 				const overwrite =
