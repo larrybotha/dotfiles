@@ -171,6 +171,8 @@ param-rejected, or in-flight), auto-appended by the extension at:
   "ts": "<iso>",
   "source": "rpc-delegate",
   "archetype": "Greenfield code / big feature",
+  "modelSource": "registry",
+  "agent": "scout",
   "provider": "opencode",
   "model": "gemini-3.1-pro",
   "stopReason": "stop",
@@ -201,6 +203,19 @@ failure row means every surface was blank. `stopReason` domain:
 novel values warn, malformed values fail lint. Rejected and in-flight
 rows carry `note` prefixes (`rejected:` / `tool return in flight`)
 with null run facts.
+
+`modelSource`: `pinned | registry | default | null` — where the
+resolved (provider, model) pair came from. `pinned` = the call supplied
+provider/model; `registry` = an `agent` supplied them; `default` = the
+child's own default model. `null` = resolution failed (unknown agent,
+invalid pair) and no model was resolved. Note the row's `model` field is
+the child's **actual** model id from `get_state` (`d.childModelId`), not
+the requested model — so a `default`-model child still records its real
+model, and `modelSource` separates routed picks from default rows
+already in the `byModel` / `byCell` buckets. `agent` is the resolved
+registry agent name, or `null`. Both keys are written on terminal,
+in-flight, and rejected rows; both are nullable. `--lint` domain-checks
+`modelSource`.
 
 Nulls mean unknown.
 

@@ -64,6 +64,20 @@ function cleanupHeartbeat() {
 	}
 }
 
+/** Prompt temp file path, passed explicitly by the transport via env (keeps
+ *  the positional watchdog args stable) — the watchdog removes it on
+ *  orphan/not-settled exits. */
+const promptPath = process.env.RPC_DELEGATE_PROMPT_PATH || null;
+
+function cleanupPromptFile() {
+	if (!promptPath) return;
+	try {
+		fs.unlinkSync(promptPath);
+	} catch {
+		/* already gone */
+	}
+}
+
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 async function termGroup() {
@@ -88,6 +102,7 @@ async function main() {
 	for (;;) {
 		if (!alive(childPid)) {
 			cleanupHeartbeat(); // normal end — the watchdog outlived the file
+			cleanupPromptFile();
 			return;
 		}
 		if (!alive(parentPid) || Date.now() >= deadlineMs || heartbeatStalled()) break;
@@ -95,9 +110,11 @@ async function main() {
 	}
 	await termGroup();
 	cleanupHeartbeat();
+	cleanupPromptFile();
 }
 
 main().catch(() => {
 	cleanupHeartbeat();
+	cleanupPromptFile();
 	process.exit(0);
 });

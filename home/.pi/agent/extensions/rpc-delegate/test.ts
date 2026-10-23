@@ -14,7 +14,17 @@
  * formatters).
  */
 import assert from "node:assert/strict";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { createActor, type Actor, fromPromise, waitFor } from "xstate";
+import {
+	formatAgentList,
+	loadAgentsFromDir,
+	MAX_AGENT_BODY_BYTES,
+	type AgentConfig,
+} from "./agents.ts";
+import { appendTelemetryRow, newSessionId, resolveDelegation } from "./index.ts";
 import {
 	buildSummary,
 	evaluateSuccess,
@@ -1118,6 +1128,323 @@ await ok("terminal states are final: begin/kill/lifecycle events dropped", async
 	assert.equal(a.getSnapshot().context.sessionId, "rpc-delegate-1-abcd");
 	assert.equal(a.getSnapshot().context.outcome, "settled");
 });
+
+// --- agent registry ---------------------------------------------------------------
+
+const tmpRoots: string[] = [];
+function agentTmpDir(): string {
+	const d = fs.mkdtempSync(path.join(os.tmpdir(), "rpc-agents-test-"));
+	tmpRoots.push(d);
+	return d;
+}
+function writeAgentFile(dir: string, file: string, content: string): void {
+	fs.writeFileSync(path.join(dir, file), content, "utf8");
+}
+
+await ok("agents: comma-string tools + provider/model parse", () => {
+	const dir = agentTmpDir();
+	writeAgentFile(
+		dir,
+		"scout.md",
+		"---\nname: scout\ndescription: Fast recon\ntools: read, bash\nprovider: openai\nmodel: gpt-5\n---\nYou are a scout.\n",
+	);
+	const r = loadAgentsFromDir(dir);
+	assert.deepEqual(r.errors, []);
+	assert.equal(r.agents.length, 1);
+	assert.deepEqual(r.agents[0].tools, ["read", "bash"]);
+	assert.equal(r.agents[0].provider, "openai");
+	assert.equal(r.agents[0].model, "gpt-5");
+	assert.equal(r.agents[0].systemPrompt, "You are a scout.");
+});
+
+await ok("agents: YAML-list tools + BOM + CRLF + blank body -> null", () => {
+	const dir = agentTmpDir();
+	writeAgentFile(
+		dir,
+		"listy.md",
+		"\uFEFF---\r\nname: listy\r\ndescription: List tools\r\ntools: [read, bash]\r\n---\r\n   \r\n",
+	);
+	const r = loadAgentsFromDir(dir);
+	assert.deepEqual(r.errors, []);
+	assert.deepEqual(r.agents[0].tools, ["read", "bash"]);
+	assert.equal(r.agents[0].systemPrompt, null);
+});
+
+await ok("agents: missing name/description silently skipped", () => {
+	const dir = agentTmpDir();
+	writeAgentFile(dir, "noname.md", "---\ndescription: no name\n---\nbody");
+	writeAgentFile(dir, "nodesc.md", "---\nname: nodesc\n---\nbody");
+	const r = loadAgentsFromDir(dir);
+	assert.deepEqual(r.errors, []);
+	assert.equal(r.agents.length, 0);
+});
+
+await ok("agents: malformed YAML is a per-file error, not fatal", () => {
+	const dir = agentTmpDir();
+	writeAgentFile(dir, "bad.md", "---\nname: [unclosed\n---\nbody");
+	writeAgentFile(dir, "good.md", "---\nname: good\ndescription: ok\n---\nbody");
+	const r = loadAgentsFromDir(dir);
+	assert.equal(r.skipped.length, 1);
+	assert.match(r.skipped[0], /bad\.md/);
+	assert.deepEqual(r.errors, []); // per-file problem is not fatal
+	assert.equal(r.agents.length, 1);
+	assert.equal(r.agents[0].name, "good");
+});
+
+await ok("agents: duplicate name is an error, not last-wins", () => {
+	const dir = agentTmpDir();
+	writeAgentFile(dir, "a.md", "---\nname: scout\ndescription: one\n---\nbody");
+	writeAgentFile(dir, "b.md", "---\nname: scout\ndescription: two\n---\nbody");
+	const r = loadAgentsFromDir(dir);
+	assert.equal(r.errors.length, 1);
+	assert.match(r.errors[0], /agent `scout` defined in a\.md and b\.md/);
+	assert.equal(r.agents.length, 1);
+});
+
+await ok("agents: model without provider is an error", () => {
+	const dir = agentTmpDir();
+	writeAgentFile(dir, "pin.md", "---\nname: pin\ndescription: pin\nmodel: gpt-5\n---\nbody");
+	const r = loadAgentsFromDir(dir);
+	assert.equal(r.skipped.length, 1);
+	assert.match(r.skipped[0], /model requires provider/);
+	assert.deepEqual(r.errors, []);
+	assert.equal(r.agents.length, 0);
+});
+
+await ok("agents: NUL byte and oversized body rejected", () => {
+	const dir = agentTmpDir();
+	writeAgentFile(dir, "nul.md", "---\nname: nul\ndescription: nul\n---\nbody\u0000here");
+	writeAgentFile(
+		dir,
+		"big.md",
+		`---\nname: big\ndescription: big\n---\n${"a".repeat(MAX_AGENT_BODY_BYTES + 1)}`,
+	);
+	const r = loadAgentsFromDir(dir);
+	assert.equal(r.agents.length, 0);
+	assert.equal(r.skipped.length, 2);
+	assert.deepEqual(r.errors, []);
+	assert.ok(r.skipped.some((e) => /NUL byte/.test(e)));
+	assert.ok(r.skipped.some((e) => /max 32768/.test(e)));
+});
+
+await ok("agents: symlink-to-dir and dangling symlink skipped", () => {
+	const dir = agentTmpDir();
+	fs.mkdirSync(path.join(dir, "sub"));
+	fs.symlinkSync(path.join(dir, "sub"), path.join(dir, "dirlink.md"));
+	fs.symlinkSync(path.join(dir, "missing.md"), path.join(dir, "dangling.md"));
+	const r = loadAgentsFromDir(dir);
+	assert.deepEqual(r.errors, []);
+	assert.equal(r.agents.length, 0);
+});
+
+await ok("agents: ignored keys warn; formatAgentList caps + flattens", () => {
+	const dir = agentTmpDir();
+	writeAgentFile(
+		dir,
+		"warn.md",
+		"---\nname: warn\ndescription: warn agent\nextensions: [a]\nmaxDepth: 3\n---\nbody",
+	);
+	const r = loadAgentsFromDir(dir);
+	assert.equal(r.warnings.length, 2);
+	const many: AgentConfig[] = Array.from({ length: 5 }, (_, i) => ({
+		name: `a${i}`,
+		description: `desc\n${i}`,
+		systemPrompt: null,
+		filePath: `${i}.md`,
+	}));
+	const list = formatAgentList(many, 3);
+	assert.equal(list.remaining, 2);
+	assert.equal(list.text.split("; ").length, 3);
+	assert.ok(!list.text.includes("\n"));
+});
+
+await ok("agents: loadAgentsFromDir(missing dir) is empty, no error", () => {
+	const r = loadAgentsFromDir(path.join(os.tmpdir(), "rpc-agents-does-not-exist"));
+	assert.equal(r.agents.length, 0);
+	assert.deepEqual(r.errors, []);
+});
+
+// --- resolveDelegation ------------------------------------------------------------
+
+const agentScout: AgentConfig = {
+	name: "scout",
+	description: "recon",
+	tools: ["read"],
+	provider: "openai",
+	model: "gpt-5",
+	systemPrompt: "SCOUT PROMPT",
+	filePath: "scout.md",
+};
+const agentNoPin: AgentConfig = {
+	name: "plain",
+	description: "no pin",
+	systemPrompt: "PLAIN PROMPT",
+	filePath: "plain.md",
+};
+
+await ok("resolveDelegation: agent pair used when call pins neither", () => {
+	const r = resolveDelegation({ agent: "scout" }, [agentScout]);
+	assert.ok(!("error" in r));
+	if ("error" in r) return;
+	assert.deepEqual(r, {
+		provider: "openai",
+		model: "gpt-5",
+		tools: ["read"],
+		agentPrompt: "SCOUT PROMPT",
+		agentName: "scout",
+		modelSource: "registry",
+	});
+});
+
+await ok("resolveDelegation: call model-only takes the pair from the call", () => {
+	const r = resolveDelegation({ agent: "scout", model: "m" }, [agentScout]);
+	assert.ok(!("error" in r));
+	if ("error" in r) return;
+	assert.equal(r.provider, null);
+	assert.equal(r.model, "m");
+	assert.equal(r.modelSource, "pinned");
+	assert.equal(r.tools?.[0], "read"); // per-field agent default survives
+});
+
+await ok("resolveDelegation: call provider-only does NOT borrow the agent model", () => {
+	const r = resolveDelegation({ agent: "scout", provider: "cp" }, [agentScout]);
+	assert.ok(!("error" in r));
+	if ("error" in r) return;
+	assert.equal(r.provider, "cp");
+	assert.equal(r.model, null);
+	assert.equal(r.modelSource, "pinned");
+});
+
+await ok("resolveDelegation: call pair wins over agent pair", () => {
+	const r = resolveDelegation({ agent: "scout", provider: "cp", model: "cm" }, [agentScout]);
+	assert.ok(!("error" in r));
+	if ("error" in r) return;
+	assert.equal(r.provider, "cp");
+	assert.equal(r.model, "cm");
+	assert.equal(r.modelSource, "pinned");
+});
+
+await ok("resolveDelegation: call tools/prompt win per field", () => {
+	const r = resolveDelegation(
+		{ agent: "scout", tools: ["bash"], agentPrompt: "CALL" },
+		[agentScout],
+	);
+	assert.ok(!("error" in r));
+	if ("error" in r) return;
+	assert.deepEqual(r.tools, ["bash"]);
+	assert.equal(r.agentPrompt, "CALL");
+});
+
+await ok("resolveDelegation: no agent, no pins -> default/null", () => {
+	const r = resolveDelegation({}, []);
+	assert.ok(!("error" in r));
+	if ("error" in r) return;
+	assert.equal(r.provider, null);
+	assert.equal(r.model, null);
+	assert.equal(r.agentName, null);
+	assert.equal(r.modelSource, "default");
+});
+
+await ok("resolveDelegation: agent without pin -> default source, prompt kept", () => {
+	const r = resolveDelegation({ agent: "plain" }, [agentNoPin]);
+	assert.ok(!("error" in r));
+	if ("error" in r) return;
+	assert.equal(r.modelSource, "default");
+	assert.equal(r.agentName, "plain");
+	assert.equal(r.agentPrompt, "PLAIN PROMPT");
+});
+
+await ok("resolveDelegation: unknown agent -> error", () => {
+	const r = resolveDelegation({ agent: "ghost" }, [agentScout]);
+	assert.ok("error" in r);
+	if ("error" in r) assert.match(r.error, /unknown agent "ghost"/);
+});
+
+// --- session id + telemetry -------------------------------------------------------
+
+await ok("newSessionId: rpc-delegate-<uuid> shape", () => {
+	const a = newSessionId();
+	const b = newSessionId();
+	assert.match(a, /^rpc-delegate-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+	assert.notEqual(a, b);
+});
+
+function fakeDetails(): Parameters<typeof appendTelemetryRow>[0] {
+	return {
+		status: "success",
+		sessionId: "rpc-delegate-x",
+		childSessionId: null,
+		childModelId: "gpt-child",
+		provider: "openai",
+		childPid: null,
+		childExit: null,
+		promptDisposition: "started",
+		stopReason: "stop",
+		lastAssistantError: null,
+		task: "t",
+		agentPrompt: null,
+		agent: null,
+		artifacts: [],
+		summary: "",
+		assistantTextTail: "",
+		stderr: "",
+		toolCalls: 0,
+		lastToolNames: [],
+		agentEndWillRetry: 0,
+		uiRequests: 0,
+		usage: null,
+		runDurationMs: null,
+		totalDurationMs: null,
+		deadlineHit: false,
+		stallHit: false,
+		failureDetail: null,
+		protoFatal: null,
+		failureClass: null,
+	};
+}
+
+await ok("appendTelemetryRow: modelSource/agent on all three kinds", () => {
+	const dir = agentTmpDir();
+	const log = path.join(dir, "telemetry.jsonl");
+	const meta = {
+		archetype: null,
+		artifactPolicy: "stopReason",
+		depth: 0,
+		parentSessionId: null,
+	};
+	appendTelemetryRow(fakeDetails(), { ...meta, modelSource: "registry", agent: "scout" }, log);
+	appendTelemetryRow(
+		fakeDetails(),
+		{ ...meta, kind: "rejected" as const, modelSource: null, agent: null },
+		log,
+	);
+	appendTelemetryRow(
+		fakeDetails(),
+		{ ...meta, kind: "inFlight" as const, modelSource: "pinned", agent: null },
+		log,
+	);
+	const rows = fs
+		.readFileSync(log, "utf8")
+		.trim()
+		.split("\n")
+		.map((l) => JSON.parse(l));
+	assert.equal(rows.length, 3);
+	assert.equal(rows[0].modelSource, "registry");
+	assert.equal(rows[0].agent, "scout");
+	assert.equal(rows[1].modelSource, null);
+	assert.equal(rows[1].agent, null);
+	assert.equal(rows[2].modelSource, "pinned");
+	assert.ok("modelSource" in rows[0]);
+	assert.ok("agent" in rows[0]);
+});
+
+for (const d of tmpRoots) {
+	try {
+		fs.rmSync(d, { recursive: true, force: true });
+	} catch {
+		/* best-effort */
+	}
+}
 
 console.log(`\n${passed} tests passed${failed > 0 ? `, ${failed} failed` : ""}`);
 if (failed > 0) process.exit(1);

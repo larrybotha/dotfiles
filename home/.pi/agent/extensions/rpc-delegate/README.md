@@ -30,6 +30,23 @@ are listed (plain names — `+name` syntax is not supported for tools), and
 loading this extension's own path re-enables delegation in the child -
 warn-not-block, depth-bounded.
 
+### Agent registry
+
+The `agent` param names a reusable entry from `~/.pi/agent/agents/*.md`.
+Frontmatter: `name` + `description` (required), optional `tools` (comma
+string or YAML list), `provider`, `model`. The body is the appended system
+prompt. Registry values are defaults — explicit call params win, per field.
+`provider`/`model` resolve atomically: if the call sets either, the pair
+comes wholly from the call; otherwise wholly from the agent. `provider` is
+required whenever `model` is set. Unknown agent, duplicate name, malformed
+frontmatter (skipped per-file, never fatal), a NUL byte, or a body over
+32 KiB is rejected before spawn. A call without `agent` performs no
+registry filesystem access. Agent descriptions are surfaced in the `agent`
+param once at load (stale until `/reload`); per-call resolution reads the
+directory fresh and is authoritative. The resolved prompt is delivered via
+a 0600 temp file (`--append-system-prompt <path>`), removed on settle and by
+the watchdog on orphan/not-settled paths.
+
 ### Depth budget
 
 Bounded by depth, not path identity — the `RPC_DELEGATE_DEPTH` /
@@ -38,6 +55,14 @@ Bounded by depth, not path identity — the `RPC_DELEGATE_DEPTH` /
 route (`-e` paths, copies, symlinks, wrappers, bash sub-spawns), so a
 delegated child can never raise its ceiling. Raise `maxDepth` in the
 top-level call to grant one more level.
+
+## Telemetry
+
+One JSONL row per terminal return in `telemetry.jsonl` (schema in
+`skills/model-routing/references/model-routing.md`). New rows carry
+`modelSource` (`pinned | registry | default | null`) and `agent` (resolved
+name or `null`); resolution-failure rejections carry `null` for both.
+Override the log path with `RPC_DELEGATE_TELEMETRY` (tests).
 
 ## Architecture
 

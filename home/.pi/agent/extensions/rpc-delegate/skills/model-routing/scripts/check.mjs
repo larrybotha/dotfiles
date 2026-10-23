@@ -86,6 +86,7 @@ const TELEMETRY_HARD_KEYS = ['ts', 'provider', 'model', 'stopReason', 'artifactO
 const TELEMETRY_SOFT_KEYS = [
 	'archetype', 'stallHit', 'failureClass', 'tokensIn', 'tokensOut',
 	'costUsd', 'runSecs', 'note', 'source', 'artifactPolicy',
+	'modelSource', 'agent',
 ];
 // Provenance value written by the rpc-delegate writer. Re-rank flags
 // count only writer rows; hand/legacy rows carry no source and are
@@ -96,6 +97,9 @@ const TELEMETRY_SOURCE = 'rpc-delegate';
 // string values warn; malformed values are problems.
 const STOP_REASON_DOMAIN = new Set(['stop', 'success', 'error', 'aborted', 'pending', 'length', 'deferred']);
 const ARTIFACT_POLICIES = new Set(['stopReason', 'artifacts']);
+// modelSource domain: where the resolved (provider, model) pair came from.
+// null is allowed (resolution-failure rejections resolve no model).
+const MODEL_SOURCES = new Set(['pinned', 'registry', 'default']);
 const FLAG_MIN_ROWS = 3;
 const CADENCE_ROWS = 50;
 const CADENCE_DAYS = 30;
@@ -242,7 +246,7 @@ function probeModel(provider, id, cmdTemplate) {
 }
 
 async function readTelemetry(file, validate = false) {
-	const out = { rows: [], badRows: [], unknownClass: [], missingKeys: [], legacy: {}, stopReasonBad: [], stopReasonUnknown: [], badArtifactPolicy: [] };
+	const out = { rows: [], badRows: [], unknownClass: [], missingKeys: [], legacy: {}, stopReasonBad: [], stopReasonUnknown: [], badArtifactPolicy: [], badModelSource: [] };
 	let txt;
 	try {
 		txt = await fs.readFile(file, 'utf8');
@@ -286,6 +290,9 @@ async function readTelemetry(file, validate = false) {
 		}
 		if (row.artifactPolicy != null && !ARTIFACT_POLICIES.has(row.artifactPolicy)) {
 			out.badArtifactPolicy.push({ line: i + 1, value: row.artifactPolicy });
+		}
+		if (row.modelSource != null && !MODEL_SOURCES.has(row.modelSource)) {
+			out.badModelSource.push({ line: i + 1, value: row.modelSource });
 		}
 	}
 	return out;
@@ -658,6 +665,7 @@ async function lintAll(roster, rosterSet, paths, problems, warnings) {
 	for (const b of tel.stopReasonBad) problems.push(`telemetry: line ${b.line}: stopReason must be a non-empty string (got ${JSON.stringify(b.value)})`);
 	for (const u of tel.stopReasonUnknown) warnings.push(`telemetry: line ${u.line}: stopReason "${u.value}" outside known domain (${[...STOP_REASON_DOMAIN].join('|')}) — extend the domain if real`);
 	for (const b of tel.badArtifactPolicy) problems.push(`telemetry: line ${b.line}: artifactPolicy must be "stopReason" or "artifacts" (got ${JSON.stringify(b.value)})`);
+	for (const b of tel.badModelSource) problems.push(`telemetry: line ${b.line}: modelSource must be "pinned", "registry", or "default" (got ${JSON.stringify(b.value)})`);
 	const legacy = Object.entries(tel.legacy).map(([k, n]) => `${k}=${n}`).join(', ');
 
 	const cls = lintClasses(problems);

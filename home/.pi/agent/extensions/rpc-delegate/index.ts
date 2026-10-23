@@ -25,6 +25,7 @@
  * Deadline/abort outcomes DO collect artifacts (explicit policy — partial
  * work is evidence).
  */
+import { randomUUID } from "node:crypto";
 import * as fs from "node:fs";
 import { fileURLToPath } from "node:url";
 import * as os from "node:os";
@@ -38,11 +39,19 @@ import { Container, Markdown, Text, Spacer } from "@earendil-works/pi-tui";
 import { Type } from "typebox";
 import { createActor, fromPromise, waitFor, type Actor } from "xstate";
 import { DELEGATION_PATTERNS } from "model-routing-classes";
+import {
+	formatAgentList,
+	loadAgentsFromDir,
+	MAX_AGENT_BODY_BYTES,
+	type AgentConfig,
+} from "./agents.ts";
 import { collectArtifacts } from "./collector.ts";
 import {
 	depthViolation,
 	evaluateSuccess,
 	formatDuration,
+	isCollected,
+	isRec,
 	runDurationMs,
 	totalDurationMs,
 	type ArtifactEntry,
@@ -134,7 +143,7 @@ interface RpcDelegateDetails {
 	sessionId: string;
 	childSessionId: string | null;
 	childModelId: string | null;
-	/** Child provider as pinned by the caller (v2 telemetry). */
+	/** Child provider as resolved (call-pinned or registry; v2 telemetry). */
 	provider: string | null;
 	childPid: number | null;
 	childExit: number | null;
@@ -144,6 +153,8 @@ interface RpcDelegateDetails {
 	/** The prompt sent to the child — shown in the expanded result view (Ctrl+O). */
 	task: string;
 	agentPrompt: string | null;
+	/** Resolved registry agent name, or null when the call named none. */
+	agent: string | null;
 	artifacts: ArtifactEntry[];
 	summary: string;
 	assistantTextTail: string;
@@ -201,10 +212,6 @@ function resolvePiBinary(): { command: string; args: string[] } {
 	return { command: "pi", args: [] };
 }
 
-function isRec(v: unknown): v is Record<string, unknown> {
-	return typeof v === "object" && v !== null && !Array.isArray(v);
-}
-
 /** v2 (C-lite) fact-typing: classify a terminal failure from every
  *  textual surface we hold. Never used for routing. Patterns are
  *  single-sourced in model-routing-classes (./skills/model-routing/
@@ -221,6 +228,99 @@ function classifyFailure(d: {
 		if (pattern.test(hay)) return cls;
 	}
 	return "other";
+}
+
+// ---------------------------------------------------------------------------
+// Agent resolution
+// ---------------------------------------------------------------------------
+
+/** Where the resolved (provider, model) pair came from — telemetry fact. */
+export type ModelSource = "pinned" | "registry" | "default";
+
+export interface ResolveParams {
+	agent?: string | null;
+	provider?: string | null;
+	model?: string | null;
+	tools?: string[] | null;
+	agentPrompt?: string | null;
+}
+
+export interface ResolvedDelegation {
+	provider: string | null;
+	model: string | null;
+	tools: string[] | null;
+	agentPrompt: string | null;
+	agentName: string | null;
+	modelSource: ModelSource;
+}
+
+/**
+ * Resolve call params against an optional registry agent. Pure: no IO, no
+ * discovery — the caller supplies the loaded agents.
+ *
+ * The (provider, model) pair is atomic: if the call sets either half, the
+ * pair comes wholly from the call; otherwise wholly from the agent. This
+ * stops a call-side `{provider}` from silently pairing with a registry model
+ * and dodging `paramsViolation`'s provider-requires-model rule. `tools` and
+ * `agentPrompt` resolve per field (call wins).
+ */
+export function resolveDelegation(
+	params: ResolveParams,
+	agents: AgentConfig[],
+): ResolvedDelegation | { error: string } {
+	let agent: AgentConfig | undefined;
+	if (params.agent != null) {
+		agent = agents.find((a) => a.name === params.agent);
+		if (!agent) {
+			const known = agents.map((a) => a.name).join(", ") || "none";
+			return { error: `unknown agent "${params.agent}" (registry: ${known})` };
+		}
+	}
+
+	const callPinsPair = params.provider != null || params.model != null;
+	let provider: string | null;
+	let model: string | null;
+	let modelSource: ModelSource;
+	if (callPinsPair) {
+		provider = params.provider ?? null;
+		model = params.model ?? null;
+		modelSource = "pinned";
+	} else if (agent && (agent.provider != null || agent.model != null)) {
+		provider = agent.provider ?? null;
+		model = agent.model ?? null;
+		modelSource = "registry";
+	} else {
+		provider = null;
+		model = null;
+		modelSource = "default";
+	}
+
+	return {
+		provider,
+		model,
+		tools: params.tools ?? agent?.tools ?? null,
+		agentPrompt: params.agentPrompt ?? agent?.systemPrompt ?? null,
+		agentName: agent?.name ?? null,
+		modelSource,
+	};
+}
+
+/** Delegation id — also the child's `--name` and the heartbeat/temp-file key. */
+export function newSessionId(): string {
+	return `rpc-delegate-${randomUUID()}`;
+}
+
+/** Prompt temp file: 0600, path derived from sessionId so both the settle
+ *  path here and the external watchdog can locate it without threading a new
+ *  field through machine.ts / transport.ts. */
+function agentPromptPath(sessionId: string): string {
+	return path.join(os.tmpdir(), `rpc-delegate-prompt-${sessionId}.md`);
+}
+
+function writeAgentPromptFile(sessionId: string, prompt: string): string {
+	const p = agentPromptPath(sessionId);
+	fs.writeFileSync(p, prompt, { encoding: "utf8", mode: 0o600 });
+	return p;
 }
 
 function childArgs(input: {
@@ -261,7 +361,10 @@ function childArgs(input: {
 		}
 	}
 	if (input.agentPrompt) {
-		args.push("--append-system-prompt", input.agentPrompt);
+		// Deliver via a 0600 temp file: removes the hazard where pi treats an
+		// inline value that resolves to a file as file contents, and removes
+		// the ARG_MAX / E2BIG class for long prompts.
+		args.push("--append-system-prompt", writeAgentPromptFile(input.sessionId, input.agentPrompt));
 	}
 	return args;
 }
@@ -313,6 +416,10 @@ async function runSpawnService(input: SpawnInput, signal: AbortSignal): Promise<
 			scriptPath: input.launch.watchdogPath,
 			parentPid: input.launch.parentPid,
 			graceMs: input.timeoutSecs * 1000 + WATCHDOG_GRACE_MS,
+			// Explicit path (not reconstructed from the heartbeat name) so the
+			// watchdog removes the prompt temp file on orphan paths even when
+			// stall supervision is disabled.
+			promptPath: agentPromptPath(input.sessionId),
 		},
 		stall:
 			input.launch.stallGapMs > 0
@@ -440,13 +547,54 @@ export const wiredMachine = rpcMachine.provide({
 // Tool result builders — machine snapshot + transport evidence only
 // ---------------------------------------------------------------------------
 
-function detailsFromSnapshot(a: Actor<typeof wiredMachine>, assistantTextTail: string, stderr: string): RpcDelegateDetails {
+/** Null skeleton for a pre-spawn rejection — no actor, no run facts. One
+ *  definition so a new RpcDelegateDetails field is added once, not twice. */
+function blankDetails(task: string): RpcDelegateDetails {
+	return {
+		status: "error",
+		sessionId: "",
+		childSessionId: null,
+		childModelId: null,
+		provider: null,
+		childPid: null,
+		childExit: null,
+		promptDisposition: null,
+		stopReason: null,
+		lastAssistantError: null,
+		task,
+		agentPrompt: null,
+		agent: null,
+		artifacts: [],
+		summary: "",
+		assistantTextTail: "",
+		stderr: "",
+		toolCalls: 0,
+		lastToolNames: [],
+		agentEndWillRetry: 0,
+		uiRequests: 0,
+		usage: null,
+		runDurationMs: null,
+		totalDurationMs: null,
+		deadlineHit: false,
+		stallHit: false,
+		failureDetail: null,
+		protoFatal: null,
+		failureClass: null,
+	};
+}
+
+function detailsFromSnapshot(
+	a: Actor<typeof wiredMachine>,
+	assistantTextTail: string,
+	stderr: string,
+	agentName: string | null = null,
+): RpcDelegateDetails {
 	const snap = a.getSnapshot();
 	const c: RpcContext = snap.context;
 	const stateName = String(snap.value);
 	const summary = summaryForSnapshot(stateName, c, assistantTextTail);
 	const d: RpcDelegateDetails = {
-		status: statusOf(String(snap.value)),
+		status: statusOf(stateName),
 		sessionId: c.sessionId,
 		childSessionId: c.childSessionId,
 		childModelId: c.childModelId,
@@ -458,6 +606,7 @@ function detailsFromSnapshot(a: Actor<typeof wiredMachine>, assistantTextTail: s
 		lastAssistantError: c.lastAssistantError,
 		task: c.task,
 		agentPrompt: c.agentPrompt,
+		agent: agentName,
 		artifacts: c.artifacts,
 		summary,
 		assistantTextTail,
@@ -479,6 +628,22 @@ function detailsFromSnapshot(a: Actor<typeof wiredMachine>, assistantTextTail: s
 	return d;
 }
 
+/** Raw usage/duration numbers shared by the text result and the TUI
+ *  renderer — one source for the token/cost extraction. */
+function usageSummary(d: RpcDelegateDetails): {
+	tokens: number;
+	costUsd: number | null;
+	runMs: number | null;
+	totalMs: number | null;
+} {
+	return {
+		tokens: d.usage?.tokens?.totalTokens ?? d.usage?.tokens?.total ?? 0,
+		costUsd: typeof d.usage?.cost === "number" ? d.usage.cost : null,
+		runMs: d.runDurationMs,
+		totalMs: d.totalDurationMs,
+	};
+}
+
 function buildResultText(d: RpcDelegateDetails): string {
 	let text = `## rpc_delegate_task — ${d.status}\n\n${d.summary}`;
 
@@ -493,9 +658,6 @@ function buildResultText(d: RpcDelegateDetails): string {
 	}
 	if (d.failureClass) {
 		text += `\nFailure class: ${d.failureClass}`;
-	}
-	if (d.stallHit) {
-		text += `\nStall: the child produced no protocol activity for the stall window (${Math.round(STALL_GAP_MS / 1000)}s) while no child tool was open — treated as a hang and cancelled; the timeout hard cap was not the trigger.`;
 	}
 	if (d.status === "error" && d.childExit !== null && d.childExit !== 0) {
 		text += `\nChild exit code: ${d.childExit}`;
@@ -528,11 +690,11 @@ function buildResultText(d: RpcDelegateDetails): string {
 	const durBits: string[] = [];
 	if (d.runDurationMs !== null) durBits.push(`run ${formatDuration(d.runDurationMs)}`);
 	if (d.totalDurationMs !== null) durBits.push(`total ${formatDuration(d.totalDurationMs)}`);
+	const usage = usageSummary(d);
 	if (d.usage) {
-		const cost = typeof d.usage.cost === "number" ? ` · $${d.usage.cost.toFixed(4)}` : "";
-		const tokens = d.usage.tokens?.totalTokens ?? d.usage.tokens?.total;
+		const cost = usage.costUsd !== null ? ` · $${usage.costUsd.toFixed(4)}` : "";
 		const dur = durBits.length > 0 ? ` · ${durBits.join(" · ")}` : "";
-		text += `\n\n### Usage\n\n${tokens ? `${tokens.toLocaleString()} tokens` : "tokens unavailable"}${cost}${dur}`;
+		text += `\n\n### Usage\n\n${usage.tokens ? `${usage.tokens.toLocaleString()} tokens` : "tokens unavailable"}${cost}${dur}`;
 	} else if (durBits.length > 0) {
 		text += `\n\n### Usage\n\n${durBits.join(" · ")}`;
 	}
@@ -544,7 +706,9 @@ function buildResultText(d: RpcDelegateDetails): string {
 	return text;
 }
 
-const TELEMETRY_PATH = fileURLToPath(new URL("./telemetry.jsonl", import.meta.url));
+const TELEMETRY_PATH =
+	process.env.RPC_DELEGATE_TELEMETRY ??
+	fileURLToPath(new URL("./telemetry.jsonl", import.meta.url));
 
 /** Bundled skill (extension-local): model-routing ships inside this
  *  extension dir and is declared through resources_discover — it loads
@@ -581,8 +745,12 @@ function noteText(parts: (string | null)[]): string {
 
 /** v2 (C-lite): one JSONL row per rpc_delegate_task terminal return —
  *  settled, param-rejected, or still-in-flight. Fact capture only — never
- *  read for routing; no task text logged; best-effort. */
-function appendTelemetryRow(
+ *  read for routing; no task text logged; best-effort.
+ *
+ *  `modelSource` / `agent` are required meta fields: a call site cannot
+ *  forget them. On resolution-failure rejections both are null (no model
+ *  was resolved — never `"default"`). */
+export function appendTelemetryRow(
 	d: RpcDelegateDetails,
 	meta: {
 		archetype: string | null;
@@ -590,7 +758,10 @@ function appendTelemetryRow(
 		kind?: "rejected" | "inFlight";
 		depth: number;
 		parentSessionId: string | null;
+		modelSource: ModelSource | null;
+		agent: string | null;
 	},
+	path = TELEMETRY_PATH,
 ): void {
 	const early = meta.kind != null; // rejected / in-flight: no run facts to log
 	try {
@@ -600,6 +771,8 @@ function appendTelemetryRow(
 			depth: meta.depth,
 			parentSessionId: meta.parentSessionId,
 			archetype: meta.archetype,
+			modelSource: meta.modelSource,
+			agent: meta.agent,
 			provider: d.provider,
 			model: d.childModelId,
 			stopReason: d.stopReason,
@@ -612,7 +785,7 @@ function appendTelemetryRow(
 			artifactOk: early
 				? null
 				: d.artifacts.length > 0
-					? d.artifacts.every((a) => !a.missing && !a.readError)
+					? d.artifacts.every(isCollected)
 					: null,
 			artifactPolicy: meta.artifactPolicy,
 			// On failures the note must be self-describing — F12: 15 of 18
@@ -626,7 +799,7 @@ function appendTelemetryRow(
 						? `tool return in flight (status ${d.status}) — no terminal row`
 						: noteText([d.failureDetail, d.lastAssistantError, d.stderr]),
 		};
-		fs.appendFileSync(TELEMETRY_PATH, `${JSON.stringify(row)}\n`, "utf8");
+		fs.appendFileSync(path, `${JSON.stringify(row)}\n`, "utf8");
 	} catch {
 		/* telemetry is best-effort — never fail a delegation for it */
 	}
@@ -636,9 +809,10 @@ function resultFromSnapshot(
 	a: Actor<typeof wiredMachine>,
 	rejected?: string,
 	warnings?: string[],
+	agentName: string | null = null,
 ) {
 	const ev = a.getSnapshot().context.transport?.getEvidence();
-	const d = detailsFromSnapshot(a, ev?.assistantTextTail ?? "", ev?.stderrTail ?? "");
+	const d = detailsFromSnapshot(a, ev?.assistantTextTail ?? "", ev?.stderrTail ?? "", agentName);
 	if (rejected) d.rejected = rejected;
 	const text =
 		buildResultText(d) + (warnings && warnings.length > 0 ? `\n\n${warnings.join("\n")}` : "");
@@ -657,6 +831,16 @@ export default function (pi: ExtensionAPI) {
 	// Bundled skill: contribute the extension-local model-routing skill.
 	// Fired by pi after session_start on startup and every reload.
 	pi.on("resources_discover", () => ({ skillPaths: [MODEL_ROUTING_SKILL_DIR] }));
+
+	// Registry descriptions are surfaced once at load (stale until /reload);
+	// per-call resolution reads the directory fresh and is authoritative.
+	const loadedAgents = loadAgentsFromDir();
+	const agentList = formatAgentList(loadedAgents.agents, 20);
+	const agentParamDescription =
+		agentList.text === "none"
+			? "Name of a registry agent from ~/.pi/agent/agents/ (none installed) — provides model/provider/tools/system-prompt defaults; explicit call params override"
+			: `Name of a registry agent from ~/.pi/agent/agents/ — provides model/provider/tools/system-prompt defaults; explicit call params override. Available: ${agentList.text}${agentList.remaining > 0 ? ` (+${agentList.remaining} more)` : ""}`;
+
 	pi.registerTool({
 		name: "rpc_delegate_task",
 		label: "RPC Delegate",
@@ -672,6 +856,7 @@ export default function (pi: ExtensionAPI) {
 			task: Type.String({
 				description: "Task description for the child pi. Be specific about expected output files.",
 			}),
+			agent: Type.Optional(Type.String({ description: agentParamDescription })),
 			cwd: Type.Optional(
 				Type.String({ description: "Working directory (defaults to current session cwd)" }),
 			),
@@ -734,6 +919,7 @@ export default function (pi: ExtensionAPI) {
 				cwd: taskCwd,
 				timeout = DEFAULT_TIMEOUT,
 				artifacts = [],
+				agent,
 				provider,
 				model,
 				tools,
@@ -745,9 +931,8 @@ export default function (pi: ExtensionAPI) {
 			} = params;
 
 			const workingDir = taskCwd ?? ctx.cwd;
+			const parentSessionId = ctx.sessionManager?.getSessionId() ?? null;
 
-			// Precheck — machine validators, single source of truth (the guard
-			// rejects the same event, so no actor spins up for an illegal call).
 			// Depth budget is monotone: the per-call request is clamped to the
 			// ancestor-granted ceiling (env lineage — survives -e paths, copies,
 			// symlinks, bash sub-spawns; a delegated child can never raise it).
@@ -755,48 +940,24 @@ export default function (pi: ExtensionAPI) {
 				maxDepth ?? INHERITED_MAX_DEPTH ?? 1,
 				INHERITED_MAX_DEPTH ?? Number.POSITIVE_INFINITY,
 			);
-			const violation =
-				paramsViolation(
-					task,
-					timeout,
-					artifacts,
-					provider ?? null,
-					model ?? null,
-					tools ?? null,
-					artifactPolicy,
-					extensions ?? null,
-					maxDepth ?? null,
-			) ?? depthViolation(DEPTH, effectiveMaxDepth);
-			if (violation) {
+
+			// Rejection path — no actor. `modelSource`/`agent` are null on
+			// resolution failures; when resolution succeeded but validation
+			// failed they carry the resolved values.
+			const reject = (
+				violation: string,
+				extra?: {
+					agentPrompt?: string | null;
+					agentName?: string | null;
+					modelSource?: ModelSource | null;
+				},
+			) => {
 				const d: RpcDelegateDetails = {
-					status: "error",
-					sessionId: "",
-					childSessionId: null,
-					childModelId: null,
-					provider: null,
-					childPid: null,
-					childExit: null,
-					promptDisposition: null,
-					stopReason: null,
-					lastAssistantError: null,
-					task,
-					agentPrompt: agentPrompt ?? null,
-					artifacts: [],
+					...blankDetails(task),
+					agentPrompt: extra?.agentPrompt ?? null,
+					agent: extra?.agentName ?? null,
 					summary: violation,
-					assistantTextTail: "",
-					stderr: "",
-					toolCalls: 0,
-					lastToolNames: [],
-					agentEndWillRetry: 0,
-					uiRequests: 0,
-					usage: null,
-					runDurationMs: null,
-					totalDurationMs: null,
-					deadlineHit: false,
-					stallHit: false,
 					failureDetail: violation,
-					protoFatal: null,
-					failureClass: null,
 					rejected: violation,
 				};
 				appendTelemetryRow(d, {
@@ -804,28 +965,93 @@ export default function (pi: ExtensionAPI) {
 					artifactPolicy,
 					kind: "rejected",
 					depth: DEPTH,
-					parentSessionId: ctx.sessionManager?.getSessionId() ?? null,
+					parentSessionId,
+					modelSource: extra?.modelSource ?? null,
+					agent: extra?.agentName ?? null,
 				});
 				return {
-					content: [{ type: "text", text: `Rejected: ${violation}` }],
+					content: [{ type: "text" as const, text: `Rejected: ${violation}` }],
 					details: d,
 					isError: true,
 				};
+			};
+
+			// An explicit but blank call-side prompt is a mistake, not "no prompt"
+			// — without this it silently shadows the registry body.
+			if (agentPrompt != null && !agentPrompt.trim()) {
+				return reject("agentPrompt must be non-empty when provided");
+			}
+
+			// Cheap first: a depth-exhausted child must not pay for a registry
+			// filesystem scan.
+			const depthErr = depthViolation(DEPTH, effectiveMaxDepth);
+			if (depthErr) return reject(depthErr);
+
+			// Discovery is skipped entirely when `agent` is absent — a call that
+			// does not use the registry performs no filesystem access.
+			let registryWarnings: string[] = [];
+			let resolved: ResolvedDelegation | { error: string };
+			if (agent !== undefined && agent !== null) {
+				const discovery = loadAgentsFromDir();
+				// Per-file problems are skips, not fatal — the rest of the registry
+				// stays usable. Only duplicate names are fatal-to-call (ambiguous).
+				registryWarnings = [...discovery.warnings, ...discovery.skipped];
+				if (discovery.errors.length > 0) {
+					return reject(`agent registry error: ${discovery.errors.join("; ")}`);
+				}
+				resolved = resolveDelegation(
+					{ agent, provider, model, tools, agentPrompt },
+					discovery.agents,
+				);
+			} else {
+				resolved = resolveDelegation({ provider, model, tools, agentPrompt }, []);
+			}
+			if ("error" in resolved) return reject(resolved.error);
+
+			// `paramsViolation` does not cover `agentPrompt`; the resolved prompt
+			// (from call or registry) is capped here, byte-measured.
+			const promptBytes = Buffer.byteLength(resolved.agentPrompt ?? "", "utf8");
+			const violation =
+				paramsViolation(
+					task,
+					timeout,
+					artifacts,
+					resolved.provider,
+					resolved.model,
+					resolved.tools,
+					artifactPolicy,
+					extensions ?? null,
+					maxDepth ?? null,
+				) ??
+				(promptBytes > MAX_AGENT_BODY_BYTES
+					? `agent prompt is ${promptBytes} bytes (max ${MAX_AGENT_BODY_BYTES})`
+					: null);
+			if (violation) {
+				return reject(violation, {
+					agentPrompt: resolved.agentPrompt,
+					agentName: resolved.agentName,
+					modelSource: resolved.modelSource,
+				});
 			}
 
 			const a = createActor(wiredMachine);
 			a.start();
 
-			const sessionId = `rpc-delegate-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
-			const parentSessionId = ctx.sessionManager?.getSessionId() ?? null;
+			const sessionId = newSessionId();
 			// Warn-not-block: an extensions entry pointing back at this very
 			// extension re-enables delegation in the child (deliberate choice —
 			// the bash route was never blocked; the depth budget still bounds it).
-			const selfWarnings = extensions == null ? [] : selfLoadWarnings(extensions, workingDir);
+			const selfWarnings = [
+				...registryWarnings,
+				...(extensions == null ? [] : selfLoadWarnings(extensions, workingDir)),
+			];
 			// Watchdog heartbeat file — the external orphan watchdog enforces
 			// the same stall policy if this process wedges; unlinked on settle
 			// here and by the watchdog on every exit path.
 			const heartbeatPath = path.join(os.tmpdir(), `rpc-delegate-hb-${sessionId}.json`);
+			// Prompt temp file (written by childArgs at spawn): removed on the
+			// settled path here, and by the watchdog on orphan/not-settled paths.
+			const promptPath = agentPromptPath(sessionId);
 			// Machine-event sink: the transport forwards typed events here.
 			// (STEER would be intercepted tool-side — v1 sends none; the
 			// machine + transport capability is tested and documented.)
@@ -840,10 +1066,10 @@ export default function (pi: ExtensionAPI) {
 				type: "BEGIN",
 				sessionId,
 				task,
-				agentPrompt: agentPrompt ?? null,
-				provider: provider ?? null,
-				model: model ?? null,
-				tools: tools ?? null,
+				agentPrompt: resolved.agentPrompt,
+				provider: resolved.provider,
+				model: resolved.model,
+				tools: resolved.tools,
 				extensions: extensions ?? null,
 				depth: DEPTH,
 				maxDepth: effectiveMaxDepth,
@@ -888,7 +1114,7 @@ export default function (pi: ExtensionAPI) {
 						if (c.agentEndWillRetry > 0) bits.push("retrying");
 						onUpdate({
 							content: [{ type: "text", text: bits.join(" · ") }],
-							details: detailsFromSnapshot(a, "", ""),
+							details: detailsFromSnapshot(a, "", "", resolved.agentName),
 						});
 					}, STATUS_UPDATE_MS)
 				: null;
@@ -919,6 +1145,7 @@ export default function (pi: ExtensionAPI) {
 					a,
 					transport?.getEvidence().assistantTextTail ?? "",
 					transport?.getEvidence().stderrTail ?? "",
+					resolved.agentName,
 				);
 				appendTelemetryRow(d, {
 					archetype: archetype ?? null,
@@ -926,6 +1153,8 @@ export default function (pi: ExtensionAPI) {
 					kind: "inFlight",
 					depth: DEPTH,
 					parentSessionId,
+					modelSource: resolved.modelSource,
+					agent: resolved.agentName,
 				});
 				return {
 					content: [
@@ -945,20 +1174,27 @@ export default function (pi: ExtensionAPI) {
 			if (transport?.alive()) transport.killHard();
 			a.stop();
 
-			// Heartbeat cleanup — the settled path owns the file; the watchdog
-			// unlinks it on the orphan/not-settled paths.
+			// Heartbeat + prompt temp-file cleanup — the settled path owns both;
+			// the watchdog unlinks them on the orphan/not-settled paths.
 			try {
 				fs.rmSync(heartbeatPath, { force: true });
 			} catch {
 				/* best-effort */
 			}
+			try {
+				fs.rmSync(promptPath, { force: true });
+			} catch {
+				/* best-effort */
+			}
 
-			const result = resultFromSnapshot(a, undefined, selfWarnings);
+			const result = resultFromSnapshot(a, undefined, selfWarnings, resolved.agentName);
 			appendTelemetryRow(result.details, {
 					archetype: archetype ?? null,
 					artifactPolicy,
 					depth: DEPTH,
 					parentSessionId,
+					modelSource: resolved.modelSource,
+					agent: resolved.agentName,
 				});
 			return result;
 		},
@@ -975,7 +1211,8 @@ export default function (pi: ExtensionAPI) {
 			let text =
 				theme.fg("toolTitle", theme.bold("rpc_delegate_task ")) +
 				theme.fg("dim", preview + cwdLabel + timeoutLabel);
-			if (args.model) text += theme.fg("dim", ` [${args.model}]`);
+			if (args.agent) text += theme.fg("dim", ` [agent:${args.agent}]`);
+			else if (args.model) text += theme.fg("dim", ` [${args.model}]`);
 			return new Text(text, 0, 0);
 		},
 
@@ -1049,6 +1286,7 @@ export default function (pi: ExtensionAPI) {
 				}
 
 				const bits: string[] = [];
+				if (d.agent) bits.push(`agent: ${d.agent}`);
 				if (d.promptDisposition) bits.push(`disposition: ${d.promptDisposition}`);
 				if (d.stopReason) bits.push(`stopReason: ${d.stopReason}`);
 				if (d.stallHit) bits.push("stall-cancelled");
@@ -1073,19 +1311,20 @@ export default function (pi: ExtensionAPI) {
 					);
 				}
 
+				const u = usageSummary(d);
 				if (d.usage) {
-					const cost = typeof d.usage.cost === "number" ? ` · $${d.usage.cost.toFixed(4)}` : "";
+					const cost = u.costUsd !== null ? ` · $${u.costUsd.toFixed(4)}` : "";
 					container.addChild(
 						new Text(
-							theme.fg("dim", `usage: ${(d.usage.tokens?.totalTokens ?? d.usage.tokens?.total ?? 0).toLocaleString()} tokens${cost}`),
+							theme.fg("dim", `usage: ${u.tokens.toLocaleString()} tokens${cost}`),
 							0,
 							0,
 						),
 					);
 				}
 				const durBits: string[] = [];
-				if (d.runDurationMs !== null) durBits.push(`run: ${formatDuration(d.runDurationMs)}`);
-				if (d.totalDurationMs !== null) durBits.push(`total: ${formatDuration(d.totalDurationMs)}`);
+				if (u.runMs !== null) durBits.push(`run: ${formatDuration(u.runMs)}`);
+				if (u.totalMs !== null) durBits.push(`total: ${formatDuration(u.totalMs)}`);
 				if (durBits.length > 0) {
 					container.addChild(new Text(theme.fg("dim", `duration: ${durBits.join(" · ")}`), 0, 0));
 				}
@@ -1100,7 +1339,7 @@ export default function (pi: ExtensionAPI) {
 
 			// Collapsed
 			let text = `${icon} ${theme.fg("toolTitle", theme.bold("rpc_delegate_task"))} — ${d.status}`;
-			const collected = d.artifacts.filter((x) => !x.missing && !x.readError).length;
+			const collected = d.artifacts.filter(isCollected).length;
 			if (collected > 0) text += ` · ${collected} artifact(s)`;
 			if (d.runDurationMs !== null) {
 				text += theme.fg("dim", ` · ${formatDuration(d.runDurationMs)}`);

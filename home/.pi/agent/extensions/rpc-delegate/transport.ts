@@ -37,11 +37,12 @@
 import { spawn, type ChildProcess } from "node:child_process";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import type {
-	CommandResponse,
-	RpcEvent,
-	TransportEvidence,
-	TransportHandle,
+import {
+	isRec,
+	type CommandResponse,
+	type RpcEvent,
+	type TransportEvidence,
+	type TransportHandle,
 } from "./machine.ts";
 
 export class CommandTimeoutError extends Error {
@@ -74,6 +75,23 @@ const KILL_TERM_TO_KILL_MS = 250;
 
 const DIALOG_METHODS = new Set(["select", "confirm", "input", "editor"]);
 
+/** Session event types with no supervisor-side effect — ignored, not counted as
+ *  unknown (forward-compatibility). */
+const IGNORED_EVENT_TYPES = new Set([
+	"auto_retry_end",
+	"summarization_retry_scheduled",
+	"summarization_retry_attempt_start",
+	"summarization_retry_finished",
+	"bash_execution_update",
+	"turn_start",
+	"turn_end",
+	"message_start",
+	"queue_update",
+	"session_info_changed",
+	"thinking_level_changed",
+	"entry_appended",
+]);
+
 /** Diagnostics counters (compaction/retry evidence — log-only, never machine events). */
 export interface TransportDiagnostics {
 	compactions: number;
@@ -99,6 +117,9 @@ export interface TransportOptions {
 		/** Hard deadline in ms from transport start (run timeout + grace). */
 		graceMs: number;
 		pollMs?: number;
+		/** Prompt temp file the watchdog removes on orphan/not-settled exits
+		 *  (passed via env so the positional watchdog args stay stable). */
+		promptPath?: string;
 	};
 	/** Diagnostic log (evidence; defaults to no-op). */
 	onLog?: (msg: string) => void;
@@ -120,10 +141,6 @@ interface PendingEntry {
 	reject: (e: Error) => void;
 	/** Timed-out (or otherwise settled) — a late response is logged, not fatal. */
 	settled: boolean;
-}
-
-function isRec(v: unknown): v is Record<string, unknown> {
-	return typeof v === "object" && v !== null && !Array.isArray(v);
 }
 
 /** A node binary that still exists, for spawning pi (index.ts) or the
@@ -273,7 +290,13 @@ export class RpcTransport implements TransportHandle {
 			if (this.hbPath && this.stallGapMs) {
 				wdArgs.push(this.hbPath, String(this.stallGapMs));
 			}
-			const w = spawn(resolveNodeBinary(), wdArgs, { stdio: "ignore", detached: true });
+			const w = spawn(resolveNodeBinary(), wdArgs, {
+				stdio: "ignore",
+				detached: true,
+				env: wd.promptPath
+					? { ...process.env, RPC_DELEGATE_PROMPT_PATH: wd.promptPath }
+					: process.env,
+			});
 			// Best-effort orphan guard: a missing binary must degrade the
 			// watchdog, not crash the parent — an unhandled 'error' would.
 			w.on("error", () => {});
@@ -640,28 +663,13 @@ export class RpcTransport implements TransportHandle {
 			case "auto_retry_start":
 				this.diagnostics.autoRetries++;
 				return;
-			case "auto_retry_end":
-			case "summarization_retry_scheduled":
-			case "summarization_retry_attempt_start":
-			case "summarization_retry_finished":
-				return;
 			case "extension_error":
 				this.log(
 					`extension_error in child: ${str(r.extensionPath)} ${str(r.event)}: ${str(r.error)}`,
 				);
 				return;
-			case "bash_execution_update":
-				// Supervisor-issued bash only — this transport never issues bash.
-				return;
-			case "turn_start":
-			case "turn_end":
-			case "message_start":
-			case "queue_update":
-			case "session_info_changed":
-			case "thinking_level_changed":
-			case "entry_appended":
-				return;
 			default:
+				if (IGNORED_EVENT_TYPES.has(type)) return;
 				// Unknown session event: logged, never fatal (forward compatibility).
 				this.diagnostics.unknownEventTypes++;
 				this.log(`unrecognized session event type '${type || "(none)"}' — ignored`);

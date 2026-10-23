@@ -40,7 +40,8 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { spawn } from "node:child_process";
 import { createActor, waitFor } from "xstate";
-import { wiredMachine } from "./index.ts";
+import { loadAgentsFromDir } from "./agents.ts";
+import { resolveDelegation, wiredMachine } from "./index.ts";
 import { runDurationMs, statusOf, totalDurationMs, type RpcEvent } from "./machine.ts";
 
 const isFinal = (v: unknown) =>
@@ -70,6 +71,8 @@ async function run(input: {
 	abortAfterMs?: number;
 	provider?: string;
 	model?: string;
+	/** Appended child system prompt (registry body or explicit prompt). */
+	agentPrompt?: string;
 	/** Extension paths for the child (-e under --no-extensions). */
 	extensions?: string[];
 	/** Depth ceiling granted to this call's child tree (default 1). */
@@ -88,7 +91,7 @@ async function run(input: {
 		type: "BEGIN",
 		sessionId,
 		task: input.task,
-		agentPrompt: null,
+		agentPrompt: input.agentPrompt ?? null,
 		provider: input.provider ?? null,
 		model: input.model ?? null,
 		tools: null,
@@ -405,6 +408,36 @@ check(
 	/depth exhausted|Rejected: delegation depth/.test(depthRun.assistantTextTail),
 	`tail: ${JSON.stringify(depthRun.assistantTextTail.slice(0, 300))}`,
 );
+
+console.log("== live check 10: registry agent body reaches the child system prompt ==");
+const regDir = fs.mkdtempSync(path.join(os.tmpdir(), "rpc-live-agents-"));
+fs.writeFileSync(
+	path.join(regDir, "codeword.md"),
+	"---\nname: codeword\ndescription: live registry probe\n---\nLIVE REGISTRY PROTOCOL: your secret codeword is BANANA42. When asked for the codeword, reply with exactly BANANA42 and nothing else.\n",
+	"utf8",
+);
+const discovery = loadAgentsFromDir(regDir);
+check(
+	"registry fixture loads (no errors, one agent)",
+	discovery.errors.length === 0 && discovery.agents.length === 1,
+	JSON.stringify(discovery.errors),
+);
+const resolved = resolveDelegation({ agent: "codeword" }, discovery.agents);
+check("registry agent resolves", !("error" in resolved), "error" in resolved ? resolved.error : "");
+const resolvedPrompt = "error" in resolved ? null : resolved.agentPrompt;
+const regRun = await run({
+	task: "What is your codeword? Reply with only the codeword.",
+	agentPrompt: resolvedPrompt ?? undefined,
+	timeoutSecs: 120,
+});
+console.log(`  status=${regRun.status} stopReason=${regRun.stopReason}`);
+check("registry child succeeds", regRun.status === "success", `got ${regRun.status} (${regRun.failureDetail ?? ""})`);
+check(
+	"registry body reached the child system prompt (codeword echoed)",
+	/BANANA42/.test(regRun.assistantTextTail),
+	`tail: ${JSON.stringify(regRun.assistantTextTail.slice(0, 160))}`,
+);
+fs.rmSync(regDir, { recursive: true, force: true });
 
 // --- cleanup -----------------------------------------------------------------
 

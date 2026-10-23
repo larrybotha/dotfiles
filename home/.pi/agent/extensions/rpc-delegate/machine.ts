@@ -176,6 +176,9 @@ export interface RpcContext extends RequestSpec {
 
 	// Outcome plumbing — set on the way into collecting/cancelling; routes finals
 	outcome: "settled" | "error" | "timeout" | "aborted" | null;
+	/** Success verdict computed once at `stopping` entry (outcome settled only)
+	 *  — the route guards read it instead of re-running evaluateSuccess. */
+	successVerdict: boolean | null;
 	deadlineHit: boolean;
 	/** Stall detection fired (silent child) — distinct from the hard-cap deadline. */
 	stallHit: boolean;
@@ -296,6 +299,16 @@ export interface StopOutput {
 // Pure helpers — shared by guards, actions, and the tool
 // ---------------------------------------------------------------------------
 
+export function isRec(v: unknown): v is Record<string, unknown> {
+	return typeof v === "object" && v !== null && !Array.isArray(v);
+}
+
+/** Artifact "collected" predicate — single source for the four consumers
+ *  (success semantics, summary, telemetry artifactOk, render). */
+export function isCollected(a: ArtifactEntry): boolean {
+	return !a.missing && !a.readError;
+}
+
 export function initialContext(): RpcContext {
 	return {
 		sessionId: "",
@@ -328,6 +341,7 @@ export function initialContext(): RpcContext {
 		uiRequests: 0,
 		lastSteer: null,
 		outcome: null,
+		successVerdict: null,
 		deadlineHit: false,
 		stallHit: false,
 		failureDetail: null,
@@ -361,7 +375,7 @@ export function evaluateSuccess(c: RpcContext): { ok: boolean; reason: string | 
 	}
 	if (!c.runStartedSeen) return { ok: false, reason: "no agent run started (agent_start never observed)" };
 	if (!c.agentSettledSeen) return { ok: false, reason: "agent never settled (agent_settled not observed)" };
-	const collectedCount = c.artifacts.filter((a) => !a.missing && !a.readError).length;
+	const collectedCount = c.artifacts.filter(isCollected).length;
 	if (stopReasonFails(c.lastAssistantStopReason) || c.lastAssistantError) {
 		if (c.artifactPolicy === "artifacts" && collectedCount > 0) return { ok: true, reason: null };
 		return {
@@ -492,7 +506,7 @@ export function paramsViolation(
 }
 
 export function buildSummary(artifactPaths: string[], artifacts: ArtifactEntry[]): string {
-	const collected = artifacts.filter((a) => !a.missing && !a.readError).length;
+	const collected = artifacts.filter(isCollected).length;
 	const missing = artifacts.filter((a) => a.missing);
 	const unreadable = artifacts.filter((a) => a.readError);
 	let summary = `Collected ${collected}/${artifactPaths.length} artifacts.`;
@@ -656,9 +670,9 @@ export const rpcMachine = setup({
 		routeError: ({ context }) =>
 			context.outcome === "error" ||
 			context.outcome === null ||
-			(context.outcome === "settled" && !evaluateSuccess(context).ok),
+			(context.outcome === "settled" && context.successVerdict === false),
 		routeSuccess: ({ context }) =>
-			context.outcome === "settled" && evaluateSuccess(context).ok,
+			context.outcome === "settled" && context.successVerdict === true,
 	},
 	actions: {
 		begin: assign(({ event }) => {
@@ -722,6 +736,11 @@ export const rpcMachine = setup({
 		// onDone, not AGENT_SETTLED. The settledFast guard already proves the
 		// settle was observed; the event guard would no-op here and strand
 		// outcome=null → routeError.
+		// Single evaluateSuccess call per delegation: computed at stopping entry
+		// (after collect, so artifacts are final), read by both route guards.
+		computeVerdict: assign(({ context }) => ({
+			successVerdict: context.outcome === "settled" ? evaluateSuccess(context).ok : null,
+		})),
 		markSettled: assign(({ context }) =>
 			context.outcome === null
 				? { agentSettledSeen: true, outcome: "settled" as const, runEndedAt: Date.now() }
@@ -737,7 +756,6 @@ export const rpcMachine = setup({
 				failureDetail: `RPC child process died (exit ${ev.code ?? "?"}${ev.signal ? `, signal ${ev.signal}` : ""}) — run lost`,
 			};
 		}),
-		recordChildExit: on("CHILD_DEAD", (ev) => ({ childExit: ev.code, childExitSignal: ev.signal })),
 		// Evidence self-transition actions (no target — no state re-entry)
 		seeAgentStart: on("AGENT_START", () => ({ runStartedSeen: true })),
 		// Settled observed before the prompt response resolved its path —
@@ -872,8 +890,9 @@ export const rpcMachine = setup({
 				onError: { target: "collecting" },
 			},
 			on: {
-				// The ladder service observes exit itself; record the evidence.
-				CHILD_DEAD: { actions: "recordChildExit" },
+				// The ladder service observes exit itself — outcome is already
+				// marked, so markChildDead degrades to the exit evidence.
+				CHILD_DEAD: { actions: "markChildDead" },
 			},
 		},
 		collecting: {
@@ -891,10 +910,11 @@ export const rpcMachine = setup({
 				// Late user abort during collect: mark aborted, let collect finish
 				// (self-transition — no re-entry, the invoke keeps running).
 				KILL: { actions: "markAborted" },
-				CHILD_DEAD: { actions: "recordChildExit" },
+				CHILD_DEAD: { actions: "markChildDead" },
 			},
 		},
 		stopping: {
+			entry: ["computeVerdict"],
 			invoke: {
 				src: "stopService",
 				input: ({ context }) => ({
@@ -921,7 +941,7 @@ export const rpcMachine = setup({
 				// evidence, but let stopService's onDone do the final routing —
 				// its output carries usage + session export. A wedged service is
 				// bounded (wait → TERM → KILL), so no route-on-exit fallback.
-				CHILD_DEAD: { actions: "recordChildExit" },
+				CHILD_DEAD: { actions: "markChildDead" },
 			},
 		},
 		// Terminal states are final: late events are dropped (entry stamps
