@@ -5,7 +5,7 @@ RUN apk add --no-cache chromium
 ENV PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser
 ENV PUPPETEER_SKIP_DOWNLOAD=true
 
-RUN npm install -g @mermaid-js/mermaid-cli@11 beautiful-mermaid
+RUN npm install -g @mermaid-js/mermaid-cli@12 beautiful-mermaid
 
 COPY ascii-preview.mjs /usr/local/bin/ascii-preview.mjs
 COPY entrypoint.sh /usr/local/bin/entrypoint.sh
