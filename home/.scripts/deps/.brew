@@ -176,6 +176,7 @@ casks=(
   "xbar"
   "xscope"
   "xykong/tap/flux-markdown"
+  "zen"
 )
 
 # Homebrew 6.0.0+ requires explicit trust for non-official taps before their
