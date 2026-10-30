@@ -1,0 +1,26 @@
+[
+  {
+    "query": "check localhost:3000 for console errors",
+    "should_trigger": true
+  },
+  {
+    "query": "screenshot the login page",
+    "should_trigger": true
+  },
+  {
+    "query": "attach to my Chrome",
+    "should_trigger": false
+  },
+  {
+    "query": "use my logged-in Gmail tab",
+    "should_trigger": false
+  },
+  {
+    "query": "connect to CDP on port 9222",
+    "should_trigger": false
+  },
+  {
+    "query": "write a Playwright test file",
+    "should_trigger": false
+  }
+]

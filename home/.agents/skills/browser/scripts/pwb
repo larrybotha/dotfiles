@@ -1,0 +1,604 @@
+#!/usr/bin/env bash
+
+# pwb — deterministic playwright-cli session wrapper.
+
+set -o pipefail
+
+CLI_PIN="0.1.22"
+SCRIPT_PATH="${BASH_SOURCE[0]}"
+
+err() {
+  printf 'pwb: %s\n' "$*" >&2
+}
+
+die_usage() {
+  err "$*"
+  exit 2
+}
+
+die_runtime() {
+  err "$*"
+  exit 1
+}
+
+usage() {
+  cat <<'EOF'
+Usage:
+  pwb [help]                              show this help
+  pwb doctor                              check dependencies and pins
+  pwb session [--json]                    show session and paths
+  pwb path <profile|output|root|config>   print one absolute path
+  pwb open [url] [--headed] [--device=<p>|--mobile] [--restart]
+  pwb close                               close the session
+  pwb reset [--yes]                       remove the session root
+  pwb <cli-command> [args...]             pass through with -s=<session>
+EOF
+}
+
+require_cache_base() {
+  [ -n "${XDG_CACHE_HOME:-}" ] || [ -n "${HOME:-}" ] \
+    || die_usage "HOME or XDG_CACHE_HOME is required"
+}
+
+cache_base() {
+  printf '%s\n' "${XDG_CACHE_HOME:-$HOME/.cache}/pi-browser-v1"
+}
+
+hash_string() {
+  if command -v sha256sum >/dev/null 2>&1; then
+    printf '%s' "$1" | sha256sum | cut -c1-12
+  elif command -v shasum >/dev/null 2>&1; then
+    printf '%s' "$1" | shasum -a 256 | cut -c1-12
+  else
+    return 1
+  fi
+}
+
+resolve_cache_if_exists() {
+  if [ -d "$C" ]; then
+    C=$(cd "$C" && pwd -P) || die_runtime "cannot resolve cache directory: $C"
+  fi
+}
+
+ensure_cache() {
+  require_cache_base
+  C=$(cache_base)
+  mkdir -p "$C" || die_runtime "cannot create cache directory: $C"
+  C=$(cd "$C" && pwd -P) || die_runtime "cannot resolve cache directory: $C"
+}
+
+compute_session() {
+  require_cache_base
+  C=$(cache_base)
+  resolve_cache_if_exists
+
+  if W=$(git -C . rev-parse --show-toplevel 2>/dev/null); then
+    :
+  else
+    W=$(pwd -P) || die_runtime "cannot resolve current directory"
+  fi
+  [ -n "$W" ] || W=$(pwd -P) || die_runtime "cannot resolve current directory"
+
+  local base h
+  base=$(basename "$W")
+  base=$(printf '%s' "$base" | tr '\n' '-')
+  base=$(printf '%s' "$base" | sed 's/[^A-Za-z0-9._-]/-/g')
+  base=$(printf '%s' "$base" | sed 's/^-*//; s/-*$//')
+  if [ "${#base}" -gt 32 ]; then
+    base=$(printf '%s' "$base" | cut -c1-32 | sed 's/-*$//')
+  fi
+  [ -n "$base" ] || base="workspace"
+
+  h=$(hash_string "$W") || die_runtime "sha256sum or shasum is required"
+  [ -n "$h" ] || die_runtime "sha256sum or shasum is required"
+
+  S0="pi-${base}-${h}"
+  if [ -n "${PWB_SESSION_SUFFIX:-}" ]; then
+    case "$PWB_SESSION_SUFFIX" in
+      *..*) die_usage "PWB_SESSION_SUFFIX must not contain '..'" ;;
+      *[!A-Za-z0-9._-]*) die_usage "invalid PWB_SESSION_SUFFIX" ;;
+      [A-Za-z0-9]*) ;;
+      *) die_usage "invalid PWB_SESSION_SUFFIX" ;;
+    esac
+    if [ "${#PWB_SESSION_SUFFIX}" -gt 16 ]; then
+      die_usage "invalid PWB_SESSION_SUFFIX"
+    fi
+    S="${S0}-${PWB_SESSION_SUFFIX}"
+  else
+    S="$S0"
+  fi
+
+  R="$C/$S"
+}
+
+ensure_layout() {
+  umask 077
+  mkdir -p "$R" "$R/profile" "$R/output" || die_runtime "cannot create session root: $R"
+  chmod 700 "$R" "$R/profile" "$R/output" 2>/dev/null || true
+}
+
+write_config() {
+  local tmp="$R/.config.json.tmp.$$"
+  if ! jq -n --arg out "$R/output" \
+    '{browser:{browserName:"chromium",launchOptions:{headless:true,channel:"chromium"}},outputDir:$out}' \
+    >"$tmp"; then
+    rm -f "$tmp"
+    die_runtime "cannot write config: $R/config.json"
+  fi
+  chmod 600 "$tmp" 2>/dev/null || true
+  mv "$tmp" "$R/config.json" || die_runtime "cannot install config: $R/config.json"
+  chmod 600 "$R/config.json" 2>/dev/null || true
+}
+
+scrub_env() {
+  local name
+  for name in $(env | sed -n 's/^\(PLAYWRIGHT_MCP_[A-Za-z0-9_]*\)=.*/\1/p'); do
+    unset "$name"
+  done
+  unset PLAYWRIGHT_CLI_SESSION
+}
+
+is_live() {
+  local out rc
+  scrub_env
+  out=$(playwright-cli list --all --json 2>/dev/null) || return 2
+  printf '%s' "$out" | jq -e --arg s "$S" '.browsers[] | select(.name == $s)' >/dev/null 2>&1
+  rc=$?
+  case "$rc" in
+    0) return 0 ;;
+    1|4) return 1 ;;
+    *) return 2 ;;
+  esac
+}
+
+close_session_quiet() {
+  playwright-cli -s="$S" close >/dev/null 2>&1 || true
+}
+
+session_cmd() {
+  local json=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --json) json=1 ;;
+      *) die_usage "session accepts only --json" ;;
+    esac
+    shift
+  done
+
+  ensure_cache
+  compute_session
+  ensure_layout
+
+  if [ "$json" -eq 1 ]; then
+    jq -n \
+      --arg session "$S" \
+      --arg workspace "$W" \
+      --arg root "$R" \
+      --arg profile "$R/profile" \
+      --arg output "$R/output" \
+      --arg config "$R/config.json" \
+      '{session:$session,workspace:$workspace,root:$root,profile:$profile,output:$output,config:$config}'
+  else
+    printf 'session: %s\n' "$S"
+    printf 'workspace: %s\n' "$W"
+    printf 'root: %s\n' "$R"
+    printf 'profile: %s\n' "$R/profile"
+    printf 'output: %s\n' "$R/output"
+    printf 'config: %s\n' "$R/config.json"
+  fi
+}
+
+path_cmd() {
+  [ "$#" -eq 1 ] || die_usage "path requires profile, output, root, or config"
+
+  ensure_cache
+  compute_session
+  ensure_layout
+
+  case "$1" in
+    profile) printf '%s\n' "$R/profile" ;;
+    output) printf '%s\n' "$R/output" ;;
+    root) printf '%s\n' "$R" ;;
+    config) printf '%s\n' "$R/config.json" ;;
+    *) die_usage "path requires profile, output, root, or config" ;;
+  esac
+}
+
+reserved_open_arg() {
+  case "$1" in
+    -s|--session|--config|--profile|--persistent|--user-data-dir|\
+    --browser|--cdp|--endpoint|--extension|--executable-path|--channel)
+      return 0
+      ;;
+    -s=*|--session=*|--config=*|--profile=*|--persistent=*|--user-data-dir=*|\
+    --browser=*|--cdp=*|--endpoint=*|--extension=*|--executable-path=*|--channel=*)
+      return 0
+      ;;
+  esac
+  return 1
+}
+
+verify_config() {
+  local out bad
+  if ! out=$(playwright-cli -s="$S" config-print 2>/dev/null); then
+    close_session_quiet
+    err "config-print failed; session closed"
+    return 1
+  fi
+
+  out=$(printf '%s' "$out" | sed -n '/^{/,$p')
+  if [ -z "$out" ]; then
+    close_session_quiet
+    err "config-print returned no JSON; session closed"
+    return 1
+  fi
+
+  if ! bad=$(printf '%s' "$out" | jq -r \
+    --arg profile "$R/profile" \
+    --arg output "$R/output" \
+    --argjson headed "$headed" '
+      [
+        (if (.browser.browserName // "") != "chromium"
+         then "browser.browserName" else empty end),
+        (if (((.browser.launchOptions // {}).channel // "chromium") | tostring) != "chromium"
+         then "browser.launchOptions.channel" else empty end),
+        (if ((.browser.launchOptions // {}) | has("executablePath"))
+         then "browser.launchOptions.executablePath" else empty end),
+        (if ((.browser // {}) | has("cdpEndpoint"))
+         then "browser.cdpEndpoint" else empty end),
+        (if ((.browser // {}) | has("remoteEndpoint"))
+         then "browser.remoteEndpoint" else empty end),
+        (if (has("extension")) then "extension" else empty end),
+        (if (.browser.userDataDir // "") != $profile
+         then "browser.userDataDir" else empty end),
+        (if (.outputDir // "") != $output
+         then "outputDir" else empty end),
+        (if $headed == 1 then
+           (if ((.browser.launchOptions // {}).headless) != false
+            then "browser.launchOptions.headless" else empty end)
+         else
+           (if ((.browser.launchOptions // {}).headless) != true
+            then "browser.launchOptions.headless" else empty end)
+         end)
+      ] | .[]'); then
+    close_session_quiet
+    err "config-print returned invalid JSON; session closed"
+    return 1
+  fi
+
+  if [ -n "$bad" ]; then
+    close_session_quiet
+    err "config drift: $(printf '%s' "$bad" | tr '\n' ' ')"
+    err "global config: ${HOME:-}/.playwright/cli.config.json"
+    return 1
+  fi
+  return 0
+}
+
+open_cmd() {
+  local rest=()
+  local headed=0
+  local restart=0
+  local timeout
+
+  while [ "$#" -gt 0 ]; do
+    if reserved_open_arg "$1"; then
+      die_usage "reserved argument: $1"
+    fi
+    case "$1" in
+      --headed)
+        headed=1
+        rest+=("$1")
+        shift
+        ;;
+      --restart)
+        restart=1
+        shift
+        ;;
+      --device)
+        rest+=("$1")
+        shift
+        if [ "$#" -gt 0 ] && [ "${1#-}" = "$1" ]; then
+          rest+=("$1")
+          shift
+        fi
+        ;;
+      --device=*|--mobile)
+        rest+=("$1")
+        shift
+        ;;
+      *)
+        rest+=("$1")
+        shift
+        ;;
+    esac
+  done
+
+  if [ "${PWB_IDLE_TIMEOUT_MS+set}" = "set" ]; then
+    case "$PWB_IDLE_TIMEOUT_MS" in
+      ''|*[!0-9]*) die_usage "PWB_IDLE_TIMEOUT_MS must be numeric" ;;
+    esac
+    timeout="$PWB_IDLE_TIMEOUT_MS"
+  elif [ "$headed" -eq 1 ]; then
+    timeout=900000
+  else
+    timeout=3600000
+  fi
+
+  ensure_cache
+  compute_session
+  ensure_layout
+
+  is_live
+  live=$?
+  [ "$live" -eq 2 ] && die_runtime "cannot query sessions with 'playwright-cli list --all --json'"
+  if [ "$live" -eq 0 ] && [ "$restart" -eq 0 ]; then
+    die_runtime "session $S is open; run 'pwb open --restart' or 'pwb close'"
+  fi
+
+  write_config
+  scrub_env
+
+  playwright-cli -s="$S" open "${rest[@]}" \
+    --config="$R/config.json" \
+    --profile="$R/profile" \
+    --idle-timeout="$timeout"
+  local status=$?
+  [ "$status" -eq 0 ] || exit 1
+
+  verify_config || exit 1
+}
+
+close_wait() {
+  scrub_env
+  playwright-cli -s="$S" close >/dev/null 2>&1 || true
+
+  local i=0 live
+  while [ "$i" -lt 30 ]; do
+    is_live
+    live=$?
+    case "$live" in
+      1) return 0 ;;
+      2) return 2 ;;
+    esac
+    sleep 0.5
+    i=$((i + 1))
+  done
+
+  return 1
+}
+
+close_cmd() {
+  compute_session
+
+  local live rc
+  is_live
+  live=$?
+  case "$live" in
+    2) die_runtime "cannot query sessions with 'playwright-cli list --all --json'" ;;
+    1)
+      jq -n --arg session "$S" '{session:$session,status:"not-open"}'
+      exit 0
+      ;;
+  esac
+
+  close_wait
+  rc=$?
+  case "$rc" in
+    0) ;;
+    2) die_runtime "cannot query sessions with 'playwright-cli list --all --json'" ;;
+    *) die_runtime "session $S is still live after close; run 'pwb close' again or inspect with 'playwright-cli list --all --json'" ;;
+  esac
+
+  jq -n --arg session "$S" '{session:$session,status:"closed"}'
+}
+
+reset_cmd() {
+  local yes=0
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --yes) yes=1 ;;
+      *) die_usage "reset accepts only --yes" ;;
+    esac
+    shift
+  done
+
+  compute_session
+
+  if [ "$yes" -ne 1 ]; then
+    err "refusing to remove $R; re-run with 'pwb reset --yes'"
+    exit 1
+  fi
+
+  local live
+  is_live
+  live=$?
+  case "$live" in
+    2) die_runtime "cannot query sessions with 'playwright-cli list --all --json'" ;;
+    0)
+      close_wait || die_runtime "session $S is still live; refusing to remove $R"
+      ;;
+  esac
+
+  case "$R" in
+    "$C"/pi-*) ;;
+    *) die_runtime "refusing to remove path outside the session cache: $R" ;;
+  esac
+  [ ! -L "$R" ] || die_runtime "refusing to remove symlinked session root: $R"
+
+  if [ ! -e "$R" ]; then
+    jq -n --arg session "$S" '{session:$session,status:"absent"}'
+    exit 0
+  fi
+
+  rm -rf "$R" || die_runtime "cannot remove session root: $R"
+  [ ! -e "$R" ] || die_runtime "session root still exists: $R"
+  jq -n --arg session "$S" '{session:$session,status:"removed"}'
+}
+
+doctor() {
+  local failures=0
+  local version
+
+  if command -v jq >/dev/null 2>&1; then
+    printf 'ok: jq\n'
+  else
+    printf 'fail: jq is required\n'
+    failures=$((failures + 1))
+  fi
+
+  if command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1; then
+    printf 'ok: hash\n'
+  else
+    printf 'fail: sha256sum or shasum is required\n'
+    failures=$((failures + 1))
+  fi
+
+  if command -v playwright-cli >/dev/null 2>&1; then
+    printf 'ok: playwright-cli\n'
+    version=$(playwright-cli --version 2>/dev/null | head -n 1)
+    if [ "$version" = "$CLI_PIN" ]; then
+      printf 'ok: playwright-cli version %s\n' "$version"
+    else
+      printf 'warn: playwright-cli version %s, expected %s\n' "${version:-unknown}" "$CLI_PIN"
+    fi
+  else
+    printf 'fail: playwright-cli is required\n'
+    failures=$((failures + 1))
+  fi
+
+  if command -v playwright-cli >/dev/null 2>&1; then
+    if playwright-cli install-browser chromium --dry-run >/dev/null 2>&1; then
+      printf 'ok: chromium dry-run\n'
+    else
+      printf 'warn: chromium dry-run failed; run playwright-cli install-browser chromium\n'
+    fi
+  fi
+
+  if env | grep -q '^PLAYWRIGHT_MCP_'; then
+    printf 'warn: PLAYWRIGHT_MCP_* is set in the caller environment\n'
+  fi
+
+  if [ -n "${HOME:-}" ] && [ -e "$HOME/.playwright/cli.config.json" ]; then
+    printf 'warn: global config exists: %s\n' "$HOME/.playwright/cli.config.json"
+  fi
+
+  if command -v pwb >/dev/null 2>&1; then
+    printf 'ok: pwb on PATH: %s\n' "$(command -v pwb)"
+  else
+    printf 'warn: pwb not on PATH; use %s\n' "$SCRIPT_PATH"
+  fi
+
+  if [ -n "${HOME:-}" ]; then
+    if [ -x "$HOME/.agents/skills/browser/scripts/pwb" ]; then
+      printf 'ok: bundled pwb\n'
+    else
+      printf 'warn: bundled pwb is not executable: %s\n' "$HOME/.agents/skills/browser/scripts/pwb"
+    fi
+  fi
+
+  if [ "$failures" -eq 0 ]; then
+    compute_session
+    printf 'session: %s\n' "$S"
+    printf 'root: %s\n' "$R"
+    return 0
+  fi
+
+  return 1
+}
+
+pass_through() {
+  local gflags=()
+  local cmd
+
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --)
+        shift
+        [ "$#" -gt 0 ] || die_usage "missing command"
+        cmd="$1"
+        shift
+        break
+        ;;
+      -s|--session)
+        die_usage "reserved argument: $1"
+        ;;
+      --session=*|-s=*)
+        die_usage "reserved argument: $1"
+        ;;
+      -*)
+        gflags+=("$1")
+        shift
+        ;;
+      *)
+        cmd="$1"
+        shift
+        break
+        ;;
+    esac
+  done
+
+  [ -n "${cmd:-}" ] || die_usage "missing command"
+
+  case "$cmd" in
+    open|close)
+      die_runtime "use 'pwb $cmd' instead of passing '$cmd' through"
+      ;;
+    attach)
+      die_runtime "'attach' is blocked; use the web-browser extension"
+      ;;
+    close-all|kill-all)
+      die_runtime "'$cmd' is blocked; use 'pwb close' for this session"
+      ;;
+    delete-data)
+      die_runtime "'delete-data' is blocked; use 'pwb reset --yes'"
+      ;;
+    install)
+      die_runtime "'install' is blocked; use 'pwb doctor' and npm for CLI installation"
+      ;;
+  esac
+
+  compute_session
+  scrub_env
+  exec playwright-cli "${gflags[@]}" -s="$S" "$cmd" "$@"
+}
+
+main() {
+  case "${1:-}" in
+    ''|help|-h|--help)
+      usage
+      exit 0
+      ;;
+    doctor)
+      shift
+      [ "$#" -eq 0 ] || die_usage "doctor accepts no arguments"
+      doctor
+      ;;
+    session)
+      shift
+      session_cmd "$@"
+      ;;
+    path)
+      shift
+      path_cmd "$@"
+      ;;
+    open)
+      shift
+      open_cmd "$@"
+      ;;
+    close)
+      shift
+      [ "$#" -eq 0 ] || die_usage "close accepts no arguments"
+      close_cmd
+      ;;
+    reset)
+      shift
+      reset_cmd "$@"
+      ;;
+    *)
+      pass_through "$@"
+      ;;
+  esac
+}
+
+main "$@"
