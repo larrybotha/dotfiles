@@ -8,8 +8,8 @@ description: >-
   network inspection. Do not use for attaching to the user's own Chrome,
   logged-in personal profiles, CDP endpoints, or browser extensions.
 compatibility: >-
-  Requires bash, jq, sha256sum or shasum, @playwright/cli 0.1.22,
-  Chromium revision 1247, ~/bin/pwb.
+  Requires bash, jq, sha256sum or shasum. Pinned @playwright/cli and
+  Chromium versions live in the skill's scripts/pins.
 ---
 
 # Browser automation with pwb
@@ -35,8 +35,7 @@ Use the `web-browser` extension for:
 - CDP endpoints;
 - browser extension bridges.
 
-Do not use `pwb` for those cases. Do not use `attach`, `--cdp`, or
-`--extension`.
+Do not use `pwb` for those cases.
 
 ## Commands
 
@@ -51,8 +50,25 @@ pwb reset [--yes]
 pwb <cli-command> [args...]
 ```
 
-`pwb` is normally on PATH. When it is not, use
-`~/.agents/skills/browser/scripts/pwb`.
+## Bootstrap
+
+Run once per machine from this skill's directory; idempotent, no sudo:
+
+```bash
+scripts/install --deps
+```
+
+This installs the pinned CLI and Chromium, then symlinks `scripts/pwb` to
+`${BIN_DIR:-$HOME/bin}/pwb`. Use `scripts/install` for the shim only, or
+`scripts/install --check` for an offline link check.
+
+Pre-run guard from this skill's directory with `pwb` on PATH:
+
+```bash
+pwb doctor >/dev/null || scripts/install --deps
+```
+
+When `pwb` is not on PATH, invoke `scripts/pwb` from this skill's directory.
 
 ## Hard rules
 
@@ -76,7 +92,8 @@ pwb <cli-command> [args...]
 
 ## Checklist
 
-1. `pwb doctor`
+1. `pwb doctor >/dev/null || scripts/install --deps` (run from this skill's
+   directory)
 2. `pwb session --json`
 3. `pwb open <url>`
 4. `pwb snapshot`

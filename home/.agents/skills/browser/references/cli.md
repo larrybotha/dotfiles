@@ -1,6 +1,7 @@
 # playwright-cli contract for pwb
 
-Pinned `playwright-cli` 0.1.22. Commands run through `pwb`.
+Pinned `playwright-cli`; the version lives in `scripts/pins`. Commands run
+through `pwb`.
 
 ## Open options
 
@@ -10,9 +11,6 @@ Pinned `playwright-cli` 0.1.22. Commands run through `pwb`.
 `pwb` accepts only `--headed`, `--device`, `--mobile`, and `--restart` on
 `open`. It injects `-s`, `--config`, `--profile`, and `--idle-timeout`.
 `--restart` is consumed by `pwb`; the CLI restarts the same-name session.
-
-`pwb open` refuses a live session. Use `pwb goto <url>` to continue it, or
-`pwb open --restart` to restart.
 
 ## Output
 
