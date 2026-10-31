@@ -1,0 +1,168 @@
+#!/usr/bin/env bash
+
+# install — expose this skill's pwb on PATH, idempotently.
+
+set -o pipefail
+
+err() {
+  printf 'browser-install: %s\n' "$*" >&2
+}
+
+usage() {
+  cat <<'EOF'
+Usage:
+  install            symlink scripts/pwb to ${BIN_DIR:-$HOME/bin}/pwb
+  install --deps     install pinned CLI and Chromium, then symlink
+  install --check    offline: exit 0 only when the link points here
+  install --quiet    suppress success lines
+
+Exit codes: 0 success, 1 runtime failure, 2 usage error.
+
+Environment:
+  BIN_DIR            target directory (default: $HOME/bin)
+EOF
+}
+
+SKILL_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P) || exit 1
+SOURCE="$SKILL_DIR/scripts/pwb"
+PINS="$SKILL_DIR/scripts/pins"
+BIN_DIR="${BIN_DIR:-${HOME:?HOME or BIN_DIR is required}/bin}"
+LINK="$BIN_DIR/pwb"
+
+[ -f "$SOURCE" ] && [ -x "$SOURCE" ] || {
+  err "missing executable: $SOURCE"
+  exit 1
+}
+
+link_is_current() {
+  [ -L "$LINK" ] && [ -x "$LINK" ] && [ "$(readlink "$LINK")" = "$SOURCE" ]
+}
+
+cli_version() {
+  # keep in sync with pwb cli_version
+  playwright-cli --version 2>/dev/null | head -n 1 \
+    | tr -d '[:space:]' | sed 's/^v//'
+}
+
+ensure_deps() {
+  local prefix version
+
+  # shellcheck source=pins disable=SC1091
+  . "$PINS" || {
+    err "missing pins: $PINS"
+    exit 1
+  }
+  : "${CLI_PIN:?missing CLI_PIN in $PINS}"
+  : "${CHROMIUM_REV:?missing CHROMIUM_REV in $PINS}"
+
+  command -v node >/dev/null 2>&1 || {
+    err "node is required; install via fnm/nvm"
+    exit 1
+  }
+  command -v npm >/dev/null 2>&1 || {
+    err "npm is required; install via fnm/nvm"
+    exit 1
+  }
+
+  version=""
+  if command -v playwright-cli >/dev/null 2>&1; then
+    version=$(cli_version)
+  fi
+
+  if [ "$version" != "$CLI_PIN" ]; then
+    prefix=$(npm prefix -g 2>/dev/null) || {
+      err "cannot determine global npm prefix"
+      exit 1
+    }
+    [ -w "$prefix" ] || {
+      err "global npm prefix is not writable: $prefix"
+      err "use fnm/nvm or set a user-owned npm prefix; do not sudo"
+      exit 1
+    }
+
+    npm install -g "@playwright/cli@$CLI_PIN" || {
+      err "failed to install @playwright/cli@$CLI_PIN; re-run when the network is available"
+      exit 1
+    }
+    hash -r
+
+    version=$(cli_version)
+    [ "$version" = "$CLI_PIN" ] || {
+      err "playwright-cli version is '$version', expected '$CLI_PIN'"
+      command -v -a playwright-cli 2>/dev/null || true
+      exit 1
+    }
+  fi
+
+  playwright-cli install-browser chromium || {
+    err "chromium install failed; re-run when the network is available"
+    if [ "$(uname -s)" = "Linux" ]; then
+      err "if launch fails, install shared libs: playwright-cli install-browser --with-deps chromium (needs root)"
+    fi
+    exit 1
+  }
+
+  # doctor is the health oracle; do not duplicate checks here
+  "$SOURCE" doctor || {
+    err "deps installed but doctor failed; fix the reported items and re-run"
+    exit 1
+  }
+}
+
+link_shim() {
+  mkdir -p "$BIN_DIR" || {
+    err "cannot create: $BIN_DIR"
+    exit 1
+  }
+
+  if [ -e "$LINK" ] && [ ! -L "$LINK" ]; then
+    err "refusing: $LINK is a regular file"
+    exit 1
+  fi
+
+  ln -sfn "$SOURCE" "$LINK" || {
+    err "cannot link: $LINK -> $SOURCE"
+    exit 1
+  }
+
+  link_is_current || {
+    err "installed link does not resolve: $LINK -> $SOURCE"
+    exit 1
+  }
+
+  [ "$quiet" -eq 1 ] || printf 'installed: %s -> %s\n' "$LINK" "$SOURCE"
+}
+
+mode="link"
+quiet=0
+for arg in "$@"; do
+  case "$arg" in
+    --check | --deps)
+      if [ "$mode" != link ]; then
+        err "$arg conflicts with --$mode"
+        exit 2
+      fi
+      mode=${arg#--}
+      ;;
+    --quiet) quiet=1 ;;
+    -h | --help) usage; exit 0 ;;
+    *)
+      err "unknown argument: $arg"
+      usage >&2
+      exit 2
+      ;;
+  esac
+done
+
+case "$mode" in
+  check)
+    link_is_current || {
+      err "not installed: $LINK -> $SOURCE"
+      exit 1
+    }
+    exit 0
+    ;;
+  deps) ensure_deps ;;
+esac
+
+link_shim
