@@ -4,6 +4,11 @@ set -o pipefail
 
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 PWB="$ROOT/scripts/pwb"
+INSTALL="$ROOT/scripts/install"
+# shellcheck source=pins disable=SC1091
+. "$ROOT/scripts/pins"
+export FAKE_CLI_VERSION="$CLI_PIN"
+export FAKE_CHROMIUM_REV="$CHROMIUM_REV"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/pwb-test.XXXXXX") || exit 1
 FAKEBIN="$TMP/bin"
 STATE="$TMP/state"
@@ -17,7 +22,9 @@ cleanup() {
 }
 trap cleanup EXIT
 
-mkdir -p "$FAKEBIN" "$STATE/sessions" "$HOME_DIR" "$CACHE"
+mkdir -p "$FAKEBIN" "$STATE/sessions" "$HOME_DIR" "$CACHE" \
+  "$STATE/chromium-$CHROMIUM_REV"
+: >"$STATE/chromium-$CHROMIUM_REV/INSTALLATION_COMPLETE"
 NOCLI_BIN="$TMP/nocli"
 mkdir -p "$NOCLI_BIN"
 ln -s "$(command -v jq)" "$NOCLI_BIN/jq"
@@ -29,7 +36,8 @@ set -o pipefail
 state="${FAKE_STATE:?}"
 mkdir -p "$state/sessions" "$state/meta"
 
-version="0.1.22"
+version="${FAKE_CLI_VERSION:?}"
+rev="${FAKE_CHROMIUM_REV:?}"
 session=""
 profile=""
 config=""
@@ -54,6 +62,17 @@ done
 
 case "$cmd" in
   install-browser)
+    dry=0
+    for arg in "$@"; do
+      [ "$arg" = "--dry-run" ] && dry=1
+    done
+    if [ "$dry" = "1" ]; then
+      printf 'Chrome for Testing (playwright chromium v%s)\n' "$rev"
+      printf '  Install location:    %s/chromium-%s\n' "$state" "$rev"
+    else
+      mkdir -p "$state/chromium-$rev"
+      : >"$state/chromium-$rev/INSTALLATION_COMPLETE"
+    fi
     exit 0
     ;;
   list)
@@ -145,11 +164,6 @@ chmod 0755 "$FAKEBIN/playwright-cli"
 pwb_run() {
   HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" \
     PATH="$FAKEBIN:$PATH" "$PWB" "$@"
-}
-
-pwb_env() {
-  HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" \
-    PATH="$FAKEBIN:$PATH" "$@"
 }
 
 pass() {
@@ -249,7 +263,7 @@ expect_eq "$(printf '%s' "$out" | json_field .session)" "$S_ROOT" "empty suffix 
 
 CASE="invalid suffix"
 expect_status 2 env PWB_SESSION_SUFFIX=../x HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" session
-expect_status 2 env PWB_SESSION_SUFFIX=abcdefghijklmnopq HOME_DIR="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" session
+expect_status 2 env PWB_SESSION_SUFFIX=abcdefghijklmnopq HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" session
 
 CASE="sanitized basename"
 DIR="$TMP/Bad Name!"
@@ -278,7 +292,7 @@ CASE="config generation"
 cd "$REPO" || exit 1
 pwb_run open http://example.test >/dev/null || fail "open failed"
 S_JSON=$(pwb_run session --json)
-ROOT=$(printf '%s' "$S_JSON" | json_field .root)
+SROOT=$(printf '%s' "$S_JSON" | json_field .root)
 OUT=$(printf '%s' "$S_JSON" | json_field .output)
 CONFIG=$(printf '%s' "$S_JSON" | json_field .config)
 [ -f "$CONFIG" ] || fail "config missing"
@@ -366,7 +380,7 @@ CASE="reset"
 pwb_run open http://example.test >/dev/null || fail "open before reset failed"
 out=$(pwb_run reset --yes) || fail "reset failed"
 expect_eq "$(printf '%s' "$out" | json_field .status)" "removed" "reset status"
-[ ! -e "$ROOT" ] || fail "root still exists"
+[ ! -e "$SROOT" ] || fail "root still exists"
 
 CASE="reset absent"
 out=$(pwb_run reset --yes) || fail "absent reset failed"
@@ -374,23 +388,31 @@ expect_eq "$(printf '%s' "$out" | json_field .status)" "absent" "absent status"
 
 CASE="reset closes live session with missing root"
 pwb_run open http://example.test >/dev/null || fail "open before missing-root reset failed"
-rm -rf "$ROOT"
+rm -rf "$SROOT"
 out=$(pwb_run reset --yes) || fail "missing-root reset failed"
 expect_eq "$(printf '%s' "$out" | json_field .status)" "absent" "missing-root reset status"
 [ ! -e "$STATE/sessions/$S_ROOT" ] || fail "missing-root reset left session live"
 
 CASE="reset symlink refusal"
 pwb_run session >/dev/null
-rm -rf "$ROOT"
-ln -s /tmp "$ROOT"
+rm -rf "$SROOT"
+ln -s /tmp "$SROOT"
 expect_status 1 pwb_run reset --yes
-rm -f "$ROOT"
+rm -f "$SROOT"
 
 CASE="doctor normal"
 expect_status 0 pwb_run doctor
 
 CASE="doctor missing cli"
 expect_status 1 env HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" PATH="$NOCLI_BIN:/usr/bin:/bin" "$PWB" doctor
+
+CASE="doctor cli mismatch"
+expect_status 1 env FAKE_CLI_VERSION=0.0.0 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" \
+  FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" doctor
+
+CASE="doctor chromium mismatch"
+expect_status 1 env FAKE_CHROMIUM_REV=1 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" \
+  FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" doctor
 
 CASE="close timeout"
 pwb_run open http://example.test >/dev/null || fail "open before timeout failed"
@@ -405,10 +427,11 @@ pwb_run close >/dev/null || fail "cleanup close failed"
 
 CASE="shell syntax"
 bash -n "$PWB" || fail "bash -n failed"
+bash -n "$INSTALL" || fail "install bash -n failed"
 
 CASE="shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck "$PWB" || fail "shellcheck failed"
+  shellcheck "$PWB" "$INSTALL" || fail "shellcheck failed"
 else
   printf 'skip: shellcheck\n'
 fi
