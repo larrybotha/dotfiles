@@ -64,6 +64,34 @@ find --regex "<pattern>"
 `find` accepts text or `--regex`, not both. A pattern starting with `-` uses
 `find --regex=<pattern>`.
 
+Network: `requests` lists the **current tab only**. Successful static traffic
+(document, scripts, images) is hidden unless `--static`; filter by URL with
+`--filter=<regexp>`; `--clear` empties the list. Indexes are 1-based with gaps.
+
+Reading page text: after an action, use `find "<text>"` or `snapshot <ref>`
+instead of a full snapshot. `eval <func> [target]` runs JavaScript on the page
+or an element.
+
+Errors: for passthrough commands, `pwb --json <cmd>` returns
+`{"isError":true,"error":"..."}` with a non-zero exit; `open`, `status`, and
+`screenshot`/`pdf` guard errors keep their plain `pwb:` messages. `pwb help
+<cmd>` prints the upstream command help (wrapper builtins print pwb usage).
+
+`screenshot` and `pdf` save artifacts. `screenshot`'s positional argument is
+an element ref or selector, **never a file path**; `pdf` accepts no positional
+argument at all:
+
+```text
+screenshot [target] [--filename=<path>] [--type=png|jpeg|webp] [--full-page] [--hires]
+pdf [--filename=<path>]
+```
+
+Without `--filename`, both auto-name the file under the output dir. `pwb`
+rejects obvious paths (absolute, `./`, `../`, `~/`, artifact extensions,
+path segments) with a `--filename` hint. A bare selector that looks like a
+filename (`p.png`, tag plus class) is also rejected; use a ref from `snapshot`
+(e.g. `screenshot e12`) or rename the file.
+
 `fill --submit` and `type --submit` press Enter.
 
 `upload` requires an open file chooser. `drop` takes repeatable `--path` or
@@ -168,3 +196,6 @@ pwb tab-list --json
 ```
 
 `pwb reset --yes` removes the session root. It requires explicit confirmation.
+
+`pwb status` prints `{"session":...,"status":"open|not-open"}` and exits 0;
+exit 1 means the session list could not be queried. It takes no arguments.

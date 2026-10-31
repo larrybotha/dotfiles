@@ -52,6 +52,11 @@ while [ "$i" -lt "${#args[@]}" ]; do
   i=$((i + 1))
 done
 
+if [ "${1:-}" = "--help" ]; then
+  printf '### Help\n%s\n' "${2:-}"
+  exit 0
+fi
+
 cmd=""
 for arg in "$@"; do
   case "$arg" in
@@ -99,6 +104,8 @@ case "$cmd" in
     ;;
   open)
     if [ "${FAKE_OPEN_EXIT:-0}" != "0" ]; then
+      [ -z "${FAKE_OPEN_STDOUT:-}" ] || printf '%s\n' "$FAKE_OPEN_STDOUT"
+      [ -z "${FAKE_OPEN_STDERR:-}" ] || printf '%s\n' "$FAKE_OPEN_STDERR" >&2
       exit "$FAKE_OPEN_EXIT"
     fi
     for arg in "$@"; do
@@ -129,6 +136,9 @@ case "$cmd" in
     ;;
   config-print)
     meta="$state/meta/$session"
+    if [ "${FAKE_CONFIG_STDERR:-0}" = "1" ]; then
+      printf '{stderr from CLI}\n' >&2
+    fi
     printf '### Result\n'
     if [ "${FAKE_CONFIG_INVALID:-0}" = "1" ]; then
       printf 'not-json\n'
@@ -144,6 +154,9 @@ case "$cmd" in
       output=$(jq -r '.outputDir' "$config" 2>/dev/null)
     fi
     printf '{"browser":{"browserName":"chromium","launchOptions":{"headless":true,"channel":"chromium"},"userDataDir":"%s"},"outputDir":"%s"}\n' "$profile" "$output"
+    if [ "${FAKE_CONFIG_TRAILING:-0}" = "1" ]; then
+      printf '### Events\ntrailing section\n'
+    fi
     ;;
   snapshot)
     if [ "${FAKE_DUMP_ENV:-0}" = "1" ]; then
@@ -207,6 +220,39 @@ mode_of() {
 CASE="help"
 out=$(pwb_run help) || fail "help failed"
 expect_eq "$(printf '%s' "$out" | head -n 1)" "Usage:" "help first line"
+
+CASE="help command passthrough"
+out=$(pwb_run help screenshot) || fail "help screenshot failed"
+case "$out" in
+  *"### Help"*screenshot*) ;;
+  *) fail "help did not reach playwright-cli: $out" ;;
+esac
+
+CASE="help wrapper builtin"
+out=$(pwb_run help status) || fail "help status failed"
+expect_eq "$(printf '%s' "$out" | head -n 1)" "Usage:" "builtin help first line"
+expect_status 2 pwb_run help screenshot pdf
+
+CASE="artifact arg guard"
+expect_status 2 pwb_run screenshot --full-page /tmp/shot.png
+expect_status 2 pwb_run screenshot shot.png
+expect_status 2 pwb_run screenshot ./shot.jpg
+expect_status 2 pwb_run pdf /tmp/page.pdf
+expect_status 2 pwb_run pdf page.pdf
+expect_status 0 pwb_run screenshot --filename=/tmp/shot.png
+expect_status 0 pwb_run screenshot --filename /tmp/shot.png --full-page
+expect_status 0 pwb_run screenshot e12
+expect_status 0 pwb_run screenshot 'a[href="/x"]'
+expect_status 0 pwb_run screenshot 'div.note span'
+expect_status 0 pwb_run pdf --filename=/tmp/page.pdf
+
+CASE="artifact guard quoted and uppercase paths"
+expect_status 2 pwb_run screenshot --full-page '/tmp/shot with spaces.png'
+expect_status 2 pwb_run screenshot 'shot with spaces.png'
+expect_status 2 pwb_run screenshot shot.PNG
+expect_status 2 pwb_run screenshot dir.something/shot
+expect_status 2 pwb_run screenshot '~/shot'
+expect_status 0 pwb_run screenshot https://example.test/shot
 
 REPO="$TMP/repo"
 mkdir -p "$REPO"
@@ -372,6 +418,53 @@ CASE="config drift"
 CASE="config-print invalid JSON"
 ( export FAKE_CONFIG_INVALID=1; expect_status 1 pwb_run open http://example.test )
 [ ! -e "$STATE/sessions/$S_ROOT" ] || fail "invalid JSON left session live"
+
+CASE="open output buffered on verify failure"
+out=$( ( export FAKE_CONFIG_INVALID=1; pwb_run open http://example.test ) 2>/dev/null )
+status=$?
+expect_eq "$status" "1" "invalid JSON open status"
+case "$out" in
+  *'"status":"open"'*) fail "open output leaked before verification" ;;
+esac
+
+CASE="config-print trailing section"
+( export FAKE_CONFIG_TRAILING=1; pwb_run open http://example.test >/dev/null ) \
+  || fail "trailing section rejected"
+[ -e "$STATE/sessions/$S_ROOT" ] || fail "trailing section left session closed"
+pwb_run close >/dev/null || fail "cleanup close failed"
+
+CASE="config-print stderr not parsed as JSON"
+S_CFG_ROOT=$(pwb_run session --json | json_field .root)
+( export FAKE_CONFIG_STDERR=1; pwb_run open http://example.test >/dev/null ) \
+  || fail "stderr poisoned config parse"
+[ -e "$STATE/sessions/$S_ROOT" ] || fail "stderr case left session closed"
+if ls -a "$S_CFG_ROOT" | grep -q 'config-print.stderr'; then
+  fail "config-print stderr temp file left behind"
+fi
+pwb_run close >/dev/null || fail "cleanup close failed"
+
+CASE="open failure preserves diagnostics"
+errfile="$TMP/open.err"
+out=$( export FAKE_OPEN_EXIT=7 FAKE_OPEN_STDOUT=open-out FAKE_OPEN_STDERR=open-err; pwb_run open http://example.test 2>"$errfile" )
+status=$?
+expect_eq "$status" "1" "open failure status"
+case "$out" in
+  *open-out*) ;;
+  *) fail "lost CLI stdout on failed open: $out" ;;
+esac
+grep -q open-err "$errfile" || fail "lost CLI stderr on failed open"
+
+CASE="status rejects arguments"
+expect_status 2 pwb_run status --json
+
+CASE="status"
+out=$(pwb_run status) || fail "status failed"
+expect_eq "$(printf '%s' "$out" | json_field .status)" "not-open" "status not-open"
+pwb_run open http://example.test >/dev/null || fail "open before status failed"
+out=$(pwb_run status) || fail "status open failed"
+expect_eq "$(printf '%s' "$out" | json_field .status)" "open" "status open"
+pwb_run close >/dev/null || fail "close after status failed"
+( export FAKE_LIST_FAIL=1; expect_status 1 pwb_run status )
 
 CASE="reset confirmation"
 expect_status 1 pwb_run reset

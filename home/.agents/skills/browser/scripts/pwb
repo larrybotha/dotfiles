@@ -54,13 +54,18 @@ usage() {
   cat <<'EOF'
 Usage:
   pwb [help]                              show this help
+  pwb help <cli-command>                  show playwright-cli help for one command
   pwb doctor                              check dependencies and pins
   pwb session [--json]                    show session and paths
+  pwb status                              show whether the session is open
   pwb path <profile|output|root|config>   print one absolute path
   pwb open [url] [--headed] [--device=<p>|--mobile] [--restart]
   pwb close                               close the session
   pwb reset [--yes]                       remove the session root
   pwb <cli-command> [args...]             pass through with -s=<session>
+
+Artifacts: screenshot/pdf take --filename=<path>; a positional argument is an
+ element ref/selector, never a file path.
 EOF
 }
 
@@ -247,22 +252,37 @@ reserved_open_arg() {
   return 1
 }
 
+config_snippet() {
+  printf '%s' "$1" | tr '\n' ' ' | cut -c1-200
+}
+
+json_block() {
+  awk '/^\{/{p=1} p && /^### /{exit} p'
+}
+
 verify_config() {
-  local out bad
-  if ! out=$(playwright-cli -s="$S" config-print 2>/dev/null); then
+  local raw errf errtxt out bad hint rc
+  errf="$R/.config-print.stderr.$$"
+  raw=$(playwright-cli -s="$S" config-print 2>"$errf")
+  rc=$?
+  errtxt=$(cat "$errf" 2>/dev/null) || errtxt=""
+  rm -f "$errf"
+  hint=$(config_snippet "${errtxt:+$errtxt }$raw")
+
+  if [ "$rc" -ne 0 ]; then
     close_session_quiet
-    err "config-print failed; session closed"
+    err "config-print failed; session closed${hint:+ ($hint)}"
     return 1
   fi
 
-  out=$(printf '%s' "$out" | sed -n '/^{/,$p')
+  out=$(printf '%s\n' "$raw" | json_block)
   if [ -z "$out" ]; then
     close_session_quiet
-    err "config-print returned no JSON; session closed"
+    err "config-print returned no JSON; session closed${hint:+ ($hint)}"
     return 1
   fi
 
-  if ! bad=$(printf '%s' "$out" | jq -r \
+  if ! bad=$(printf '%s\n' "$out" | jq -r \
     --arg profile "$R/profile" \
     --arg output "$R/output" \
     --argjson headed "$headed" '
@@ -289,9 +309,9 @@ verify_config() {
            (if ((.browser.launchOptions // {}).headless) != true
             then "browser.launchOptions.headless" else empty end)
          end)
-      ] | .[]'); then
+      ] | .[]' 2>/dev/null); then
     close_session_quiet
-    err "config-print returned invalid JSON; session closed"
+    err "config-print returned invalid JSON; session closed${hint:+ ($hint)}"
     return 1
   fi
 
@@ -368,14 +388,21 @@ open_cmd() {
   write_config
   scrub_env
 
-  playwright-cli -s="$S" open "${rest[@]}" \
+  # Buffer the CLI's success output until config verification passes:
+  # a verified session is the only thing pwb may announce as open.
+  local open_out status
+  open_out=$(playwright-cli -s="$S" open "${rest[@]}" \
     --config="$R/config.json" \
     --profile="$R/profile" \
-    --idle-timeout="$timeout"
-  local status=$?
-  [ "$status" -eq 0 ] || exit 1
+    --idle-timeout="$timeout")
+  status=$?
+  if [ "$status" -ne 0 ]; then
+    [ -z "$open_out" ] || printf '%s\n' "$open_out"
+    exit 1
+  fi
 
   verify_config || exit 1
+  [ -z "$open_out" ] || printf '%s\n' "$open_out"
 }
 
 close_wait() {
@@ -420,6 +447,22 @@ close_cmd() {
   esac
 
   jq -n --arg session "$S" '{session:$session,status:"closed"}'
+}
+
+status_cmd() {
+  [ "$#" -eq 0 ] || die_usage "status accepts no arguments"
+
+  compute_session
+
+  local live
+  is_live
+  live=$?
+  case "$live" in
+    2) die_runtime "cannot query sessions with 'playwright-cli list --all --json'" ;;
+    0) jq -n --arg session "$S" '{session:$session,status:"open"}' ;;
+    *) jq -n --arg session "$S" '{session:$session,status:"not-open"}' ;;
+  esac
+  exit 0
 }
 
 reset_cmd() {
@@ -548,6 +591,73 @@ doctor() {
   return 1
 }
 
+path_like_token() {
+  local lower
+
+  case "$1" in
+    http://*|https://*|data:*|about:*|file://*|blob:*) return 1 ;;
+  esac
+  case "$1" in
+    /*|./*|../*|~/*) return 0 ;;
+  esac
+  # Selector metacharacters win: let upstream parse these as selectors.
+  case "$1" in
+    *'['*|*']'*|*'('*|*')'*|*'='*|*'"'*|*"'"*|*'>'*|*'#'*) return 1 ;;
+  esac
+
+  lower=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]')
+  case "$lower" in
+    *.png|*.jpg|*.jpeg|*.webp|*.pdf) return 0 ;;
+  esac
+  case "$1" in
+    */*) return 0 ;;
+  esac
+  return 1
+}
+
+guard_artifact_args() {
+  local cmd="$1"
+  shift
+  local arg p
+  local positional=()
+
+  while [ "$#" -gt 0 ]; do
+    arg="$1"
+    case "$arg" in
+      --filename|--type)
+        shift
+        [ "$#" -gt 0 ] && shift
+        continue
+        ;;
+      --filename=*|--type=*)
+        shift
+        continue
+        ;;
+      --*)
+        shift
+        continue
+        ;;
+      *)
+        positional+=("$arg")
+        shift
+        ;;
+    esac
+  done
+
+  for p in "${positional[@]}"; do
+    case "$cmd" in
+      screenshot)
+        if path_like_token "$p"; then
+          die_usage "screenshot [target] is an element ref/selector; for a file path use --filename=<path>"
+        fi
+        ;;
+      pdf)
+        die_usage "pdf takes no positional arguments; for a file path use --filename=<path>"
+        ;;
+    esac
+  done
+}
+
 pass_through() {
   local gflags=()
   local cmd
@@ -599,6 +709,10 @@ pass_through() {
       ;;
   esac
 
+  case "$cmd" in
+    screenshot|pdf) guard_artifact_args "$cmd" "$@" ;;
+  esac
+
   compute_session
   scrub_env
   exec playwright-cli "${gflags[@]}" -s="$S" "$cmd" "$@"
@@ -606,9 +720,24 @@ pass_through() {
 
 main() {
   case "${1:-}" in
-    ''|help|-h|--help)
+    ''|-h|--help)
       usage
       exit 0
+      ;;
+    help)
+      shift
+      [ "$#" -le 1 ] || die_usage "help accepts at most one cli-command"
+      if [ "$#" -eq 0 ]; then
+        usage
+        exit 0
+      fi
+      case "$1" in
+        doctor|session|status|path|open|close|reset|help)
+          usage
+          exit 0
+          ;;
+      esac
+      exec playwright-cli --help "$1"
       ;;
     doctor)
       shift
@@ -618,6 +747,10 @@ main() {
     session)
       shift
       session_cmd "$@"
+      ;;
+    status)
+      shift
+      status_cmd "$@"
       ;;
     path)
       shift

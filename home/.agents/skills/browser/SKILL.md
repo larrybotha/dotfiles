@@ -43,6 +43,8 @@ Do not use `pwb` for those cases.
 pwb [help]
 pwb doctor
 pwb session [--json]
+pwb status
+pwb help <cli-command>
 pwb path <profile|output|root|config>
 pwb open [url] [--headed] [--device=<p>|--mobile] [--restart]
 pwb close
@@ -97,11 +99,13 @@ When `pwb` is not on PATH, invoke `scripts/pwb` from this skill's directory.
 2. `pwb session --json`
 3. `pwb open <url>`
 4. `pwb snapshot`
-5. Act with the returned refs.
+5. Act with the returned refs. Save artifacts with `--filename`, never a
+   positional path: `pwb screenshot --full-page --filename="$(pwb path output)/shot.png"`
+   and `pwb pdf --filename="$(pwb path output)/page.pdf"`.
 6. `pwb console warning`
-7. `pwb requests`
+7. `pwb requests` (add `--static` for document/asset traffic, `--filter=<re>` to narrow)
 8. Save artifacts under `pwb path output`.
-9. `pwb close`
+9. `pwb status` then `pwb close`
 
 ## Live sessions
 
