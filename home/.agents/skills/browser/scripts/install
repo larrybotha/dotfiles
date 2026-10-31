@@ -23,11 +23,44 @@ Environment:
 EOF
 }
 
-SKILL_DIR=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd -P) || exit 1
+resolve_path() {
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$1"
+    return
+  fi
+
+  if [ -L "$1" ]; then
+    local target
+    target=$(readlink "$1") || return 1
+    case "$target" in
+      /*) resolve_path "$target" ;;
+      *) resolve_path "$(dirname "$1")/$target" ;;
+    esac
+    return
+  fi
+
+  (
+    cd "$(dirname "$1")" || exit 1
+    printf '%s/%s\n' "$(pwd -P)" "$(basename "$1")"
+  )
+}
+
+SELF=$(resolve_path "${BASH_SOURCE[0]}") || {
+  err "cannot resolve script path"
+  exit 1
+}
+SKILL_DIR=$(cd "$(dirname "$SELF")/.." && pwd -P) || exit 1
 SOURCE="$SKILL_DIR/scripts/pwb"
 PINS="$SKILL_DIR/scripts/pins"
+LIB="$SKILL_DIR/scripts/lib.sh"
 BIN_DIR="${BIN_DIR:-${HOME:?HOME or BIN_DIR is required}/bin}"
 LINK="$BIN_DIR/pwb"
+
+# shellcheck source=lib.sh disable=SC1091
+. "$LIB" || {
+  err "missing lib: $LIB"
+  exit 1
+}
 
 [ -f "$SOURCE" ] && [ -x "$SOURCE" ] || {
   err "missing executable: $SOURCE"
@@ -36,12 +69,6 @@ LINK="$BIN_DIR/pwb"
 
 link_is_current() {
   [ -L "$LINK" ] && [ -x "$LINK" ] && [ "$(readlink "$LINK")" = "$SOURCE" ]
-}
-
-cli_version() {
-  # keep in sync with pwb cli_version
-  playwright-cli --version 2>/dev/null | head -n 1 \
-    | tr -d '[:space:]' | sed 's/^v//'
 }
 
 ensure_deps() {

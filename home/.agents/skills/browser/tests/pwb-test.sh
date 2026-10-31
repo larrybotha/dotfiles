@@ -5,8 +5,12 @@ set -o pipefail
 ROOT=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 PWB="$ROOT/scripts/pwb"
 INSTALL="$ROOT/scripts/install"
+LIB="$ROOT/scripts/lib.sh"
+TRIGGERS_JSON="$ROOT/tests/triggers.json"
 # shellcheck source=pins disable=SC1091
 . "$ROOT/scripts/pins"
+# shellcheck source=../scripts/lib.sh disable=SC1091
+. "$LIB"
 export FAKE_CLI_VERSION="$CLI_PIN"
 export FAKE_CHROMIUM_REV="$CHROMIUM_REV"
 TMP=$(mktemp -d "${TMPDIR:-/tmp}/pwb-test.XXXXXX") || exit 1
@@ -198,6 +202,35 @@ expect_status() {
   fi
 }
 
+expect_status_quiet() {
+  local expected="$1"
+  shift
+  "$@" >/dev/null 2>&1
+  local actual=$?
+  if [ "$actual" -ne "$expected" ]; then
+    fail "expected status $expected, got $actual"
+  fi
+}
+
+run_with_deadline() {
+  local seconds="$1"
+  shift
+  "$@" &
+  local pid=$!
+  local i=0
+  while [ "$i" -lt "$seconds" ]; do
+    if ! kill -0 "$pid" 2>/dev/null; then
+      wait "$pid"
+      return $?
+    fi
+    sleep 1
+    i=$((i + 1))
+  done
+  kill "$pid" 2>/dev/null || true
+  wait "$pid" 2>/dev/null || true
+  return 124
+}
+
 expect_eq() {
   local actual="$1" expected="$2" label="$3"
   if [ "$actual" != "$expected" ]; then
@@ -215,6 +248,20 @@ mode_of() {
   else
     stat -c '%a' "$1"
   fi
+}
+
+validate_triggers_json() {
+  jq -e '
+    .comment and (.comment | type == "string") and
+    .consumer and (.consumer | type == "string") and
+    (.cases | type == "array") and
+    (.cases | length > 0) and
+    ([.cases[] | (.query | type == "string") and (.query | length > 0)
+      and (.description | type == "string") and (.description | length > 0)
+      and (.skill | type == "string") and (.skill | length > 0)
+      and (.should_trigger | type == "boolean")] | all) and
+    ((.cases | map(.query) | unique | length) == (.cases | length))
+  ' "$TRIGGERS_JSON" >/dev/null
 }
 
 CASE="help"
@@ -241,6 +288,8 @@ expect_status 2 pwb_run pdf /tmp/page.pdf
 expect_status 2 pwb_run pdf page.pdf
 expect_status 0 pwb_run screenshot --filename=/tmp/shot.png
 expect_status 0 pwb_run screenshot --filename /tmp/shot.png --full-page
+expect_status 2 pwb_run screenshot --filename=shot.png
+expect_status 2 pwb_run pdf --filename=page.pdf
 expect_status 0 pwb_run screenshot e12
 expect_status 0 pwb_run screenshot 'a[href="/x"]'
 expect_status 0 pwb_run screenshot 'div.note span'
@@ -251,7 +300,7 @@ expect_status 2 pwb_run screenshot --full-page '/tmp/shot with spaces.png'
 expect_status 2 pwb_run screenshot 'shot with spaces.png'
 expect_status 2 pwb_run screenshot shot.PNG
 expect_status 2 pwb_run screenshot dir.something/shot
-expect_status 2 pwb_run screenshot '~/shot'
+expect_status 2 pwb_run screenshot \~/shot
 expect_status 0 pwb_run screenshot https://example.test/shot
 
 REPO="$TMP/repo"
@@ -304,7 +353,7 @@ keys=$(printf '%s' "$out" | jq -r 'keys | join(",")')
 expect_eq "$keys" "config,output,profile,root,session,workspace" "suffix keys"
 
 CASE="empty suffix"
-out=$(cd "$REPO" && PWB_SESSION_SUFFIX= pwb_run session --json) || fail "empty suffix failed"
+out=$(cd "$REPO" && PWB_SESSION_SUFFIX='' pwb_run session --json) || fail "empty suffix failed"
 expect_eq "$(printf '%s' "$out" | json_field .session)" "$S_ROOT" "empty suffix session"
 
 CASE="invalid suffix"
@@ -348,7 +397,11 @@ expect_eq "$(mode_of "$CONFIG")" "600" "config mode"
 expect_eq "$(mode_of "$OUT")" "700" "output mode"
 
 CASE="live open refusal"
-expect_status 1 pwb_run open http://example.test
+errfile="$TMP/live-open.err"
+pwb_run open http://example.test 2>"$errfile" && fail "expected open refusal"
+status=$?
+expect_eq "$status" "1" "live open refusal status"
+grep -q "pwb goto <url>" "$errfile" || fail "open refusal missing goto hint"
 
 CASE="restart"
 pwb_run open --restart http://example.test >/dev/null || fail "restart failed"
@@ -376,6 +429,8 @@ expect_status 1 pwb_run attach default
 expect_status 1 pwb_run close-all
 expect_status 1 pwb_run delete-data
 expect_status 1 pwb_run install
+expect_status 1 pwb_run list
+expect_status 1 pwb_run playwright-cli list
 expect_status 1 pwb_run -g attach default
 expect_status 1 pwb_run --all close-all
 expect_status 1 pwb_run --raw -g kill-all
@@ -385,24 +440,36 @@ CASE="device does not consume reserved flags"
 expect_status 2 pwb_run open --device --config=/tmp/x
 
 CASE="open exit normalization"
-( export FAKE_OPEN_EXIT=7; expect_status 1 pwb_run open http://example.test )
+expect_status 1 env FAKE_OPEN_EXIT=7 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" open http://example.test
+
+CASE="closed session hint rewrite"
+pwb_run close >/dev/null || fail "close before hint rewrite failed"
+errfile="$TMP/not-open.err"
+pwb_run snapshot 2>"$errfile" >/dev/null && fail "expected snapshot to fail when closed"
+status=$?
+expect_eq "$status" "1" "closed session status"
+grep -q "pwb open <url>" "$errfile" || fail "closed-session hint missing pwb open"
+if grep -q "playwright-cli -s=" "$errfile"; then
+  fail "closed-session hint leaked raw playwright-cli command"
+fi
 
 CASE="env scrub"
-( export FAKE_DUMP_ENV=1 PLAYWRIGHT_MCP_FOO=1 PLAYWRIGHT_CLI_SESSION=other; pwb_run snapshot >/dev/null ) || fail "snapshot failed"
+pwb_run open http://example.test >/dev/null || fail "open before env scrub failed"
+env FAKE_DUMP_ENV=1 PLAYWRIGHT_MCP_FOO=1 PLAYWRIGHT_CLI_SESSION=other HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" snapshot >/dev/null || fail "snapshot failed"
 if grep -q '^PLAYWRIGHT_MCP_FOO=' "$STATE/env"; then fail "PLAYWRIGHT_MCP_FOO leaked"; fi
 if grep -q '^PLAYWRIGHT_CLI_SESSION=' "$STATE/env"; then fail "PLAYWRIGHT_CLI_SESSION leaked"; fi
 
 CASE="list failure is not absence"
-( export FAKE_LIST_FAIL=1; expect_status 1 pwb_run close )
-( export FAKE_LIST_INVALID=1; expect_status 1 pwb_run close )
+expect_status 1 env FAKE_LIST_FAIL=1 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" close
+expect_status 1 env FAKE_LIST_INVALID=1 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" close
 
 CASE="env scrub initial list"
-( export FAKE_DUMP_ENV=1 PLAYWRIGHT_MCP_FOO=1; pwb_run close >/dev/null ) || fail "close with dump failed"
+env FAKE_DUMP_ENV=1 PLAYWRIGHT_MCP_FOO=1 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" close >/dev/null || fail "close with dump failed"
 if grep -q '^PLAYWRIGHT_MCP_FOO=' "$STATE/env-list"; then fail "list leaked PLAYWRIGHT_MCP_FOO"; fi
 
 CASE="multi-poll close"
 pwb_run open http://example.test >/dev/null || fail "open before multi-poll close failed"
-( export FAKE_CLOSE_DELAY=1; pwb_run close >/dev/null ) || fail "multi-poll close failed"
+( export FAKE_CLOSE_DELAY=1 PWB_CLOSE_POLL_COUNT=30 PWB_CLOSE_POLL_INTERVAL=0.1; pwb_run close >/dev/null ) || fail "multi-poll close failed"
 [ ! -e "$STATE/sessions/$S_ROOT" ] || fail "multi-poll session still live"
 
 CASE="close"
@@ -416,11 +483,11 @@ CASE="config drift"
 [ ! -e "$STATE/sessions/$S_ROOT" ] || fail "drift left session live"
 
 CASE="config-print invalid JSON"
-( export FAKE_CONFIG_INVALID=1; expect_status 1 pwb_run open http://example.test )
+expect_status 1 env FAKE_CONFIG_INVALID=1 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" open http://example.test
 [ ! -e "$STATE/sessions/$S_ROOT" ] || fail "invalid JSON left session live"
 
 CASE="open output buffered on verify failure"
-out=$( ( export FAKE_CONFIG_INVALID=1; pwb_run open http://example.test ) 2>/dev/null )
+out=$(env FAKE_CONFIG_INVALID=1 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" open http://example.test 2>/dev/null)
 status=$?
 expect_eq "$status" "1" "invalid JSON open status"
 case "$out" in
@@ -438,14 +505,17 @@ S_CFG_ROOT=$(pwb_run session --json | json_field .root)
 ( export FAKE_CONFIG_STDERR=1; pwb_run open http://example.test >/dev/null ) \
   || fail "stderr poisoned config parse"
 [ -e "$STATE/sessions/$S_ROOT" ] || fail "stderr case left session closed"
-if ls -a "$S_CFG_ROOT" | grep -q 'config-print.stderr'; then
-  fail "config-print stderr temp file left behind"
-fi
+for entry in "$S_CFG_ROOT"/config-print.stderr*; do
+  if [ -e "$entry" ]; then
+    fail "config-print stderr temp file left behind"
+    break
+  fi
+done
 pwb_run close >/dev/null || fail "cleanup close failed"
 
 CASE="open failure preserves diagnostics"
 errfile="$TMP/open.err"
-out=$( export FAKE_OPEN_EXIT=7 FAKE_OPEN_STDOUT=open-out FAKE_OPEN_STDERR=open-err; pwb_run open http://example.test 2>"$errfile" )
+out=$(env FAKE_OPEN_EXIT=7 FAKE_OPEN_STDOUT=open-out FAKE_OPEN_STDERR=open-err HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" open http://example.test 2>"$errfile")
 status=$?
 expect_eq "$status" "1" "open failure status"
 case "$out" in
@@ -464,7 +534,7 @@ pwb_run open http://example.test >/dev/null || fail "open before status failed"
 out=$(pwb_run status) || fail "status open failed"
 expect_eq "$(printf '%s' "$out" | json_field .status)" "open" "status open"
 pwb_run close >/dev/null || fail "close after status failed"
-( export FAKE_LIST_FAIL=1; expect_status 1 pwb_run status )
+expect_status 1 env FAKE_LIST_FAIL=1 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" status
 
 CASE="reset confirmation"
 expect_status 1 pwb_run reset
@@ -497,34 +567,41 @@ CASE="doctor normal"
 expect_status 0 pwb_run doctor
 
 CASE="doctor missing cli"
-expect_status 1 env HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" PATH="$NOCLI_BIN:/usr/bin:/bin" "$PWB" doctor
+expect_status_quiet 1 env HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" PATH="$NOCLI_BIN:/usr/bin:/bin" "$PWB" doctor
 
 CASE="doctor cli mismatch"
-expect_status 1 env FAKE_CLI_VERSION=0.0.0 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" \
+expect_status_quiet 1 env FAKE_CLI_VERSION=0.0.0 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" \
   FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" doctor
 
 CASE="doctor chromium mismatch"
-expect_status 1 env FAKE_CHROMIUM_REV=1 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" \
+expect_status_quiet 1 env FAKE_CHROMIUM_REV=1 HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" \
   FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" doctor
 
 CASE="close timeout"
 pwb_run open http://example.test >/dev/null || fail "open before timeout failed"
-(
-  export FAKE_CLOSE_NOOP=1
-  HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" \
-    PATH="$FAKEBIN:$PATH" timeout 20 "$PWB" close
-) >/dev/null 2>&1
+run_with_deadline 5 env FAKE_CLOSE_NOOP=1 PWB_CLOSE_POLL_COUNT=2 PWB_CLOSE_POLL_INTERVAL=0 \
+  HOME="$HOME_DIR" XDG_CACHE_HOME="$CACHE" FAKE_STATE="$STATE" PATH="$FAKEBIN:$PATH" "$PWB" close >/dev/null 2>&1
 status=$?
 expect_eq "$status" "1" "close timeout status"
 pwb_run close >/dev/null || fail "cleanup close failed"
 
+CASE="shared cli_version parity"
+expect_eq "$(cli_version)" "$CLI_PIN" "cli_version from lib"
+if grep -q '^cli_version()' "$PWB" "$INSTALL"; then
+  fail "cli_version should be defined only in scripts/lib.sh"
+fi
+
+CASE="triggers json validation"
+validate_triggers_json || fail "invalid triggers.json"
+
 CASE="shell syntax"
 bash -n "$PWB" || fail "bash -n failed"
 bash -n "$INSTALL" || fail "install bash -n failed"
+bash -n "$LIB" || fail "lib bash -n failed"
 
 CASE="shellcheck"
 if command -v shellcheck >/dev/null 2>&1; then
-  shellcheck "$PWB" "$INSTALL" || fail "shellcheck failed"
+  shellcheck "$PWB" "$INSTALL" "$LIB" "$ROOT/tests/pwb-test.sh" || fail "shellcheck failed"
 else
   printf 'skip: shellcheck\n'
 fi

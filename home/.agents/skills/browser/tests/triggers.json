@@ -1,26 +1,54 @@
-[
-  {
-    "query": "check localhost:3000 for console errors",
-    "should_trigger": true
-  },
-  {
-    "query": "screenshot the login page",
-    "should_trigger": true
-  },
-  {
-    "query": "attach to my Chrome",
-    "should_trigger": false
-  },
-  {
-    "query": "use my logged-in Gmail tab",
-    "should_trigger": false
-  },
-  {
-    "query": "connect to CDP on port 9222",
-    "should_trigger": false
-  },
-  {
-    "query": "write a Playwright test file",
-    "should_trigger": false
-  }
-]
+{
+  "comment": "Deterministic trigger fixtures for tests/pwb-test.sh::validate_triggers_json",
+  "consumer": "tests/pwb-test.sh",
+  "cases": [
+    {
+      "query": "check localhost:3000 for console errors",
+      "description": "localhost UI check",
+      "skill": "browser",
+      "should_trigger": true
+    },
+    {
+      "query": "screenshot the login page",
+      "description": "screenshot request",
+      "skill": "browser",
+      "should_trigger": true
+    },
+    {
+      "query": "save a PDF of this page",
+      "description": "pdf artifact request",
+      "skill": "browser",
+      "should_trigger": true
+    },
+    {
+      "query": "inspect network requests for failed API calls",
+      "description": "network inspection request",
+      "skill": "browser",
+      "should_trigger": true
+    },
+    {
+      "query": "attach to my Chrome",
+      "description": "forbidden personal browser attach",
+      "skill": "browser",
+      "should_trigger": false
+    },
+    {
+      "query": "use my logged-in Gmail tab",
+      "description": "forbidden personal profile usage",
+      "skill": "browser",
+      "should_trigger": false
+    },
+    {
+      "query": "connect to CDP on port 9222",
+      "description": "forbidden cdp usage",
+      "skill": "browser",
+      "should_trigger": false
+    },
+    {
+      "query": "write a Playwright test file",
+      "description": "coding task not browser automation run",
+      "skill": "browser",
+      "should_trigger": false
+    }
+  ]
+}

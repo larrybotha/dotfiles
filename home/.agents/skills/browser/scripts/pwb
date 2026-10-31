@@ -44,7 +44,10 @@ SELF=$(resolve_path "${BASH_SOURCE[0]}") || die_runtime "cannot resolve pwb path
 SKILL_DIR=$(cd "$(dirname "$SELF")/.." && pwd -P) \
   || die_runtime "cannot resolve skill directory"
 PINS="$SKILL_DIR/scripts/pins"
+LIB="$SKILL_DIR/scripts/lib.sh"
 
+# shellcheck source=lib.sh disable=SC1091
+. "$LIB" || die_runtime "missing lib: $LIB"
 # shellcheck source=pins disable=SC1091
 . "$PINS" || die_runtime "missing pins: $PINS"
 : "${CLI_PIN:?missing CLI_PIN in $PINS}"
@@ -382,7 +385,7 @@ open_cmd() {
   live=$?
   [ "$live" -eq 2 ] && die_runtime "cannot query sessions with 'playwright-cli list --all --json'"
   if [ "$live" -eq 0 ] && [ "$restart" -eq 0 ]; then
-    die_runtime "session $S is open; run 'pwb open --restart' or 'pwb close'"
+    die_runtime "session $S is open; use 'pwb goto <url>' to continue, 'pwb open --restart' to restart"
   fi
 
   write_config
@@ -409,15 +412,27 @@ close_wait() {
   scrub_env
   playwright-cli -s="$S" close >/dev/null 2>&1 || true
 
-  local i=0 live
-  while [ "$i" -lt 30 ]; do
+  local poll_count poll_interval i=0 live
+  poll_count="${PWB_CLOSE_POLL_COUNT:-30}"
+  poll_interval="${PWB_CLOSE_POLL_INTERVAL:-0.5}"
+
+  case "$poll_count" in
+    ''|*[!0-9]*) die_usage "PWB_CLOSE_POLL_COUNT must be a non-negative integer" ;;
+  esac
+  case "$poll_interval" in
+    ''|*[!0-9.]*) die_usage "PWB_CLOSE_POLL_INTERVAL must be numeric seconds" ;;
+    *.*.*) die_usage "PWB_CLOSE_POLL_INTERVAL must be numeric seconds" ;;
+    .*) die_usage "PWB_CLOSE_POLL_INTERVAL must be numeric seconds" ;;
+  esac
+
+  while [ "$i" -lt "$poll_count" ]; do
     is_live
     live=$?
     case "$live" in
       1) return 0 ;;
       2) return 2 ;;
     esac
-    sleep 0.5
+    sleep "$poll_interval"
     i=$((i + 1))
   done
 
@@ -506,11 +521,6 @@ reset_cmd() {
   rm -rf "$R" || die_runtime "cannot remove session root: $R"
   [ ! -e "$R" ] || die_runtime "session root still exists: $R"
   jq -n --arg session "$S" '{session:$session,status:"removed"}'
-}
-
-cli_version() {
-  playwright-cli --version 2>/dev/null | head -n 1 \
-    | tr -d '[:space:]' | sed 's/^v//'
 }
 
 chromium_info() {
@@ -618,18 +628,39 @@ path_like_token() {
 guard_artifact_args() {
   local cmd="$1"
   shift
-  local arg p
+  local arg p filename
   local positional=()
 
   while [ "$#" -gt 0 ]; do
     arg="$1"
     case "$arg" in
-      --filename|--type)
+      --filename)
         shift
-        [ "$#" -gt 0 ] && shift
+        [ "$#" -gt 0 ] || die_usage "--filename requires a value"
+        filename="$1"
+        case "$filename" in
+          /*) ;;
+          *) die_usage "--filename must be absolute; use \"\$(pwb path output)/name.ext\"" ;;
+        esac
+        shift
         continue
         ;;
-      --filename=*|--type=*)
+      --filename=*)
+        filename=${arg#--filename=}
+        case "$filename" in
+          /*) ;;
+          *) die_usage "--filename must be absolute; use \"\$(pwb path output)/name.ext\"" ;;
+        esac
+        shift
+        continue
+        ;;
+      --type)
+        shift
+        [ "$#" -gt 0 ] || die_usage "--type requires a value"
+        shift
+        continue
+        ;;
+      --type=*)
         shift
         continue
         ;;
@@ -707,6 +738,14 @@ pass_through() {
     install)
       die_runtime "'install' is blocked; use scripts/install --deps"
       ;;
+    list)
+      die_runtime "'list' is blocked; do not inspect other sessions"
+      ;;
+    playwright-cli)
+      case "${1:-}" in
+        list) die_runtime "'playwright-cli list' is blocked; do not inspect other sessions" ;;
+      esac
+      ;;
   esac
 
   case "$cmd" in
@@ -714,6 +753,17 @@ pass_through() {
   esac
 
   compute_session
+  case "$cmd" in
+    screenshot|pdf) ;;
+    *)
+      is_live
+      case "$?" in
+        2) die_runtime "cannot query sessions with 'playwright-cli list --all --json'" ;;
+        1) die_runtime "session $S is not open; run 'pwb open <url>'" ;;
+      esac
+      ;;
+  esac
+
   scrub_env
   exec playwright-cli "${gflags[@]}" -s="$S" "$cmd" "$@"
 }
