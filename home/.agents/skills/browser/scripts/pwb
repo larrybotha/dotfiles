@@ -4,9 +4,6 @@
 
 set -o pipefail
 
-CLI_PIN="0.1.22"
-SCRIPT_PATH="${BASH_SOURCE[0]}"
-
 err() {
   printf 'pwb: %s\n' "$*" >&2
 }
@@ -20,6 +17,38 @@ die_runtime() {
   err "$*"
   exit 1
 }
+
+resolve_path() {
+  if command -v realpath >/dev/null 2>&1; then
+    realpath "$1"
+    return
+  fi
+
+  if [ -L "$1" ]; then
+    local target
+    target=$(readlink "$1") || return 1
+    case "$target" in
+      /*) resolve_path "$target" ;;
+      *) resolve_path "$(dirname "$1")/$target" ;;
+    esac
+    return
+  fi
+
+  (
+    cd "$(dirname "$1")" || exit 1
+    printf '%s/%s\n' "$(pwd -P)" "$(basename "$1")"
+  )
+}
+
+SELF=$(resolve_path "${BASH_SOURCE[0]}") || die_runtime "cannot resolve pwb path"
+SKILL_DIR=$(cd "$(dirname "$SELF")/.." && pwd -P) \
+  || die_runtime "cannot resolve skill directory"
+PINS="$SKILL_DIR/scripts/pins"
+
+# shellcheck source=pins disable=SC1091
+. "$PINS" || die_runtime "missing pins: $PINS"
+: "${CLI_PIN:?missing CLI_PIN in $PINS}"
+: "${CHROMIUM_REV:?missing CHROMIUM_REV in $PINS}"
 
 usage() {
   cat <<'EOF'
@@ -436,43 +465,63 @@ reset_cmd() {
   jq -n --arg session "$S" '{session:$session,status:"removed"}'
 }
 
+cli_version() {
+  playwright-cli --version 2>/dev/null | head -n 1 \
+    | tr -d '[:space:]' | sed 's/^v//'
+}
+
+chromium_info() {
+  local out
+  out=$(playwright-cli install-browser chromium --dry-run 2>/dev/null) || return 1
+  rev=$(printf '%s\n' "$out" \
+    | sed -n 's/.*(playwright chromium v\([0-9][0-9]*\)).*/\1/p' | head -n 1)
+  location=$(printf '%s\n' "$out" \
+    | sed -n 's/.*Install location:[[:space:]]*//p' | head -n 1)
+  [ -n "$rev" ] && [ -n "$location" ]
+}
+
 doctor() {
   local failures=0
-  local version
+  local rev location version
+
+  fail() {
+    printf 'fail: %s\n' "$*"
+    failures=$((failures + 1))
+  }
 
   if command -v jq >/dev/null 2>&1; then
     printf 'ok: jq\n'
   else
-    printf 'fail: jq is required\n'
-    failures=$((failures + 1))
+    fail "jq is required"
   fi
 
   if command -v sha256sum >/dev/null 2>&1 || command -v shasum >/dev/null 2>&1; then
     printf 'ok: hash\n'
   else
-    printf 'fail: sha256sum or shasum is required\n'
-    failures=$((failures + 1))
+    fail "sha256sum or shasum is required"
   fi
 
   if command -v playwright-cli >/dev/null 2>&1; then
-    printf 'ok: playwright-cli\n'
-    version=$(playwright-cli --version 2>/dev/null | head -n 1)
+    version=$(cli_version)
     if [ "$version" = "$CLI_PIN" ]; then
       printf 'ok: playwright-cli version %s\n' "$version"
     else
-      printf 'warn: playwright-cli version %s, expected %s\n' "${version:-unknown}" "$CLI_PIN"
+      fail "playwright-cli version ${version:-unknown}, expected $CLI_PIN; run scripts/install --deps"
+    fi
+
+    if chromium_info; then
+      if [ "$rev" != "$CHROMIUM_REV" ]; then
+        fail "playwright-cli bundles chromium v$rev, pins say v$CHROMIUM_REV; update scripts/pins"
+      elif [ ! -d "$location" ] || [ ! -e "$location/INSTALLATION_COMPLETE" ]; then
+        fail "chromium v$rev not installed at $location; run scripts/install --deps"
+      else
+        printf 'ok: chromium v%s\n' "$rev"
+      fi
+    else
+      fail "chromium dry-run failed; run scripts/install --deps"
     fi
   else
-    printf 'fail: playwright-cli is required\n'
-    failures=$((failures + 1))
-  fi
-
-  if command -v playwright-cli >/dev/null 2>&1; then
-    if playwright-cli install-browser chromium --dry-run >/dev/null 2>&1; then
-      printf 'ok: chromium dry-run\n'
-    else
-      printf 'warn: chromium dry-run failed; run playwright-cli install-browser chromium\n'
-    fi
+    fail "playwright-cli is required; run scripts/install --deps"
   fi
 
   if env | grep -q '^PLAYWRIGHT_MCP_'; then
@@ -486,15 +535,7 @@ doctor() {
   if command -v pwb >/dev/null 2>&1; then
     printf 'ok: pwb on PATH: %s\n' "$(command -v pwb)"
   else
-    printf 'warn: pwb not on PATH; use %s\n' "$SCRIPT_PATH"
-  fi
-
-  if [ -n "${HOME:-}" ]; then
-    if [ -x "$HOME/.agents/skills/browser/scripts/pwb" ]; then
-      printf 'ok: bundled pwb\n'
-    else
-      printf 'warn: bundled pwb is not executable: %s\n' "$HOME/.agents/skills/browser/scripts/pwb"
-    fi
+    printf 'warn: pwb not on PATH; use %s\n' "$SELF"
   fi
 
   if [ "$failures" -eq 0 ]; then
@@ -554,7 +595,7 @@ pass_through() {
       die_runtime "'delete-data' is blocked; use 'pwb reset --yes'"
       ;;
     install)
-      die_runtime "'install' is blocked; use 'pwb doctor' and npm for CLI installation"
+      die_runtime "'install' is blocked; use scripts/install --deps"
       ;;
   esac
 

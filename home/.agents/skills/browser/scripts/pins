@@ -1,0 +1,3 @@
+# Shared version pins. Data only; sourced by pwb, install, and tests.
+CLI_PIN=0.1.22
+CHROMIUM_REV=1247
