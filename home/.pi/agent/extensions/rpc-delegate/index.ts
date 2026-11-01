@@ -171,6 +171,8 @@ interface RpcDelegateDetails {
 	agentEndWillRetry: number;
 	uiRequests: number;
 	usage: SessionStatsData | null;
+	/** Sum of all attempt costs when fallback ran; null when no cost evidence. */
+	totalCostUsd?: number | null;
 	/** Agent-run duration (prompt accepted → outcome decided) — pairs with
 	 *  cost; null before run start / until the outcome is decided. */
 	runDurationMs: number | null;
@@ -582,6 +584,7 @@ function blankDetails(task: string): RpcDelegateDetails {
 		agentEndWillRetry: 0,
 		uiRequests: 0,
 		usage: null,
+		totalCostUsd: null,
 		runDurationMs: null,
 		totalDurationMs: null,
 		deadlineHit: false,
@@ -626,6 +629,7 @@ function detailsFromSnapshot(
 		agentEndWillRetry: c.agentEndWillRetry,
 		uiRequests: c.uiRequests,
 		usage: c.usage,
+		totalCostUsd: null,
 		runDurationMs: runDurationMs(c),
 		totalDurationMs: totalDurationMs(c),
 		deadlineHit: c.deadlineHit,
@@ -649,7 +653,7 @@ function usageSummary(d: RpcDelegateDetails): {
 } {
 	return {
 		tokens: d.usage?.tokens?.totalTokens ?? d.usage?.tokens?.total ?? 0,
-		costUsd: typeof d.usage?.cost === "number" ? d.usage.cost : null,
+		costUsd: d.totalCostUsd ?? (typeof d.usage?.cost === "number" ? d.usage.cost : null),
 		runMs: d.runDurationMs,
 		totalMs: d.totalDurationMs,
 	};
@@ -705,7 +709,7 @@ function buildResultText(d: RpcDelegateDetails): string {
 	if (d.runDurationMs !== null) durBits.push(`run ${formatDuration(d.runDurationMs)}`);
 	if (d.totalDurationMs !== null) durBits.push(`total ${formatDuration(d.totalDurationMs)}`);
 	const usage = usageSummary(d);
-	if (d.usage) {
+	if (d.usage || usage.costUsd !== null) {
 		const cost = usage.costUsd !== null ? ` · $${usage.costUsd.toFixed(4)}` : "";
 		const dur = durBits.length > 0 ? ` · ${durBits.join(" · ")}` : "";
 		text += `\n\n### Usage\n\n${usage.tokens ? `${usage.tokens.toLocaleString()} tokens` : "tokens unavailable"}${cost}${dur}`;
@@ -1286,7 +1290,13 @@ export default function (pi: ExtensionAPI) {
 				modelSource: resolved.modelSource,
 				fallbackFrom: null as string | null,
 			};
+			let totalCostUsd: number | null = null;
+			const accrue = (r: Awaited<ReturnType<typeof runAttempt>>) => {
+				const cost = r.details.usage?.cost;
+				if (typeof cost === "number") totalCostUsd = (totalCostUsd ?? 0) + cost;
+			};
 			let result = await runAttempt(attempt);
+			accrue(result);
 			attemptedModels.add(attempt.model ?? "");
 			attemptedModels.add(result.details.childModelId ?? "");
 			if (attemptFailed(result.details)) {
@@ -1301,8 +1311,10 @@ export default function (pi: ExtensionAPI) {
 					};
 					attemptedModels.add(next.model);
 					result = await runAttempt(attempt);
+					accrue(result);
 				}
 			}
+			result.details.totalCostUsd = totalCostUsd;
 			return result;
 		},
 
@@ -1419,7 +1431,7 @@ export default function (pi: ExtensionAPI) {
 				}
 
 				const u = usageSummary(d);
-				if (d.usage) {
+				if (d.usage || u.costUsd !== null) {
 					const cost = u.costUsd !== null ? ` · $${u.costUsd.toFixed(4)}` : "";
 					container.addChild(
 						new Text(
@@ -1450,6 +1462,10 @@ export default function (pi: ExtensionAPI) {
 			if (collected > 0) text += ` · ${collected} artifact(s)`;
 			if (d.runDurationMs !== null) {
 				text += theme.fg("dim", ` · ${formatDuration(d.runDurationMs)}`);
+			}
+			const collapsedUsage = usageSummary(d);
+			if (d.status === "success" && collapsedUsage.costUsd !== null) {
+				text += theme.fg("dim", ` · $${collapsedUsage.costUsd.toFixed(4)}`);
 			}
 			const missingCount = d.artifacts.filter((x) => x.missing).length;
 			if (missingCount > 0) text += theme.fg("warning", ` · ${missingCount} missing`);

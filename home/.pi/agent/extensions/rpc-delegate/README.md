@@ -65,7 +65,9 @@ name or `null`); resolution-failure rejections carry `null` for both.
 When `roster.policy.fallback` is `frontier` and a pinned open-weight model
 errors or breaks its artifact contract, the extension retries once with the
 next eligible roster candidate and appends `fallbackFrom=<id>` to the retry
-row's `note` (not on abort, timeout, or `spawn-enoent`).
+row's `note` (not on abort, timeout, or `spawn-enoent`). The displayed
+delegation cost is the sum of attempt costs when fallback ran; telemetry
+keeps one per-attempt cost row.
 Override the log path with `RPC_DELEGATE_TELEMETRY` (tests).
 
 ## Architecture
