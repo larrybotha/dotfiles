@@ -1,4 +1,18 @@
 {
+  "policy": {
+    "preference": "open-first",
+    "fallback": "frontier",
+    "minArtifactRows": 3,
+    "maxBrokenRate": 0.1,
+    "gateWindowDays": 30
+  },
+  "modelMeta": {
+    "glm-5.3": { "weights": "open", "origin": "zai" },
+    "glm-5.3-flash": { "weights": "open", "origin": "zai" },
+    "kimi-k3": { "weights": "open", "origin": "moonshot" },
+    "minimax-m3": { "weights": "open", "origin": "minimax" },
+    "deepseek-v4.1-flash": { "weights": "open", "origin": "deepseek" }
+  },
   "archetypes": [
     {
       "archetype": "Deep research / synthesis",
@@ -8,12 +22,12 @@
     {
       "archetype": "Greenfield code / big feature",
       "picks": ["gpt-5.3-codex", "claude-opus-5-5"],
-      "alt": []
+      "alt": ["deepseek-v4.1-flash"]
     },
     {
       "archetype": "Mechanical edits / bulk transform",
       "picks": ["claude-sonnet-5-5", "gpt-5.3-codex"],
-      "alt": ["gpt-5.4-nano"]
+      "alt": ["glm-5.3-flash", "gpt-5.4-nano"]
     },
     {
       "archetype": "Code review / judgment / rubric",

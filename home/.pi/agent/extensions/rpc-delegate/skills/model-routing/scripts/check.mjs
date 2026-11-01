@@ -5,14 +5,15 @@
 //   (default)      probe roster, rewrite assets/verdicts.json (revision), report
 //   --full          default + probe every first-party catalog model
 //   --status        read-only: cadence, live diff (fail-soft), catalog
-//                  diff, telemetry re-rank flags, thinking-map record
-//                  + managed-block drift (zero-spawn policy check via
-//                  shared.mjs)
+//                  diff, open-weight routing state + telemetry re-rank
+//                  flags, thinking-map record + managed-block drift
+//                  (zero-spawn policy check via shared.mjs)
 //   --live          read-only: live provider /models listing vs the
 //                  store (store-only retired ids, live-only ids, roster
 //                  absence) — fail-soft (no key / network); --status
 //                  embeds the same diff
 //   --lint          read-only: roster/verdicts/telemetry/store/class validation
+//                  (roster.policy + modelMeta included)
 //
 // Flags:
 //   --catalog <path>      override catalog location (default: paths.json)
@@ -38,7 +39,7 @@
 // store+models.json merge estimate, and --status reports the policy
 // drift (zero spawns) without rewriting anything.
 //
-// Roster (rankings, alternatives, never_delegate) lives in
+// Roster (rankings, alternatives, never_delegate, policy, modelMeta) lives in
 // assets/roster.json (tracked). Verdicts + probed timestamps in
 // assets/verdicts.json are per-machine (gitignored).
 import fs from 'node:fs/promises';
@@ -55,12 +56,20 @@ import {
 } from './classes.mjs';
 import {
 	expandTilde,
+	FALLBACK_DOMAIN,
 	flattenCatalog,
 	firstParty,
 	managedOverridesPolicy,
 	parseArgs,
+	PREFERENCE_DOMAIN,
+	qualityGate,
 	readJson,
+	routingPolicy,
 	runPool,
+	telemetryStats,
+	telemetryStatsForPolicy,
+	VISION_ARCHETYPE,
+	WEIGHTS_DOMAIN,
 } from './shared.mjs';
 
 const TIMEOUT_MS = 30_000;
@@ -88,10 +97,6 @@ const TELEMETRY_SOFT_KEYS = [
 	'costUsd', 'runSecs', 'note', 'source', 'artifactPolicy',
 	'modelSource', 'agent',
 ];
-// Provenance value written by the rpc-delegate writer. Re-rank flags
-// count only writer rows; hand/legacy rows carry no source and are
-// excluded from demotion flags.
-const TELEMETRY_SOURCE = 'rpc-delegate';
 // stopReason protocol values observed in live rows + machine.ts domain
 // (error/aborted/pending fail; length/deferred surface as notes). Novel
 // string values warn; malformed values are problems.
@@ -103,7 +108,6 @@ const MODEL_SOURCES = new Set(['pinned', 'registry', 'default']);
 const FLAG_MIN_ROWS = 3;
 const CADENCE_ROWS = 50;
 const CADENCE_DAYS = 30;
-const VISION_ARCHETYPE = 'Vision (image input)';
 
 const KNOWN_FLAGS = new Set(['--lint', '--status', '--live', '--full', '--catalog', '--models-config', '--telemetry', '--auth']);
 const VALUE_FLAGS = new Set(['--catalog', '--models-config', '--telemetry', '--auth']);
@@ -298,44 +302,6 @@ async function readTelemetry(file, validate = false) {
 	return out;
 }
 
-// artifactOk tri-state: true = artifacts collected and readable;
-// false = artifacts declared but broken (real defect signal);
-// null = artifact-less run (expected under artifactPolicy "stopReason"
-// — prose deliverables — not a defect signal). Flags count only
-// artifact-policy rows (true+false); null runs are reported separately.
-// Re-rank statistics count writer rows only (source === TELEMETRY_SOURCE):
-// pre-writer legacy and hand rows carry no source and must not mint
-// demotion flags.
-function telemetryStats(rows) {
-	const writerRows = rows.filter((r) => r?.source === TELEMETRY_SOURCE);
-	// spawn-enoent rows are harness failures (node/pi binary missing),
-	// never model state — excluded from re-rank statistics entirely;
-	// reported as a count so the harness issue stays visible.
-	const harnessFailures = writerRows.filter((r) => r?.failureClass === 'spawn-enoent').length;
-	const usable = writerRows.filter((r) => r?.failureClass !== 'spawn-enoent');
-	const byModel = new Map();
-	const byCell = new Map();
-	const push = (map, key, r) => {
-		let s = map.get(key);
-		if (!s) {
-			s = { n: 0, okTrue: 0, okFalse: 0, okNull: 0, stall: 0, failures: {} };
-			map.set(key, s);
-		}
-		s.n += 1;
-		if (r.artifactOk === true) s.okTrue += 1;
-		else if (r.artifactOk === false) s.okFalse += 1;
-		else s.okNull += 1;
-		if (r.stallHit === true) s.stall += 1;
-		if (r.failureClass) s.failures[r.failureClass] = (s.failures[r.failureClass] || 0) + 1;
-	};
-	for (const r of usable) {
-		if (!r?.model) continue;
-		push(byModel, r.model, r);
-		if (r.archetype) push(byCell, `${r.archetype} x ${r.model}`, r);
-	}
-	return { byModel, byCell, harnessFailures };
-}
-
 function reRankFlags(stats) {
 	const flags = [];
 	const collect = (map) => {
@@ -349,6 +315,44 @@ function reRankFlags(stats) {
 	collect(stats.byModel);
 	collect(stats.byCell);
 	return flags;
+}
+
+function printOpenWeightStatus(stats, roster, policy) {
+	const meta = roster?.modelMeta;
+	const metaObj = meta && typeof meta === 'object' && !Array.isArray(meta) ? meta : {};
+	const openIds = Object.entries(metaObj)
+		.filter(([, e]) => e?.weights === 'open')
+		.map(([id]) => id)
+		.sort();
+	const places = new Map();
+	for (const a of roster?.archetypes || []) {
+		for (const id of [...(a.picks || []), ...(a.alt || [])]) {
+			if (!places.has(id)) places.set(id, []);
+			places.get(id).push(a.archetype);
+		}
+	}
+	console.log(`routing policy: preference=${policy.preference}, fallback=${policy.fallback}, minArtifactRows=${policy.minArtifactRows}, maxBrokenRate=${policy.maxBrokenRate}, gateWindowDays=${policy.gateWindowDays}`);
+	if (!openIds.length) {
+		console.log('open-weight candidates: none — add roster.modelMeta weights=open');
+		return;
+	}
+	const sum = { n: 0, okTrue: 0, okFalse: 0, okNull: 0, costSum: 0, costN: 0, runSum: 0, runN: 0 };
+	for (const id of openIds) {
+		const s = stats.byModel.get(id);
+		if (!s) continue;
+		for (const k of ['n', 'okTrue', 'okFalse', 'okNull', 'costSum', 'costN', 'runSum', 'runN']) sum[k] += s[k];
+	}
+	const cost = sum.costN ? `$${(sum.costSum / sum.costN).toFixed(4)}/row` : 'cost n/a';
+	const run = sum.runN ? `${(sum.runSum / sum.runN).toFixed(1)}s/row` : 'run n/a';
+	console.log(`open-weight telemetry (writer rows, last ${policy.gateWindowDays}d gate window): n=${sum.n} artifactOk=true/false/null=${sum.okTrue}/${sum.okFalse}/${sum.okNull} ${cost} ${run}`);
+	console.log(`open-weight candidates (${openIds.length}):`);
+	for (const id of openIds) {
+		const s = stats.byModel.get(id);
+		const gate = qualityGate(s, policy);
+		const where = places.get(id) || [];
+		const facts = s ? `n=${s.n} artifactOk=${s.okTrue}/${s.okFalse}/${s.okNull}` : 'n=0';
+		console.log(`  - ${id} [${where.length ? where.join(', ') : 'not in archetypes'}]: ${facts} -> ${gate.ok ? 'priority-eligible' : 'NOT priority'} (${gate.reason})`);
+	}
 }
 
 function printFlags(flags) {
@@ -375,7 +379,7 @@ function daysSince(iso) {
 	return Math.floor(ms / 86_400_000);
 }
 
-function lintRoster(roster, catalog, overrides, derived, problems, warnings) {
+function lintRoster(roster, rosterSet, catalog, overrides, derived, problems, warnings) {
 	const archetypes = new Set();
 	const neverIds = new Set();
 	for (const e of roster?.never_delegate || []) {
@@ -387,6 +391,55 @@ function lintRoster(roster, catalog, overrides, derived, problems, warnings) {
 			neverIds.add(e.id);
 		}
 	}
+
+	// Routing policy + openness metadata are hand-curated priors. Lint the
+	// shape, keep ids anchored to the roster, and surface an open-first policy
+	// that has no open-weight candidate for an archetype.
+	const policy = roster?.policy;
+	if (!policy || typeof policy !== 'object' || Array.isArray(policy)) {
+		warnings.push('roster: missing "policy" object — routing defaults to roster-order');
+	} else {
+		if (!PREFERENCE_DOMAIN.has(policy.preference)) {
+			problems.push(`roster: policy.preference must be "open-first" or "roster-order" (got ${JSON.stringify(policy.preference)})`);
+		}
+		if (!FALLBACK_DOMAIN.has(policy.fallback)) {
+			problems.push(`roster: policy.fallback must be "frontier" or "none" (got ${JSON.stringify(policy.fallback)})`);
+		}
+		if (!Number.isInteger(policy.minArtifactRows) || policy.minArtifactRows < 1) {
+			problems.push(`roster: policy.minArtifactRows must be a positive integer (got ${JSON.stringify(policy.minArtifactRows)})`);
+		}
+		if (typeof policy.maxBrokenRate !== 'number' || !Number.isFinite(policy.maxBrokenRate) || policy.maxBrokenRate < 0 || policy.maxBrokenRate > 1) {
+			problems.push(`roster: policy.maxBrokenRate must be a number in [0, 1] (got ${JSON.stringify(policy.maxBrokenRate)})`);
+		}
+		if (!Number.isInteger(policy.gateWindowDays) || policy.gateWindowDays < 1) {
+			problems.push(`roster: policy.gateWindowDays must be a positive integer (got ${JSON.stringify(policy.gateWindowDays)})`);
+		}
+	}
+	const meta = roster?.modelMeta;
+	if (!meta || typeof meta !== 'object' || Array.isArray(meta)) {
+		problems.push('roster: "modelMeta" must be an object keyed by model id');
+	} else {
+		for (const [id, e] of Object.entries(meta)) {
+			if (!id) problems.push('roster: modelMeta contains an empty id');
+			if (!rosterSet.has(id)) problems.push(`roster: modelMeta id "${id}" not in roster`);
+			if (!e || typeof e !== 'object' || Array.isArray(e)) {
+				problems.push(`roster: modelMeta["${id}"] must be an object`);
+				continue;
+			}
+			if (!WEIGHTS_DOMAIN.has(e.weights)) {
+				problems.push(`roster: modelMeta["${id}"].weights must be "open" or "closed" (got ${JSON.stringify(e.weights)})`);
+			}
+			if ('origin' in e && (typeof e.origin !== 'string' || !e.origin)) {
+				problems.push(`roster: modelMeta["${id}"].origin must be a non-empty string when set`);
+			}
+			if (e.weights === 'open' && neverIds.has(id)) {
+				warnings.push(`roster: open-weight id "${id}" is never_delegate — not a routing candidate`);
+			}
+		}
+	}
+	const metaFor = (id) => (meta && typeof meta === 'object' && !Array.isArray(meta) ? meta[id] : null);
+	const openPref = policy && typeof policy === 'object' && !Array.isArray(policy) && policy.preference === 'open-first';
+
 	for (const a of roster?.archetypes || []) {
 		if (!a.archetype) {
 			problems.push('roster: archetypes entry missing archetype');
@@ -438,6 +491,12 @@ function lintRoster(roster, catalog, overrides, derived, problems, warnings) {
 				if (st.reasoning === false) {
 					warnings.push(`roster: "${id}" reasoning:false — not proven for tool loops`);
 				}
+			}
+		}
+		if (openPref) {
+			const hasOpen = [...(a.picks || []), ...(a.alt || [])].some((id) => metaFor(id)?.weights === 'open');
+			if (!hasOpen) {
+				warnings.push(`roster: archetype "${a.archetype}" has no open-weight candidate — open-first falls back to roster order`);
 			}
 		}
 	}
@@ -551,7 +610,7 @@ async function lintAll(roster, rosterSet, paths, problems, warnings) {
 		warnings.push(`models.json unavailable (${e?.code === 'ENOENT' ? 'missing' : 'unparseable'}) — modelOverrides merge skipped; store-only checks continue`);
 	}
 
-	lintRoster(roster, catalog, overrides, derived, problems, warnings);
+	lintRoster(roster, rosterSet, catalog, overrides, derived, problems, warnings);
 
 	let verdicts = null;
 	try {
@@ -794,6 +853,8 @@ async function main() {
 
 	const tel = await readTelemetry(paths.telemetry);
 	const stats = telemetryStats(tel.rows);
+	const routing = routingPolicy(roster);
+	const gateStats = telemetryStatsForPolicy(tel.rows, routing);
 	const flagsOut = reRankFlags(stats);
 
 	const rowsSince = countRowsAfter(tel.rows, prior?.revised || null);
@@ -895,6 +956,7 @@ async function main() {
 			}
 		}
 
+		printOpenWeightStatus(gateStats, roster, routing);
 		printFlags(flagsOut);
 		if (stats.harnessFailures) {
 			console.log(`telemetry harness failures (spawn-enoent — excluded from re-rank stats): ${stats.harnessFailures}`);
@@ -1003,7 +1065,7 @@ async function main() {
 		archetypes,
 		never_delegate,
 		catalog: catalogSection,
-		notes: 'Roster: assets/roster.json (tracked, hand-curated). Verdicts + probed timestamps regenerated per machine by scripts/check.mjs. Rankings are priors (n=1 origin); telemetry flags (--status, min 3 writer rows) are the re-rank review path. Indeterminate probes retain prior verdicts (hysteresis). retired: id absent from the live /models listing (check.mjs --live; fail-open when the live list is unavailable). catalog: non-roster first-party verdicts from --full runs, retained on default refresh.',
+		notes: 'Roster: assets/roster.json (tracked, hand-curated). Verdicts + probed timestamps regenerated per machine by scripts/check.mjs. Rankings are priors (n=1 origin); telemetry flags (--status, min 3 writer rows) are the re-rank review path; roster.policy + modelMeta drive open-first ordering (check.mjs --status reports the gate). Indeterminate probes retain prior verdicts (hysteresis). retired: id absent from the live /models listing (check.mjs --live; fail-open when the live list is unavailable). catalog: non-roster first-party verdicts from --full runs, retained on default refresh.',
 	};
 
 	const changedById = new Map();

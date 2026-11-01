@@ -24,7 +24,7 @@ import {
 	MAX_AGENT_BODY_BYTES,
 	type AgentConfig,
 } from "./agents.ts";
-import { appendTelemetryRow, newSessionId, resolveDelegation } from "./index.ts";
+import { appendTelemetryRow, attemptFailed, newSessionId, resolveDelegation } from "./index.ts";
 import {
 	buildSummary,
 	evaluateSuccess,
@@ -1403,7 +1403,7 @@ function fakeDetails(): Parameters<typeof appendTelemetryRow>[0] {
 	};
 }
 
-await ok("appendTelemetryRow: modelSource/agent on all three kinds", () => {
+await ok("appendTelemetryRow: modelSource/agent + fallbackFrom note", () => {
 	const dir = agentTmpDir();
 	const log = path.join(dir, "telemetry.jsonl");
 	const meta = {
@@ -1423,12 +1423,25 @@ await ok("appendTelemetryRow: modelSource/agent on all three kinds", () => {
 		{ ...meta, kind: "inFlight" as const, modelSource: "pinned", agent: null },
 		log,
 	);
+	appendTelemetryRow(
+		{ ...fakeDetails(), fallbackFrom: "gpt-5.5-pro" },
+		{ ...meta, modelSource: "pinned", agent: null },
+		log,
+	);
+	appendTelemetryRow(
+		{ ...fakeDetails(), failureDetail: "x".repeat(200), fallbackFrom: "glm-5.3" },
+		{ ...meta, modelSource: "pinned", agent: null },
+		log,
+	);
 	const rows = fs
 		.readFileSync(log, "utf8")
 		.trim()
 		.split("\n")
 		.map((l) => JSON.parse(l));
-	assert.equal(rows.length, 3);
+	assert.equal(rows.length, 5);
+	assert.match(rows[3].note, /fallbackFrom=gpt-5\.5-pro/);
+	assert.ok(rows[4].note.startsWith("fallbackFrom=glm-5.3"));
+	assert.ok(rows[4].note.length <= 140);
 	assert.equal(rows[0].modelSource, "registry");
 	assert.equal(rows[0].agent, "scout");
 	assert.equal(rows[1].modelSource, null);
@@ -1436,6 +1449,15 @@ await ok("appendTelemetryRow: modelSource/agent on all three kinds", () => {
 	assert.equal(rows[2].modelSource, "pinned");
 	assert.ok("modelSource" in rows[0]);
 	assert.ok("agent" in rows[0]);
+});
+
+await ok("attemptFailed: retries model failures/artifacts, not abort/timeout/spawn-enoent", () => {
+	assert.equal(attemptFailed({ ...fakeDetails(), status: "error", failureClass: "other" }), true);
+	assert.equal(attemptFailed({ ...fakeDetails(), status: "success", artifacts: [{ path: "x", content: "", missing: true }] }), true);
+	assert.equal(attemptFailed({ ...fakeDetails(), status: "success", artifacts: [{ path: "x", content: "ok", missing: false }] }), false);
+	assert.equal(attemptFailed({ ...fakeDetails(), status: "error", failureClass: "spawn-enoent" }), false);
+	assert.equal(attemptFailed({ ...fakeDetails(), status: "timeout" }), false);
+	assert.equal(attemptFailed({ ...fakeDetails(), status: "aborted" }), false);
 });
 
 for (const d of tmpRoots) {

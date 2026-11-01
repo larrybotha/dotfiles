@@ -40,6 +40,13 @@ import { Type } from "typebox";
 import { createActor, fromPromise, waitFor, type Actor } from "xstate";
 import { DELEGATION_PATTERNS } from "model-routing-classes";
 import {
+	expandTilde,
+	flattenCatalog,
+	pickFallback,
+	readJsonlSync,
+	VISION_ARCHETYPE,
+} from "./skills/model-routing/scripts/shared.mjs";
+import {
 	formatAgentList,
 	loadAgentsFromDir,
 	MAX_AGENT_BODY_BYTES,
@@ -180,6 +187,8 @@ interface RpcDelegateDetails {
 	 *  never a model failure; the skill excludes it from re-rank stats. */
 	failureClass: string | null;
 	protoFatal: string | null;
+	/** Model id this attempt fell back from (open-first escalation), or null. */
+	fallbackFrom?: string | null;
 	rejected?: string;
 }
 
@@ -580,6 +589,7 @@ function blankDetails(task: string): RpcDelegateDetails {
 		failureDetail: null,
 		protoFatal: null,
 		failureClass: null,
+		fallbackFrom: null,
 	};
 }
 
@@ -623,6 +633,7 @@ function detailsFromSnapshot(
 		failureDetail: c.failureDetail,
 		protoFatal: c.protoFatal,
 		failureClass: null, // set below from the full failure surfaces
+		fallbackFrom: null,
 	};
 	d.failureClass = classifyFailure(d);
 	return d;
@@ -658,6 +669,9 @@ function buildResultText(d: RpcDelegateDetails): string {
 	}
 	if (d.failureClass) {
 		text += `\nFailure class: ${d.failureClass}`;
+	}
+	if (d.fallbackFrom) {
+		text += `\nFallback from: ${d.fallbackFrom} (previous attempt failed)`;
 	}
 	if (d.status === "error" && d.childExit !== null && d.childExit !== 0) {
 		text += `\nChild exit code: ${d.childExit}`;
@@ -716,6 +730,55 @@ const TELEMETRY_PATH =
  *  delegated child given this file via the `extensions` param).
  *  Module-relative path: survives the symlinked agent-dir layout. */
 const MODEL_ROUTING_SKILL_DIR = fileURLToPath(new URL("./skills/model-routing", import.meta.url));
+
+/** Fallback candidate for open-first escalation. Reads the skill's tracked
+ *  roster + per-machine verdicts/telemetry, never writes. Returns null unless
+ *  the failed model is open-weight and the policy allows frontier fallback. */
+interface FallbackCandidate {
+	provider: string;
+	model: string;
+}
+
+function readJsonSync(file: string): any | null {
+	try {
+		return JSON.parse(fs.readFileSync(file, "utf8"));
+	} catch {
+		return null;
+	}
+}
+
+function nextFallbackCandidate(input: {
+	archetype: string | null;
+	currentModel: string | null;
+	attempted: Set<string>;
+}): FallbackCandidate | null {
+	if (!input.archetype || !input.currentModel) return null;
+	const roster = readJsonSync(path.join(MODEL_ROUTING_SKILL_DIR, "assets/roster.json"));
+	const verdicts = readJsonSync(path.join(MODEL_ROUTING_SKILL_DIR, "assets/verdicts.json"));
+	const pathsCfg = readJsonSync(path.join(MODEL_ROUTING_SKILL_DIR, "assets/paths.json"));
+	if (!roster || !verdicts || !pathsCfg) return null;
+	const catalogRaw = readJsonSync(expandTilde(pathsCfg.catalog));
+	if (!catalogRaw) return null;
+	const { map: catalog } = flattenCatalog(catalogRaw);
+	const telemetryPath = process.env.RPC_DELEGATE_TELEMETRY ?? (pathsCfg.telemetry ? expandTilde(pathsCfg.telemetry) : null);
+	return pickFallback({
+		roster,
+		verdicts,
+		catalog,
+		telemetryRows: telemetryPath ? readJsonlSync(telemetryPath) : [],
+		archetype: input.archetype,
+		currentModel: input.currentModel,
+		attempted: input.attempted,
+		needsImage: input.archetype === VISION_ARCHETYPE,
+	});
+}
+
+export function attemptFailed(d: RpcDelegateDetails): boolean {
+	if (d.status === "aborted" || d.status === "timeout") return false;
+	if (d.failureClass === "spawn-enoent") return false;
+	if (d.status === "error") return true;
+	return d.artifacts.length > 0 && d.artifacts.some((a) => !isCollected(a));
+}
 
 /** Redact credential-shaped substrings before anything reaches the
  *  persistent telemetry log (F12 hardening: lastAssistantError/stderr are
@@ -792,12 +855,17 @@ export function appendTelemetryRow(
 			// flagged rows logged an empty note (provider errors leave
 			// failureDetail null; the text lives in lastAssistantError/stderr)
 			// and made the `other` bucket unclassifiable post-hoc.
-			note:
-				meta.kind === "rejected"
-					? `rejected: ${noteText([d.failureDetail])}`
-					: meta.kind === "inFlight"
-						? `tool return in flight (status ${d.status}) — no terminal row`
-						: noteText([d.failureDetail, d.lastAssistantError, d.stderr]),
+			note: (() => {
+				const base =
+					meta.kind === "rejected"
+						? `rejected: ${noteText([d.failureDetail])}`
+						: meta.kind === "inFlight"
+							? `tool return in flight (status ${d.status}) — no terminal row`
+							: noteText([d.failureDetail, d.lastAssistantError, d.stderr]);
+				const fallback = meta.kind == null && d.fallbackFrom ? `fallbackFrom=${d.fallbackFrom}` : "";
+				if (!fallback) return base;
+				return `${fallback}${base ? ` ${base}` : ""}`.slice(0, 140);
+			})(),
 		};
 		fs.appendFileSync(path, `${JSON.stringify(row)}\n`, "utf8");
 	} catch {
@@ -1034,6 +1102,16 @@ export default function (pi: ExtensionAPI) {
 				});
 			}
 
+			const runAttempt = async (attempt: {
+				provider: string | null;
+				model: string | null;
+				modelSource: ModelSource;
+				fallbackFrom: string | null;
+			}): Promise<{
+				content: { type: "text"; text: string }[];
+				details: RpcDelegateDetails;
+				isError: boolean;
+			}> => {
 			const a = createActor(wiredMachine);
 			a.start();
 
@@ -1067,8 +1145,8 @@ export default function (pi: ExtensionAPI) {
 				sessionId,
 				task,
 				agentPrompt: resolved.agentPrompt,
-				provider: resolved.provider,
-				model: resolved.model,
+				provider: attempt.provider,
+				model: attempt.model,
 				tools: resolved.tools,
 				extensions: extensions ?? null,
 				depth: DEPTH,
@@ -1147,13 +1225,14 @@ export default function (pi: ExtensionAPI) {
 					transport?.getEvidence().stderrTail ?? "",
 					resolved.agentName,
 				);
+				d.fallbackFrom = attempt.fallbackFrom;
 				appendTelemetryRow(d, {
 					archetype: archetype ?? null,
 					artifactPolicy,
 					kind: "inFlight",
 					depth: DEPTH,
 					parentSessionId,
-					modelSource: resolved.modelSource,
+					modelSource: attempt.modelSource,
 					agent: resolved.agentName,
 				});
 				return {
@@ -1188,14 +1267,42 @@ export default function (pi: ExtensionAPI) {
 			}
 
 			const result = resultFromSnapshot(a, undefined, selfWarnings, resolved.agentName);
+			result.details.fallbackFrom = attempt.fallbackFrom;
 			appendTelemetryRow(result.details, {
 					archetype: archetype ?? null,
 					artifactPolicy,
 					depth: DEPTH,
 					parentSessionId,
-					modelSource: resolved.modelSource,
+					modelSource: attempt.modelSource,
 					agent: resolved.agentName,
 				});
+			return result;
+			};
+
+			const attemptedModels = new Set<string>();
+			let attempt = {
+				provider: resolved.provider,
+				model: resolved.model,
+				modelSource: resolved.modelSource,
+				fallbackFrom: null as string | null,
+			};
+			let result = await runAttempt(attempt);
+			attemptedModels.add(attempt.model ?? "");
+			attemptedModels.add(result.details.childModelId ?? "");
+			if (attemptFailed(result.details)) {
+				const currentModel = result.details.childModelId ?? attempt.model;
+				const next = nextFallbackCandidate({ archetype: archetype ?? null, currentModel, attempted: attemptedModels });
+				if (next) {
+					attempt = {
+						provider: next.provider,
+						model: next.model,
+						modelSource: "pinned",
+						fallbackFrom: currentModel ?? "unknown",
+					};
+					attemptedModels.add(next.model);
+					result = await runAttempt(attempt);
+				}
+			}
 			return result;
 		},
 
