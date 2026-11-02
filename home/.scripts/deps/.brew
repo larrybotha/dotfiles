@@ -13,7 +13,6 @@ brews=(
   "pinentry-mac" # pinentry for gpg
 
   # shell / prompt / nav
-  "android-platform-tools"
   "anyquery"
   "atuin"
   "carapace"
@@ -130,6 +129,7 @@ casks=(
   "a-better-finder-rename"
   "aldente"
   "alfred"
+  "android-platform-tools"
   "android-studio"
   "apparency"
   "arc"
