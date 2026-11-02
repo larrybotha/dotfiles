@@ -185,12 +185,13 @@ casks=(
 taps_requiring_trust=(
   "anomalyco/tap/opencode"
   "fsouza/prettierd/prettierd"
-  "hashicorp/tap/packer"
   "hashicorp/tap/hashicorp-vagrant"
+  "hashicorp/tap/packer"
   "jesseduffield/lazydocker/lazydocker"
   "jesseduffield/lazynpm/lazynpm"
   "koekeishiya/formulae/skhd"
   "koekeishiya/formulae/yabai"
+  "libsql/sqld"                  # turso
   "terraform-linters/tap/tflint" # linter for Terraform
 )
 
