@@ -69,6 +69,7 @@ brews=(
   # databases
   "postgresql@18"
   "sqlite"
+  "tursodatabase/tap/turso" # Turso CLI (turso); core "turso" is tursodb shell
 
   # cloud / infra
   "ansible"
@@ -187,8 +188,9 @@ taps_requiring_trust=(
   "jesseduffield/lazynpm/lazynpm"
   "koekeishiya/formulae/skhd"
   "koekeishiya/formulae/yabai"
-  "libsql/sqld"                  # turso
+  "libsql/sqld/sqld"              # dependency of tursodatabase/tap/turso
   "terraform-linters/tap/tflint" # linter for Terraform
+  "tursodatabase/tap/turso"      # Turso CLI
 )
 
 casks_requiring_trust=(
