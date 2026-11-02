@@ -245,7 +245,7 @@ done
 
 if [[ "$(uname -s)" == "Darwin" ]]; then
   for cask in "${casks[@]}"; do
-    brew_lines+="cask \"${cask}\"${NL}"
+    cask_lines+="cask \"${cask}\"${NL}"
   done
 fi
 
