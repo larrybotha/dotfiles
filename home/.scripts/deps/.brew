@@ -76,7 +76,6 @@ brews=(
   "checkov"
   "docker"
   "docker-agent"
-  "docker-completion"
   "doctl"
   "flux"
   "glab"
@@ -200,6 +199,18 @@ casks_requiring_trust=(
 custom_taps=(
   "koekeishiya/formulae|https://github.com/asmvik/homebrew-formulae.git"
 )
+
+# Packages replaced by another formula/cask. Installing both causes file
+# conflicts (e.g. docker-completion and docker both own the docker completions).
+obsolete_brews=(
+  "docker-completion"
+)
+
+for formula in "${obsolete_brews[@]}"; do
+  if brew list --formula "$formula" &>/dev/null; then
+    brew uninstall --ignore-dependencies "$formula"
+  fi
+done
 
 forced_links=(
   "postgresql@18" # ensure pg_isready is available without manual linking
