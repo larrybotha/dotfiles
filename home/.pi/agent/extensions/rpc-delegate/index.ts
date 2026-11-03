@@ -167,6 +167,10 @@ interface RpcDelegateDetails {
 	assistantTextTail: string;
 	stderr: string;
 	toolCalls: number;
+	/** `codemode` outer tool calls observed (script runs). */
+	codemodeUsed: boolean;
+	/** `codemode` outer tool calls that ended in error. */
+	codemodeErrors: number;
 	lastToolNames: string[];
 	agentEndWillRetry: number;
 	uiRequests: number;
@@ -380,6 +384,50 @@ function childArgs(input: {
 	return args;
 }
 
+const CODEMODE_BUILTIN = "builtin:codemode";
+
+function toolPatternMatches(pattern: string, name: string): boolean {
+	const parts = pattern.split("*").map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+	return new RegExp(`^${parts.join(".*")}$`).test(name);
+}
+
+/** Codemode opt-in facts: the built-in extension loads under the child's
+ *  `--no-extensions`, and the tool selection must keep the codemode tool.
+ *  `tools: null` leaves selection to the child's defaults. */
+export function codemodeConfig(
+	extensions: string[] | null,
+	tools: string[] | null,
+): { enabled: boolean; warnings: string[] } {
+	const builtinLoaded = (extensions ?? []).some((e) => e.trim() === CODEMODE_BUILTIN);
+	let selected: boolean | null = null;
+	if (tools !== null) {
+		const entries = tools.map((t) => t.trim());
+		const delta = entries.length > 0 && entries.every((t) => t.startsWith("+") || t.startsWith("-"));
+		if (delta) {
+			for (const entry of entries) {
+				const pattern = entry.slice(1);
+				if (!toolPatternMatches(pattern, "codemode")) continue;
+				selected = entry.startsWith("+");
+			}
+		} else {
+			selected = entries.some((entry) => toolPatternMatches(entry, "codemode"));
+		}
+	}
+
+	const warnings: string[] = [];
+	if (selected === false && builtinLoaded) {
+		warnings.push(
+			`⚠ extensions loads "${CODEMODE_BUILTIN}" but the tools selection excludes codemode — the extension is inactive, so the child has no codemode tool`,
+		);
+	}
+	if (selected === true && !builtinLoaded) {
+		warnings.push(
+			`⚠ tools selects codemode but extensions does not load "${CODEMODE_BUILTIN}" — the child's --no-extensions disables the built-in codemode extension, so the tool is unavailable`,
+		);
+	}
+	return { enabled: builtinLoaded && selected !== false, warnings };
+}
+
 /** Warn-not-block: an `extensions` entry that resolves to this very extension
  *  re-enables delegation in the child — a deliberate choice (the bash
  *  sub-spawn route was never blocked; the depth budget still bounds it).
@@ -580,6 +628,8 @@ function blankDetails(task: string): RpcDelegateDetails {
 		assistantTextTail: "",
 		stderr: "",
 		toolCalls: 0,
+		codemodeUsed: false,
+		codemodeErrors: 0,
 		lastToolNames: [],
 		agentEndWillRetry: 0,
 		uiRequests: 0,
@@ -625,6 +675,8 @@ function detailsFromSnapshot(
 		assistantTextTail,
 		stderr,
 		toolCalls: c.toolCalls,
+		codemodeUsed: c.codemodeCalls > 0,
+		codemodeErrors: c.codemodeErrors,
 		lastToolNames: c.lastToolNames,
 		agentEndWillRetry: c.agentEndWillRetry,
 		uiRequests: c.uiRequests,
@@ -810,8 +862,8 @@ function noteText(parts: (string | null)[]): string {
 	return "";
 }
 
-/** v2 (C-lite): one JSONL row per rpc_delegate_task terminal return —
- *  settled, param-rejected, or still-in-flight. Fact capture only — never
+/** v2 (C-lite): one JSONL row per rpc_delegate_task return — settled,
+ *  param-rejected, or still-in-flight. Fact capture only — never
  *  read for routing; no task text logged; best-effort.
  *
  *  `modelSource` / `agent` are required meta fields: a call site cannot
@@ -827,6 +879,7 @@ export function appendTelemetryRow(
 		parentSessionId: string | null;
 		modelSource: ModelSource | null;
 		agent: string | null;
+		codemodeEnabled: boolean | null;
 	},
 	path = TELEMETRY_PATH,
 ): void {
@@ -855,6 +908,9 @@ export function appendTelemetryRow(
 					? d.artifacts.every(isCollected)
 					: null,
 			artifactPolicy: meta.artifactPolicy,
+			codemodeEnabled: meta.codemodeEnabled,
+			codemodeUsed: early ? null : d.codemodeUsed,
+			codemodeErrors: early ? null : d.codemodeErrors,
 			// On failures the note must be self-describing — F12: 15 of 18
 			// flagged rows logged an empty note (provider errors leave
 			// failureDetail null; the text lives in lastAssistantError/stderr)
@@ -951,13 +1007,14 @@ export default function (pi: ExtensionAPI) {
 			),
 			tools: Type.Optional(
 				Type.Array(Type.String(), {
-					description: "Explicit tool allowlist for the child (default: child's default tools)",
+					description:
+						"Explicit tool allowlist for the child (default: child's default tools). A plain list replaces the child's selection; include 'codemode' to keep the codemode tool when the builtin extension is loaded",
 				}),
 			),
 			extensions: Type.Optional(
 				Type.Array(Type.String(), {
 					description:
-					"Extension file paths to load into the child (pi --extension). Explicit paths load even under the child's --no-extensions default, so auto-loading (including this extension) stays off — this is NOT a recursion block: a child with bash can spawn plain pi and rediscover everything. CAUTION: a `tools` allowlist disables extension tools unless their names are included (e.g. web_search, web_fetch)",
+						"Extension file paths or builtin:<name> entries to load into the child (pi --extension). Explicit entries load even under the child's --no-extensions default, so auto-loading (including this extension) stays off — this is NOT a recursion block: a child with bash can spawn plain pi and rediscover everything. builtin:codemode loads codemode; the tool selection must also include codemode. CAUTION: a `tools` allowlist disables extension tools unless their names are included (e.g. web_search, web_fetch, codemode)",
 				}),
 			),
 			maxDepth: Type.Optional(
@@ -1015,7 +1072,9 @@ export default function (pi: ExtensionAPI) {
 
 			// Rejection path — no actor. `modelSource`/`agent` are null on
 			// resolution failures; when resolution succeeded but validation
-			// failed they carry the resolved values.
+			// failed they carry the resolved values. Codemode config follows the
+			// same rule: null before tool/extension resolution.
+			let resolvedCodemodeEnabled: boolean | null = null;
 			const reject = (
 				violation: string,
 				extra?: {
@@ -1040,6 +1099,7 @@ export default function (pi: ExtensionAPI) {
 					parentSessionId,
 					modelSource: extra?.modelSource ?? null,
 					agent: extra?.agentName ?? null,
+					codemodeEnabled: resolvedCodemodeEnabled,
 				});
 				return {
 					content: [{ type: "text" as const, text: `Rejected: ${violation}` }],
@@ -1079,6 +1139,8 @@ export default function (pi: ExtensionAPI) {
 				resolved = resolveDelegation({ provider, model, tools, agentPrompt }, []);
 			}
 			if ("error" in resolved) return reject(resolved.error);
+			const codemode = codemodeConfig(extensions ?? null, resolved.tools);
+			resolvedCodemodeEnabled = codemode.enabled;
 
 			// `paramsViolation` does not cover `agentPrompt`; the resolved prompt
 			// (from call or registry) is capped here, byte-measured.
@@ -1125,6 +1187,7 @@ export default function (pi: ExtensionAPI) {
 			// the bash route was never blocked; the depth budget still bounds it).
 			const selfWarnings = [
 				...registryWarnings,
+				...codemode.warnings,
 				...(extensions == null ? [] : selfLoadWarnings(extensions, workingDir)),
 			];
 			// Watchdog heartbeat file — the external orphan watchdog enforces
@@ -1238,6 +1301,7 @@ export default function (pi: ExtensionAPI) {
 					parentSessionId,
 					modelSource: attempt.modelSource,
 					agent: resolved.agentName,
+					codemodeEnabled: codemode.enabled,
 				});
 				return {
 					content: [
@@ -1273,13 +1337,14 @@ export default function (pi: ExtensionAPI) {
 			const result = resultFromSnapshot(a, undefined, selfWarnings, resolved.agentName);
 			result.details.fallbackFrom = attempt.fallbackFrom;
 			appendTelemetryRow(result.details, {
-					archetype: archetype ?? null,
-					artifactPolicy,
-					depth: DEPTH,
-					parentSessionId,
-					modelSource: attempt.modelSource,
-					agent: resolved.agentName,
-				});
+				archetype: archetype ?? null,
+				artifactPolicy,
+				depth: DEPTH,
+				parentSessionId,
+				modelSource: attempt.modelSource,
+				agent: resolved.agentName,
+				codemodeEnabled: codemode.enabled,
+			});
 			return result;
 			};
 

@@ -170,6 +170,10 @@ export interface RpcContext extends RequestSpec {
 	lastAssistantStopReason: string | null;
 	lastAssistantError: string | null;
 	toolCalls: number;
+	/** `codemode` outer tool calls observed (script runs). */
+	codemodeCalls: number;
+	/** `codemode` outer tool calls that ended in error. */
+	codemodeErrors: number;
 	lastToolNames: string[];
 	uiRequests: number;
 	lastSteer: string | null;
@@ -337,6 +341,8 @@ export function initialContext(): RpcContext {
 		lastAssistantStopReason: null,
 		lastAssistantError: null,
 		toolCalls: 0,
+		codemodeCalls: 0,
+		codemodeErrors: 0,
 		lastToolNames: [],
 		uiRequests: 0,
 		lastSteer: null,
@@ -770,12 +776,17 @@ export const rpcMachine = setup({
 		})),
 		seeToolStart: on("TOOL_START", (ev, c) => ({
 			toolCalls: c.toolCalls + 1,
+			codemodeCalls: c.codemodeCalls + (ev.toolName === "codemode" ? 1 : 0),
 			lastToolNames: pushToolRing(c.lastToolNames, ev.toolName),
 		})),
 		// Tool END only enters the ring when it failed — starts carry the name.
-		seeToolEnd: on("TOOL_END", (ev, c) =>
-			ev.isError ? { lastToolNames: pushToolRing(c.lastToolNames, `${ev.toolName} (error)`) } : {},
-		),
+		seeToolEnd: on("TOOL_END", (ev, c) => {
+			const codemodeError = ev.toolName === "codemode" && ev.isError;
+			return {
+				...(codemodeError ? { codemodeErrors: c.codemodeErrors + 1 } : {}),
+				...(ev.isError ? { lastToolNames: pushToolRing(c.lastToolNames, `${ev.toolName} (error)`) } : {}),
+			};
+		}),
 		seeUiRequest: on("EXT_UI_REQUEST", (ev, c) => ({ uiRequests: c.uiRequests + 1 })),
 		steerSent: on("STEER", (ev) => ({ lastSteer: ev.message })),
 		collect: onOutput<CollectOutput>((out, c) => ({

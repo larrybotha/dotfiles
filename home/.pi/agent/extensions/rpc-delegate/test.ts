@@ -24,7 +24,7 @@ import {
 	MAX_AGENT_BODY_BYTES,
 	type AgentConfig,
 } from "./agents.ts";
-import { appendTelemetryRow, attemptFailed, newSessionId, resolveDelegation } from "./index.ts";
+import { appendTelemetryRow, attemptFailed, codemodeConfig, newSessionId, resolveDelegation } from "./index.ts";
 import {
 	buildSummary,
 	evaluateSuccess,
@@ -624,6 +624,23 @@ await ok("tool + UI evidence rings: counts and last-N tool names", async () => {
 	assert.equal(c.toolCalls, 12);
 	assert.equal(c.uiRequests, 1);
 	assert.deepEqual(c.lastToolNames, ["tool-4", "tool-5", "tool-6", "tool-7", "tool-8", "tool-9", "tool-10", "tool-11"]);
+});
+
+await ok("codemode evidence: outer codemode calls and errors counted", async () => {
+	const stub = makeStubs();
+	const a = makeActor(stub);
+	begin(a);
+	await waitFor(a, (s) => s.matches("running"), { timeout: 2000 });
+	a.send({ type: "TOOL_START", toolName: "codemode" });
+	a.send({ type: "TOOL_END", toolName: "codemode", isError: true });
+	a.send({ type: "TOOL_START", toolName: "codemode" });
+	a.send({ type: "TOOL_END", toolName: "codemode", isError: false });
+	a.send({ type: "AGENT_SETTLED" });
+	await waitFor(a, (s) => isFinal(s), { timeout: 2000 });
+	const c = a.getSnapshot().context;
+	assert.equal(c.toolCalls, 2);
+	assert.equal(c.codemodeCalls, 2);
+	assert.equal(c.codemodeErrors, 1);
 });
 
 // --- fast completion race -------------------------------------------------------
@@ -1362,6 +1379,27 @@ await ok("resolveDelegation: unknown agent -> error", () => {
 
 // --- session id + telemetry -------------------------------------------------------
 
+await ok("codemodeConfig: builtin load + tool selection pairing", () => {
+	let c = codemodeConfig(["builtin:codemode"], ["read", "codemode"]);
+	assert.equal(c.enabled, true);
+	assert.deepEqual(c.warnings, []);
+	c = codemodeConfig(["builtin:codemode"], ["read"]);
+	assert.equal(c.enabled, false);
+	assert.match(c.warnings[0]!, /extension is inactive/);
+	c = codemodeConfig(null, ["codemode"]);
+	assert.equal(c.enabled, false);
+	assert.match(c.warnings[0]!, /tool is unavailable/);
+	c = codemodeConfig(["builtin:codemode"], null);
+	assert.equal(c.enabled, true);
+	assert.deepEqual(c.warnings, []);
+	c = codemodeConfig(["builtin:codemode"], ["+read", "-codemode"]);
+	assert.equal(c.enabled, false);
+	assert.match(c.warnings[0]!, /extension is inactive/);
+	c = codemodeConfig(null, ["+read", "+codemode"]);
+	assert.equal(c.enabled, false);
+	assert.match(c.warnings[0]!, /tool is unavailable/);
+});
+
 await ok("newSessionId: rpc-delegate-<uuid> shape", () => {
 	const a = newSessionId();
 	const b = newSessionId();
@@ -1389,6 +1427,8 @@ function fakeDetails(): Parameters<typeof appendTelemetryRow>[0] {
 		assistantTextTail: "",
 		stderr: "",
 		toolCalls: 0,
+		codemodeUsed: false,
+		codemodeErrors: 0,
 		lastToolNames: [],
 		agentEndWillRetry: 0,
 		uiRequests: 0,
@@ -1411,6 +1451,7 @@ await ok("appendTelemetryRow: modelSource/agent + fallbackFrom note", () => {
 		artifactPolicy: "stopReason",
 		depth: 0,
 		parentSessionId: null,
+		codemodeEnabled: false,
 	};
 	appendTelemetryRow(fakeDetails(), { ...meta, modelSource: "registry", agent: "scout" }, log);
 	appendTelemetryRow(
@@ -1449,6 +1490,11 @@ await ok("appendTelemetryRow: modelSource/agent + fallbackFrom note", () => {
 	assert.equal(rows[2].modelSource, "pinned");
 	assert.ok("modelSource" in rows[0]);
 	assert.ok("agent" in rows[0]);
+	assert.equal(rows[0].codemodeEnabled, false);
+	assert.equal(rows[0].codemodeUsed, false);
+	assert.equal(rows[0].codemodeErrors, 0);
+	assert.equal(rows[1].codemodeUsed, null);
+	assert.equal(rows[1].codemodeErrors, null);
 });
 
 await ok("attemptFailed: retries model failures/artifacts, not abort/timeout/spawn-enoent", () => {
