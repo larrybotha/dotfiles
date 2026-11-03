@@ -49,17 +49,7 @@
             "off": null
           }
         },
-        "claude-opus-5-5": {
-          "thinkingLevelMap": {
-            "off": null
-          }
-        },
         "claude-sonnet-4-6": {
-          "thinkingLevelMap": {
-            "off": null
-          }
-        },
-        "claude-sonnet-5-5": {
           "thinkingLevelMap": {
             "off": null
           }
