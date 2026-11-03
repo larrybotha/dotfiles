@@ -56,13 +56,9 @@ skill-managed `modelOverrides` block in `~/.pi/agent/models.json`
 drift. Fail-closed: ≥ 25% of children failing to spawn aborts without
 a write. `--lint` validates the record (shape, `revised` staleness
 ≥ 30 d, roster coverage) and prefers it over the store+merge estimate
-for roster effective-map checks. **When to derive**: `--status` /
-`--lint` say so (record missing or ≥ 30 d stale, roster id not
-derived, managed-block DRIFT); after roster edits on thinking
-models; after any `~/.pi/agent/models.json` edit (`--dry-run`
-verifies drift; `--status` reports it without spawning). The policy
-(generated / retained / dropped / drift) is single-sourced in
-`shared.mjs` — derive.mjs writes it, `--status` reports the same
+for roster effective-map checks. When to derive: see `../SKILL.md`.
+The policy (generated / retained / dropped / drift) is single-sourced
+in `shared.mjs` — derive.mjs writes it, `--status` reports the same
 computation, zero spawns.
 
 Failure-class taxonomy (class values, probe + delegation patterns,
@@ -134,7 +130,7 @@ flags remain review signals, not hidden exclusions.
 
 Eight classes. Detection mechanism per class:
 
-**Metadata-detected (store lint — never probe-classifiable):**
+**Metadata + delegation (never probe-classifiable):**
 
 1. **thinking-map-400** — map lacking an `off` key + session default
    `thinkingLevel: "off"` can trigger upstream 400 (or clamp to a
@@ -142,9 +138,9 @@ Eight classes. Detection mechanism per class:
    `scripts/check.mjs --lint`, preferring the derived record
    (`assets/thinking-levels.json`, live RPC `get_state` truth) over the
    `models-store.json` + `models.json` `modelOverrides` estimate
-   (key presence only; the value may be `null` or `"none"`);
-   probe output cannot classify it (`classifyVerdict` has no
-   pattern).
+   (key presence only; the value may be `null` or `"none"`), and by
+   delegation telemetry through `DELEGATION_PATTERNS`. Probe output
+   cannot classify it (`classifyVerdict` has no pattern).
 
 **Probe-classifiable (`scripts/check.mjs` `classifyVerdict` matches
 probe output; probe recipe in `../SKILL.md` catches these directly):**
@@ -220,8 +216,8 @@ Single source: `../SKILL.md` §Guardrails. Not mirrored here.
 
 ## Telemetry
 
-One JSONL row per `rpc_delegate_task` terminal return (settled,
-param-rejected, or in-flight), auto-appended by the extension at:
+One JSONL row per `rpc_delegate_task` return (settled, param-rejected,
+or in-flight), auto-appended by the extension at:
 `~/.pi/agent/extensions/rpc-delegate/telemetry.jsonl`
 
 ```json
@@ -242,6 +238,9 @@ param-rejected, or in-flight), auto-appended by the extension at:
   "runSecs": 40,
   "artifactOk": true,
   "artifactPolicy": "stopReason",
+  "codemodeEnabled": false,
+  "codemodeUsed": false,
+  "codemodeErrors": 0,
   "note": "one-line takeaway"
 }
 ```
@@ -252,14 +251,19 @@ free-tier-403 | param-400 | unavailable-400 | spawn-enoent | other`
 `source` is the provenance marker (`rpc-delegate`); rows without it
 are pre-writer legacy — summarized by `--lint`, excluded from re-rank
 flags. `archetype` comes from the `archetype` tool param and may be
-null when omitted. Terminal rows carry the failure detail in `note`
+null when omitted. `codemodeEnabled` is the resolved extension/tool
+selection (`builtin:codemode` loaded and not excluded by the tool
+selection; null before resolution), `codemodeUsed` is true when the child
+issued at least one outer `codemode` tool call, and `codemodeErrors` counts
+outer `codemode` calls that ended in error. Rejected and in-flight rows
+carry null usage counters. Terminal rows carry the failure detail in `note`
 when any exists (machine `failureDetail` → last assistant error →
 stderr tail, ≤140 chars, credential-shaped substrings redacted —
 authorization/bearer/api-key/sk-token shapes) — an empty note on a
 failure row means every surface was blank. Open-first escalation appends
 `fallbackFrom=<model-id>` to the retry row's note (one retry, enforced by
 the extension). `stopReason` domain:
-`stop | success | error | aborted | pending | length | deferred` —
+`stop | success | error | aborted | pending | length | deferred | toolUse` —
 novel values warn, malformed values fail lint. Rejected and in-flight
 rows carry `note` prefixes (`rejected:` / `tool return in flight`)
 with null run facts.
@@ -267,8 +271,8 @@ with null run facts.
 `modelSource`: `pinned | registry | default | null` — where the
 resolved (provider, model) pair came from. `pinned` = the call supplied
 provider/model; `registry` = an `agent` supplied them; `default` = the
-child's own default model. `null` = resolution failed (unknown agent,
-invalid pair) and no model was resolved. Note the row's `model` field is
+child's own default model. `null` = no resolved model (resolution
+failure or a rejection before resolution). Note the row's `model` field is
 the child's **actual** model id from `get_state` (`d.childModelId`), not
 the requested model — so a `default`-model child still records its real
 model, and `modelSource` separates routed picks from default rows

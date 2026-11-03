@@ -49,27 +49,16 @@ any `~/.pi/agent/models.json` edit (`--dry-run` verifies drift;
    It is read-only and prints eligibility, gate state, and exclusion
    reasons.
 4. **Apply routing policy** (`roster.policy`) to the eligible list.
-   Preference never overrides step 2 or 3.
-   - `roster-order`: `picks` in order, then `alt` (legacy behavior).
-   - `open-first`: symmetric quality gate for every candidate. Tier
-     order: open + gate-pass, closed + gate-pass, then gated candidates
-     (open and closed) in roster order. Gate: untested/under-tested
-     passes; once a candidate has `minArtifactRows` artifact-policy
-     rows, its broken rate must stay ≤ `maxBrokenRate`. Only rows inside
-     `gateWindowDays` count, so old breaks age out. A gated candidate
-     keeps eligibility but loses priority.
-   - `fallback: frontier`: the extension enforces one retry when the
-     chosen open model errors or breaks the artifact policy (not abort,
-     timeout, or `spawn-enoent`). It uses the next eligible candidate
-     from the same computed order and records `fallbackFrom=<id>` in the
-     telemetry `note`. `none` disables the retry.
+   Preference never overrides step 2 or 3. `roster-order` uses `picks`
+   then `alt`; `open-first` orders by the symmetric quality gate;
+   `fallback: frontier` retries once on an open-model failure. Ordering,
+   gate, and retry rules: `references/model-routing.md`
+   §Open-weight preference policy.
 5. **First-time model — probe first** (its provider):
    `pi --no-session --provider <provider> --model <id> --print "ok"`
    (~10 s, ≤ ~$0.04). `--no-session` mandatory — no stray session files.
-   Blocked = out. Caveat: probe ≠ delegation path — probe is plain
-   `--print`, no RPC child config, no tool loop; probe-pass does not
-   prove thinking-map (class-1) safety. `--lint` warns on roster picks
-   with that gap.
+   Blocked = out. Probe ≠ delegation path: see `references/model-routing.md`
+   §Known gaps.
 6. **High stakes / novel task:** A/B parallel — two cheap delegations of
    the same task, compare artifacts, keep the winner. Do this before
    trusting an open-first slot on a new task shape.
@@ -78,7 +67,7 @@ any `~/.pi/agent/models.json` edit (`--dry-run` verifies drift;
    children full set.
 9. **Telemetry:** pass `archetype` on every `rpc_delegate_task` call
    — the extension writer records it plus `source`, `artifactPolicy`,
-   and one row per terminal return (settled, rejected, in-flight).
+   and one row per return (settled, rejected, in-flight).
    Verify the row landed — the writer is best-effort (silent failure
    possible) and the running session may predate an extension edit
    (restart pi to pick up extension code). Rankings are priors (n=1

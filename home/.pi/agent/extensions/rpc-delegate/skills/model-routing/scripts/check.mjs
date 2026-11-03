@@ -95,12 +95,12 @@ const TELEMETRY_HARD_KEYS = ['ts', 'provider', 'model', 'stopReason', 'artifactO
 const TELEMETRY_SOFT_KEYS = [
 	'archetype', 'stallHit', 'failureClass', 'tokensIn', 'tokensOut',
 	'costUsd', 'runSecs', 'note', 'source', 'artifactPolicy',
-	'modelSource', 'agent',
+	'modelSource', 'agent', 'codemodeEnabled', 'codemodeUsed', 'codemodeErrors',
 ];
 // stopReason protocol values observed in live rows + machine.ts domain
 // (error/aborted/pending fail; length/deferred surface as notes). Novel
 // string values warn; malformed values are problems.
-const STOP_REASON_DOMAIN = new Set(['stop', 'success', 'error', 'aborted', 'pending', 'length', 'deferred']);
+const STOP_REASON_DOMAIN = new Set(['stop', 'success', 'error', 'aborted', 'pending', 'length', 'deferred', 'toolUse']);
 const ARTIFACT_POLICIES = new Set(['stopReason', 'artifacts']);
 // modelSource domain: where the resolved (provider, model) pair came from.
 // null is allowed (resolution-failure rejections resolve no model).

@@ -10,8 +10,8 @@ descriptions callers see at tool-use time.
 ### Child extensions
 
 Children spawn with `--no-extensions`, which turns off extension
-_discovery_ (auto-loading) — this extension included — and project-local
-surprises. It does **not** block recursion at the capability level: a child
+_discovery_ (auto-loading) — this extension included — built-in extensions,
+and project-local surprises. It does **not** block recursion at the capability level: a child
 with `bash` can spawn a plain `pi` that rediscovers every user extension
 (live-verified: a one-shot `pi --print` in bash reported `web_search`,
 browser CDP tools, and `rpc_delegate_task` itself, unsupervised). What the
@@ -22,13 +22,25 @@ watches — and in a live A/B, research children improvising via bash errored
 2/2 (no artifacts) while the explicit `-e …/web-search/index.ts` route
 worked first try.
 
-The `extensions` param opts in to loading specific extension files
-(live-verified: a child with `-e …/web-search/index.ts` reports
-`web_search`, `web_fetch`, `web_report`, `web_archive`, `web_reset`). Two
-footguns: a `tools` allowlist disables extension tools unless their names
-are listed (plain names — `+name` syntax is not supported for tools), and
+The `extensions` param opts in to loading specific extension files or a
+`builtin:<name>` extension (live-verified: a child with
+`-e …/web-search/index.ts` reports `web_search`, `web_fetch`, `web_report`,
+`web_archive`, `web_reset`). Two footguns: a `tools` allowlist disables
+extension tools unless their names are listed (a plain list replaces the
+selection; `+name` / `-name` entries adjust the default selection), and
 loading this extension's own path re-enables delegation in the child -
 warn-not-block, depth-bounded.
+
+Child codemode is off by default: `--no-extensions` disables
+`builtin:codemode`, so `defaultTools: ["+codemode"]` alone does not enable it
+in a child. Opt in by passing `extensions: ["builtin:codemode"]` and selecting
+the tool: with no `tools` param the child's default tool selection must
+include codemode; with a `tools` selection include `"codemode"` in a plain
+list, or `"+codemode"` in a `+` / `-` list. A loaded codemode extension whose
+tool selection excludes codemode produces an inactive extension and no
+codemode tool. A tool selection naming codemode without loading
+`builtin:codemode` produces an unavailable tool. Both cases surface a warning
+in the result.
 
 ### Agent registry
 
@@ -38,12 +50,14 @@ string or YAML list), `provider`, `model`. The body is the appended system
 prompt. Registry values are defaults — explicit call params win, per field.
 `provider`/`model` resolve atomically: if the call sets either, the pair
 comes wholly from the call; otherwise wholly from the agent. `provider` is
-required whenever `model` is set. Unknown agent, duplicate name, malformed
-frontmatter (skipped per-file, never fatal), a NUL byte, or a body over
-32 KiB is rejected before spawn. A call without `agent` performs no
-registry filesystem access. Agent descriptions are surfaced in the `agent`
-param once at load (stale until `/reload`); per-call resolution reads the
-directory fresh and is authoritative. The resolved prompt is delivered via
+required whenever `model` is set. Unknown agent and duplicate names are
+rejected before spawn. Malformed frontmatter, NUL bytes, and registry bodies
+over 32 KiB are skipped per-file with warnings; a resolved call-side prompt
+over 32 KiB is rejected. Per-call resolution without `agent` performs no
+registry filesystem access; extension load scans the registry once for the
+`agent` description. Agent descriptions are surfaced in the `agent` param once
+at load (stale until `/reload`); per-call resolution reads the directory fresh
+and is authoritative. The resolved prompt is delivered via
 a 0600 temp file (`--append-system-prompt <path>`), removed on settle and by
 the watchdog on orphan/not-settled paths.
 
@@ -58,10 +72,9 @@ top-level call to grant one more level.
 
 ## Telemetry
 
-One JSONL row per terminal return in `telemetry.jsonl` (schema in
-`skills/model-routing/references/model-routing.md`). New rows carry
-`modelSource` (`pinned | registry | default | null`) and `agent` (resolved
-name or `null`); resolution-failure rejections carry `null` for both.
+One JSONL row per return in `telemetry.jsonl` — settled, param-rejected, or
+in-flight. Schema and field semantics:
+`skills/model-routing/references/model-routing.md`.
 When `roster.policy.fallback` is `frontier` and a pinned open-weight model
 errors or breaks its artifact contract, the extension retries once with the
 next eligible roster candidate and appends `fallbackFrom=<id>` to the retry
@@ -131,4 +144,4 @@ delegation failure-class patterns.
 - **Raw RPC pipe + immediate stdin EOF kills a child mid-turn** — keep stdin
   open (the extension's transport never closes stdin early).
 - **`get_session_stats` works on `--no-session` children** — usage/cost
-  evidence (`tokens.total`, not `totalTokens`).
+  evidence (`tokens.totalTokens`, falling back to `tokens.total`).
