@@ -16,8 +16,8 @@
   "archetypes": [
     {
       "archetype": "Deep research / synthesis",
-      "picks": ["gpt-5.5-pro", "claude-opus-5-5", "gemini-3.1-pro"],
-      "alt": ["kimi-k3"]
+      "picks": ["gpt-5.5-pro", "claude-opus-5-5"],
+      "alt": ["kimi-k3", "deepseek-v4.1-flash"]
     },
     {
       "archetype": "Greenfield code / big feature",
@@ -41,8 +41,8 @@
     },
     {
       "archetype": "Long-doc summarize / digest",
-      "picks": ["gemini-3.1-pro", "gpt-5.5-pro"],
-      "alt": ["kimi-k3"]
+      "picks": ["gpt-5.5-pro"],
+      "alt": ["kimi-k3", "deepseek-v4.1-flash"]
     },
     {
       "archetype": "Draft prose / docs",
@@ -51,7 +51,7 @@
     },
     {
       "archetype": "Vision (image input)",
-      "picks": ["claude-fable-5-1", "gpt-5.5-pro", "gemini-3.1-pro"],
+      "picks": ["claude-fable-5-1", "gpt-5.5-pro"],
       "alt": ["deepseek-v4.1-flash"]
     }
   ],
