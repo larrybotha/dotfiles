@@ -168,6 +168,7 @@ casks=(
   "the-unarchiver"
   "transmission"
   "virtualbox"
+  "vivaldi"
   "vlc"
   "webpquicklook"
   "xbar"
@@ -188,7 +189,7 @@ taps_requiring_trust=(
   "jesseduffield/lazynpm/lazynpm"
   "koekeishiya/formulae/skhd"
   "koekeishiya/formulae/yabai"
-  "libsql/sqld/sqld"              # dependency of tursodatabase/tap/turso
+  "libsql/sqld/sqld"             # dependency of tursodatabase/tap/turso
   "terraform-linters/tap/tflint" # linter for Terraform
   "tursodatabase/tap/turso"      # Turso CLI
 )
